@@ -2,7 +2,7 @@
 
 | 项目名称 | 航空票务管理数据库系统                                       |
 | -------- | ------------------------------------------------------------ |
-| 文档版本 | v2.1                                                         |
+| 文档版本 | v2.2                                                         |
 | 编写日期 | 2026-05-10                                                   |
 | 配套文档 | PRD.md（业务需求）、SCHEMA.md（数据库设计）、API.md（接口定义） |
 
@@ -387,12 +387,16 @@ flight/
 | ---------------------- | ------------------------------------------------------------ | --------- |
 | `cities.csv`           | city_name                                                    | ~250-300  |
 | `airports.csv`         | iata_code, airport_name, city_name                           | ~250      |
-| `city_near_apt.csv`    | city_name, iata_code, distance                               | ~50-100   |
+| `city_near_apt.csv`    | city_name, iata_code, distance(用该值为0表示机场位于此城市)    | ~50-100   |
 | `airlines.csv`         | iata_code, airline_name                                      | ~10-15    |
 | `aircraft_types.csv`   | model, economy_seats, first_seats                            | ~10       |
 | `flights.csv`          | flight_no, scheduled_departure, scheduled_arrival, fuel_infra_fee, dep_airport_code, dep_terminal, arr_airport_code, arr_terminal, airline_code, aircraft_model | ~50-150   |
 | `flight_weekdays.csv`  | flight_no, weekday（一行一个 weekday，每个航班对应多行）     | ~300-1000 |
 | `flight_stopovers.csv` | flight_no, stop_order, airport_code                          | ~10-20    |
+
+**city_near_apt 完整性约定**：
+- `distance = 0` 是判断“城市拥有机场”的唯一依据。
+- 非 0 记录表示跨城临近机场关系，距离必须在 `[0, 300]`。
 
 #### 3.3.3 init_db.py 调用链
 
@@ -424,8 +428,8 @@ def main():
     
     # 3. 灌真实基础数据(CSV → DB)
     load_csv.load_cities(cur)
-    load_csv.load_airports(cur)         
-    load_csv.load_city_near_apt(cur)  
+    load_csv.load_airports(cur)          # 只导入 airport
+    load_csv.load_city_near_apt(cur)     # 导入完整 city_near_apt，含 distance=0 自有机场记录
     load_csv.load_airlines(cur)
     load_csv.load_aircraft_types(cur)
     load_csv.load_flights(cur)
@@ -447,23 +451,6 @@ def main():
 
 #### 3.3.4 关键导入逻辑
 
-**airport 导入的双写约束**（呼应 §5.7）：
-
-```python
-# scripts/load_csv.py
-def load_airports(cur):
-    with open('data/airports.csv', encoding='utf-8') as f:
-        for row in csv.DictReader(f):
-            cur.execute(
-                "INSERT INTO airport VALUES (%s, %s, %s)",
-                (row['iata_code'], row['airport_name'], row['city_name'])
-            )
-            # ★ 双写:同步插入 city_near_apt distance=0
-            cur.execute(
-                "INSERT INTO city_near_apt VALUES (%s, %s, 0.00)",
-                (row['city_name'], row['iata_code'])
-            )
-```
 
 **管理员密码 bcrypt 哈希**：
 
@@ -873,7 +860,7 @@ MySQL InnoDB 默认 `REPEATABLE READ`，本项目不修改。关键事务（下�
 - 实现方式：`flight.service.deduct_seat(instance_id, cabin_class, fare_type, count)` 在事务内执行 UPDATE 两张表，业务代码统一调此函数
 - 反向操作：`flight.service.restore_seat(...)` 用于退改和超时回补
 
-**airport-city_near_apt 双写规则**（强制）：
+**airport-city_near_apt 双写规则**（强制，但不适用于初始化 CSV 导入）：
 
 - `airport.service.create(iata, name, city_name)`：事务内同时插入 `airport` 和 `city_near_apt(city_name, iata, 0)`
 - `airport.service.update_city(iata, new_city)`：事务内更新 `airport.city_name`、删除旧 distance=0 记录、插入新 distance=0 记录
@@ -1392,4 +1379,5 @@ app.include_router(search_router,  prefix="/api/search")
 | ---- | ---------- | ------ | ------------------------------------------------------------ |
 | v1.0 | 2026-05-09 | 王铿轶 | 基于 PRD v1.0 与 SCHEMA v1.0 编写。技术栈：FastAPI + SQLAlchemy + Vue 3 + Element Plus + JWT + APScheduler。架构：三档分层(workflows/domains/core),领域包内部四层(router/service/repository/models)。前端美学设计。 |
 | v2.0 | 2026-05-10 | 王铿轶 | 根据 PRD/SCHEMA v2.0同步：删除 admin_permission 资源级权限，统一为 role-based 单一管理员角色；新增"每日生成 3 个月后航班实例"定时任务；新增 airport-city_near_apt 双写规则；新增库存双重表达的事务同步规则；删除 Alembic 迁移工具；JWT 改为 httpOnly cookie 传递。 |
-| v2.1 | 2026-05-10 | 王铿轶 | 为新 AI 上下文交接补全代码约束：新增 §3.3 数据准备与初始化（CSV 目录、init_db.py 调用链、双写约束）；新增 §3.4 业务常量统一存放（core/constants.py）；§3.1 完整化异常类清单（与 API.md §14 一一对应）和 ID 生成器代码；新增 §5.8 应用层约束 AC-1 至 AC-8 的代码强制位置；新增附录 A 完整领域包代码模板；新增附录 B 项目结构速查表；新增附录 C 提示词。 |
+| v2.1 | 2026-05-10 | 王铿轶 | 为新 AI 上下文交接补全代码约束：新增 §3.3 数据准备与初始化（CSV 目录、init_db.py 调用链、双写约束）；新增 §3.4 业务常量统一存放（core/constants.py）；§3.1 完整化异常类清单（与 API.md §14 一一对应）和 ID 生成器代码；新增 §5.8 应用层约束 AC-1 至 AC-8 的代码强制位置；新增附录 A 完整领域包代码模板；新增附录 B 项目结构速查表；新增附录 C 提示词。 | v2.2 | 2026-05-10 | 王铿轶 | 城市临近机场逻辑更正，初始化数据会默认将distance为0视为城市拥有机场。
+|
