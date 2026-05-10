@@ -2,8 +2,8 @@
 
 | 项目名称 | 航空票务管理数据库系统                                       |
 | -------- | ------------------------------------------------------------ |
-| 文档版本 | v1.0                                                         |
-| 编写日期 | 2026-05-09                                                   |
+| 文档版本 | v2.0                                                         |
+| 编写日期 | 2026-05-10                                                   |
 | 数据库   | MySQL 8.0+ / InnoDB                                          |
 | 字符集   | utf8mb4 / utf8mb4_unicode_ci                                 |
 | 配套文档 | PRD.md（业务规则）、ARCHITECTURE.md（应用层并发方案）、API.md（接口） |
@@ -72,7 +72,7 @@
 
 ## 2. 实体清单
 
-系统共 **15** 张表，分三组：
+系统共 **16** 张表，分三组：
 
 ### 2.1 航班侧（10 张）
 
@@ -99,12 +99,11 @@
 | 14   | `ticket`        | 客票表     | `ticket_no` | 单张乘机凭证         |
 | 15   | `refund_change` | 退改记录表 | `refund_id` | 退票/改签操作日志    |
 
-### 2.3 管理员侧（2 张）
+### 2.3 管理员侧（1 张）
 
-| #    | 表名               | 中文名       | 主键                        | 用途                       |
-| ---- | ------------------ | ------------ | --------------------------- | -------------------------- |
-| 16   | `admin`            | 管理员表     | `admin_id`                  | 后台运营人员               |
-| 17   | `admin_permission` | 管理员权限表 | `(admin_id, resource_type)` | 标识管理员可操作的资源类型 |
+| #    | 表名    | 中文名   | 主键       | 用途         |
+| ---- | ------- | -------- | ---------- | ------------ |
+| 16   | `admin` | 管理员表 | `admin_id` | 后台运营人员 |
 
 ---
 
@@ -132,25 +131,23 @@
 | airport_name | VARCHAR(128) | NOT NULL                                         | 否   | —    | 机场全称           |
 | city_name    | VARCHAR(32)  | FK → city(city_name) ON UPDATE CASCADE, NOT NULL | 否   | —    | 所属城市           |
 
-**索引**：
-
-- `idx_airport_city` ON `(city_name)` — 按城市查机场（搜索"上海有哪些机场"）
-
 **示例数据**：`('PEK','北京首都国际机场','北京')`, `('PVG','上海浦东国际机场','上海')`
 
 ---
 
 #### 3.1.3 `city_near_apt` 城市临近机场表
 
-| 字段      | 类型         | 键/约束                                             | 可空 | 默认 | 说明              |
-| --------- | ------------ | --------------------------------------------------- | ---- | ---- | ----------------- |
-| city_name | VARCHAR(32)  | PK, FK → city(city_name) ON DELETE CASCADE          | 否   | —    | 城市名            |
-| iata_code | CHAR(3)      | PK, FK → airport(iata_code) ON DELETE CASCADE       | 否   | —    | 临近机场三字码    |
-| distance  | DECIMAL(6,2) | NOT NULL, CHECK (distance >= 0 AND distance <= 200) | 否   | —    | 距离 km，上限 200 |
+| 字段      | 类型         | 键/约束                                             | 可空 | 默认 | 说明                                         |
+| --------- | ------------ | --------------------------------------------------- | ---- | ---- | -------------------------------------------- |
+| city_name | VARCHAR(32)  | PK, FK → city(city_name) ON DELETE CASCADE          | 否   | —    | 城市名                                       |
+| iata_code | CHAR(3)      | PK, FK → airport(iata_code) ON DELETE CASCADE       | 否   | —    | 临近机场三字码                               |
+| distance  | DECIMAL(6,2) | NOT NULL, CHECK (distance >= 0 AND distance <= 300) | 否   | —    | 距离 km，当前城市的机场设定距离为0，上限 300 |
 
 **业务约束**：
 
-- 应用层校验：临近机场不应是该城市自己拥有的机场（避免"上海的临近机场是浦东"这种语义重复）；即 `(city_name, iata_code)` 不应满足 `airport.city_name = city_name`。
+- `distance = 0` 表示该机场即位于该城市，是判定"该城市拥有机场"的统一查询入口。
+- 同一城市的自有机场（`distance = 0`）记录可有多条（一城多机场场景，如上海有 SHA、PVG）。
+- **一致性约束**：`distance = 0` 的记录必须与 `airport.city_name` 保持一致——即对每条 `airport(iata_code, city_name)`，`city_near_apt` 中必须存在对应的 `(city_name, iata_code, 0)`；反之亦然。该一致性由 `airport service` 在 create / update / delete 时双写维护。
 
 **索引**：
 
@@ -368,16 +365,16 @@
 
 #### 3.2.4 `ticket` 客票表
 
-| 字段         | 类型                                      | 键/约束                             | 可空 | 默认   | 说明                                      |
-| ------------ | ----------------------------------------- | ----------------------------------- | ---- | ------ | ----------------------------------------- |
-| ticket_no    | VARCHAR(32)                               | PK                                  | 否   | —      | 票号（建议格式：`T{yyyymmdd}{递增9位}`）  |
-| order_no     | VARCHAR(32)                               | FK → aptorder(order_no), NOT NULL   | 否   | —      | 所属订单                                  |
-| passenger_id | VARCHAR(32)                               | FK → passenger(id_no), NOT NULL     | 否   | —      | 乘机人                                    |
-| instance_id  | VARCHAR(32)                               | FK 组合, NOT NULL                   | 否   | —      | 航班实例                                  |
-| cabin_class  | ENUM('经济舱','头等舱')                   | FK 组合, NOT NULL                   | 否   | —      | 舱位等级                                  |
-| fare_type    | ENUM('标准','特价')                       | FK 组合, NOT NULL                   | 否   | '标准' | 票价类型                                  |
-| actual_price | DECIMAL(10,2)                             | NOT NULL, CHECK (actual_price >= 0) | 否   | —      | 成交价（下单时刻 cabin_price.price 快照） |
-| status       | ENUM('有效','已退','已改签作废','已使用') | NOT NULL                            | 否   | '有效' | 客票状态                                  |
+| 字段         | 类型                                      | 键/约束                             | 可空 | 默认   | 说明                                                         |
+| ------------ | ----------------------------------------- | ----------------------------------- | ---- | ------ | ------------------------------------------------------------ |
+| ticket_no    | VARCHAR(32)                               | PK                                  | 否   | —      | 票号（建议格式：`T{yyyymmdd}{递增9位}`）                     |
+| order_no     | VARCHAR(32)                               | FK → aptorder(order_no), NOT NULL   | 否   | —      | 所属订单                                                     |
+| passenger_id | VARCHAR(32)                               | FK → passenger(id_no), NOT NULL     | 否   | —      | 乘机人                                                       |
+| instance_id  | VARCHAR(32)                               | FK 组合, NOT NULL                   | 否   | —      | 航班实例                                                     |
+| cabin_class  | ENUM('经济舱','头等舱')                   | FK 组合, NOT NULL                   | 否   | —      | 舱位等级                                                     |
+| fare_type    | ENUM('标准','特价')                       | FK 组合, NOT NULL                   | 否   | '标准' | 票价类型                                                     |
+| actual_price | DECIMAL(10,2)                             | NOT NULL, CHECK (actual_price >= 0) | 否   | —      | 成交价（下单时刻 cabin_price.price+对应flight表中航班的燃油基建fuel_infra_fee） |
+| status       | ENUM('有效','已退','已改签作废','已使用') | NOT NULL                            | 否   | '有效' | 客票状态                                                     |
 
 **复合外键**：
 
@@ -436,26 +433,6 @@ FOREIGN KEY (instance_id, cabin_class, fare_type)
 
 ---
 
-#### 3.3.2 `admin_permission` 管理员权限表
-
-| 字段          | 类型                                                         | 键/约束                                    | 可空 | 默认 | 说明                   |
-| ------------- | ------------------------------------------------------------ | ------------------------------------------ | ---- | ---- | ---------------------- |
-| admin_id      | VARCHAR(32)                                                  | PK, FK → admin(admin_id) ON DELETE CASCADE | 否   | —    | 管理员                 |
-| resource_type | ENUM('city','airport','airline','aircraft_type','flight','flight_instance','order','*') | PK                                         | 否   | —    | 资源类型；`*` 表示全部 |
-
-**业务约束**：
-
-- 当 `resource_type='*'` 时，该管理员对所有资源类型都有权；其他资源类型记录可以省略。
-- 至少应有 1 个管理员拥有 `'*'` 权限以维护权限表本身（业务约定，无表层强制）。
-- 删除一条权限记录即收回该管理员对该资源类型的操作权。
-
-**索引**：
-
-- 主键复合索引
-- `idx_perm_resource` ON `(resource_type)` — 反查"哪些管理员能管 X 类资源"
-
----
-
 ## 4. 跨表完整性约束
 
 ### 4.1 外键拓扑
@@ -478,24 +455,22 @@ user ──< aptorder ──< ticket >── passenger                          
                           │ (instance_id, cabin_class, fare_type)──>┘
                           │
                           └──< refund_change >── (new_ticket_no → ticket)
-
-admin ──< admin_permission
 ```
 
 ### 4.2 应用层补充约束（无法/不便用 SQL 表达）
 
 下列约束需在业务逻辑层强制执行，写入测试用例覆盖：
 
-| 编号 | 约束                                                         | 强制位置           |
-| ---- | ------------------------------------------------------------ | ------------------ |
-| AC-1 | 同一乘客在同一航班实例上仅能有 1 张有效客票                  | 下单时 SELECT 校验 |
-| AC-2 | `cabin_price.available_seats` 之和 = `flight_instance.economy_left/first_left` | 事务内同步更新     |
-| AC-3 | 改签记录的 `new_ticket_no` 不能等于 `ticket_no`（不能改到自己） | 应用层校验         |
-| AC-4 | 临近机场不能是该城市自己的机场                               | 维护时校验         |
-| AC-5 | `flight.dep_airport_code != flight.arr_airport_code`         | 维护时校验         |
-| AC-6 | `flight_instance.flight_date` 必须落在 `flight_weekday` 的允许日内 | 创建实例时校验     |
-| AC-7 | `flight_stopover.airport_code` 不能是该航班的起飞或到达机场  | 维护时校验         |
-| AC-8 | 已起飞/已到达的实例不可再下单；已退/已改签作废的票不可再退改 | 业务流程校验       |
+| 编号 | 约束                                                         | 强制位置                                                     |
+| ---- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| AC-1 | 同一乘客在同一航班实例上仅能有 1 张有效客票                  | 下单时 SELECT 校验                                           |
+| AC-2 | `cabin_price.available_seats` 之和 = `flight_instance.economy_left/first_left` | 事务内同步更新                                               |
+| AC-3 | 改签记录的 `new_ticket_no` 不能等于 `ticket_no`（不能改到自己） | 应用层校验                                                   |
+| AC-4 | `airport.city_name` 与 `city_near_apt` 中 `distance=0` 的记录表达同一语义"机场归属城市"，二者必须保持一致 | `airport service` 在 create/update/delete 时双写同步；新增 `city_near_apt` 记录时若 `distance=0` 校验是否与 `airport.city_name` 匹配 |
+| AC-5 | `flight.dep_airport_code != flight.arr_airport_code`         | 维护时校验                                                   |
+| AC-6 | `flight_instance.flight_date` 必须落在 `flight_weekday` 的允许日内 | 创建实例时校验                                               |
+| AC-7 | `flight_stopover.airport_code` 不能是该航班的起飞或到达机场  | 维护时校验                                                   |
+| AC-8 | 已起飞/已到达的实例不可再下单；已退/已改签作废的票不可再退改 | 业务流程校验                                                 |
 
 ---
 
@@ -527,7 +502,6 @@ admin ──< admin_permission
 | ------ | ------------------------ | ---- |
 | 计划   | 已生成实例，未开放售票   | 否   |
 | 可订   | 开放售票                 | 否   |
-| 延误   | 延误（可恢复）           | 否   |
 | 已起飞 | 已起飞                   | 否   |
 | 已到达 | 已到达                   | 是   |
 | 已取消 | 航班取消（触发批量退款） | 是   |
@@ -538,28 +512,27 @@ admin ──< admin_permission
 
 ### 6.1 索引清单
 
-| 表               | 索引名                     | 字段                                 | 类型 | 用途             |
-| ---------------- | -------------------------- | ------------------------------------ | ---- | ---------------- |
-| airport          | idx_airport_city           | city_name                            | 普通 | 按城市查机场     |
-| city_near_apt    | idx_near_apt_iata          | iata_code                            | 普通 | 反查临近关系     |
-| airline          | uk_airline_name            | airline_name                         | 唯一 | 名称唯一         |
-| flight           | idx_flight_route           | (dep_airport_code, arr_airport_code) | 普通 | **直飞搜索**     |
-| flight           | idx_flight_airline         | airline_code                         | 普通 | 按航司查         |
-| flight           | idx_flight_aircraft        | aircraft_model                       | 普通 | 按机型查         |
-| flight_weekday   | idx_weekday_flight         | (weekday, flight_no)                 | 普通 | 生成实例         |
-| flight_stopover  | idx_stopover_airport       | airport_code                         | 普通 | 反查经停         |
-| flight_instance  | uk_instance_flight_date    | (flight_no, flight_date)             | 唯一 | 同航班同日唯一   |
-| flight_instance  | idx_instance_date_status   | (flight_date, status)                | 普通 | **搜索可订航班** |
-| cabin_price      | idx_cabin_price_instance   | instance_id                          | 普通 | 按实例聚合档位   |
-| user             | uk_user_phone              | phone                                | 唯一 | 登录             |
-| aptorder         | idx_order_user_created     | (user_id, created_at DESC)           | 普通 | 我的订单         |
-| aptorder         | idx_order_status_created   | (status, created_at)                 | 普通 | **超时扫描**     |
-| ticket           | idx_ticket_order           | order_no                             | 普通 | 订单详情         |
-| ticket           | idx_ticket_passenger       | passenger_id                         | 普通 | 乘客行程         |
-| ticket           | idx_ticket_instance_status | (instance_id, status)                | 普通 | 实例剩余有效票   |
-| refund_change    | idx_refund_ticket          | ticket_no                            | 普通 | 退改历史         |
-| refund_change    | idx_refund_optime          | op_time DESC                         | 普通 | 时序查询         |
-| admin_permission | idx_perm_resource          | resource_type                        | 普通 | 反查             |
+| 表              | 索引名                     | 字段                                 | 类型 | 用途             |
+| --------------- | -------------------------- | ------------------------------------ | ---- | ---------------- |
+| airport         | idx_airport_city           | city_name                            | 普通 | 按城市查机场     |
+| city_near_apt   | idx_near_apt_iata          | iata_code                            | 普通 | 反查临近关系     |
+| airline         | uk_airline_name            | airline_name                         | 唯一 | 名称唯一         |
+| flight          | idx_flight_route           | (dep_airport_code, arr_airport_code) | 普通 | **直飞搜索**     |
+| flight          | idx_flight_airline         | airline_code                         | 普通 | 按航司查         |
+| flight          | idx_flight_aircraft        | aircraft_model                       | 普通 | 按机型查         |
+| flight_weekday  | idx_weekday_flight         | (weekday, flight_no)                 | 普通 | 生成实例         |
+| flight_stopover | idx_stopover_airport       | airport_code                         | 普通 | 反查经停         |
+| flight_instance | uk_instance_flight_date    | (flight_no, flight_date)             | 唯一 | 同航班同日唯一   |
+| flight_instance | idx_instance_date_status   | (flight_date, status)                | 普通 | **搜索可订航班** |
+| cabin_price     | idx_cabin_price_instance   | instance_id                          | 普通 | 按实例聚合档位   |
+| user            | uk_user_phone              | phone                                | 唯一 | 登录             |
+| aptorder        | idx_order_user_created     | (user_id, created_at DESC)           | 普通 | 我的订单         |
+| aptorder        | idx_order_status_created   | (status, created_at)                 | 普通 | **超时扫描**     |
+| ticket          | idx_ticket_order           | order_no                             | 普通 | 订单详情         |
+| ticket          | idx_ticket_passenger       | passenger_id                         | 普通 | 乘客行程         |
+| ticket          | idx_ticket_instance_status | (instance_id, status)                | 普通 | 实例剩余有效票   |
+| refund_change   | idx_refund_ticket          | ticket_no                            | 普通 | 退改历史         |
+| refund_change   | idx_refund_optime          | op_time DESC                         | 普通 | 时序查询         |
 
 ### 6.2 索引设计原则
 
@@ -584,6 +557,7 @@ SELECT
     fi.status              AS instance_status,
     f.scheduled_departure,
     f.scheduled_arrival,
+	f.fuel_infra_fee,
     f.dep_airport_code,
     dep_apt.city_name      AS dep_city,
     f.arr_airport_code,
@@ -598,7 +572,7 @@ JOIN flight    f       ON fi.flight_no       = f.flight_no
 JOIN airport   dep_apt ON f.dep_airport_code = dep_apt.iata_code
 JOIN airport   arr_apt ON f.arr_airport_code = arr_apt.iata_code
 JOIN airline   al      ON f.airline_code     = al.iata_code
-WHERE fi.status IN ('可订','延误');
+WHERE fi.status IN ('可订');
 ```
 
 > 用途：直飞搜索基础视图，避免多表 JOIN 重复书写。
@@ -710,7 +684,7 @@ COMMIT;
 
 ```sql
 -- 查询 :dep_city → :arr_city 在 :date 的中转方案
--- 约束：MCT 60 分钟，最大衔接 6 小时
+-- 约束：MCT 120 分钟，最大衔接 6 小时
 
 SELECT
     leg1.instance_id  AS leg1_id,
@@ -738,7 +712,7 @@ JOIN v_flight_search leg2
  AND TIMESTAMPDIFF(MINUTE,
         TIMESTAMP(leg1.flight_date, leg1.scheduled_arrival),
         TIMESTAMP(leg2.flight_date, leg2.scheduled_departure)
-     ) BETWEEN 60 AND 360                                  -- 衔接时间窗口
+     ) BETWEEN 120 AND 360                                  -- 衔接时间窗口
 WHERE leg1.economy_left > 0 AND leg2.economy_left > 0     -- 两段都有座
 ORDER BY leg1.scheduled_departure;
 ```
@@ -814,7 +788,7 @@ CREATE TABLE city_near_apt (
         REFERENCES city(city_name) ON DELETE CASCADE,
     CONSTRAINT fk_near_airport FOREIGN KEY (iata_code)
         REFERENCES airport(iata_code) ON DELETE CASCADE,
-    CONSTRAINT chk_near_distance CHECK (distance >= 0 AND distance <= 200)
+    CONSTRAINT chk_near_distance CHECK (distance >= 0 AND distance <= 300)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE airline (
@@ -883,7 +857,7 @@ CREATE TABLE flight_instance (
     flight_date    DATE                NOT NULL,
     economy_left   SMALLINT UNSIGNED   NOT NULL,
     first_left     SMALLINT UNSIGNED   NOT NULL,
-    status         ENUM('计划','可订','已起飞','已到达','已取消','延误') NOT NULL DEFAULT '计划',
+    status         ENUM('计划','可订','已起飞','已到达','已取消') NOT NULL DEFAULT '计划',
     PRIMARY KEY (instance_id),
     UNIQUE KEY uk_instance_flight_date (flight_no, flight_date),
     KEY idx_instance_date_status (flight_date, status),
@@ -981,15 +955,6 @@ CREATE TABLE admin (
     PRIMARY KEY (admin_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE admin_permission (
-    admin_id       VARCHAR(32) NOT NULL,
-    resource_type  ENUM('city','airport','airline','aircraft_type','flight','flight_instance','order','*') NOT NULL,
-    PRIMARY KEY (admin_id, resource_type),
-    KEY idx_perm_resource (resource_type),
-    CONSTRAINT fk_perm_admin FOREIGN KEY (admin_id)
-        REFERENCES admin(admin_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ---------- 视图 ----------
@@ -1033,6 +998,11 @@ FROM aptorder o
 JOIN user u    ON o.user_id  = u.user_id
 LEFT JOIN ticket t ON o.order_no = t.order_no
 GROUP BY o.order_no, o.user_id, u.name, o.total_amount, o.status, o.created_at;
+
+-- ---------- 管理员账号硬编码 ----------
+-- 密码 'admin123' 的 bcrypt 哈希，仅用于演示
+INSERT INTO admin (admin_id, admin_password, admin_name) VALUES
+    ('A001', '$2b$12$XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', '系统管理员');
 ```
 
 ---
@@ -1045,4 +1015,5 @@ GROUP BY o.order_no, o.user_id, u.name, o.total_amount, o.status, o.created_at;
 
 | 版本 | 日期       | 修订人 | 变更说明                                                     |
 | ---- | ---------- | ------ | ------------------------------------------------------------ |
-| v1.0 | 2026-05-09 | 王铿轶 | 基于 PRD v1.0 与期中 PPT v2 编写。相比期中 PPT 的主要变化：cabin_price 主键扩展为三元组 + 新增 available_seats；ticket 加 status/fare_type；refund_change 加 new_ticket_no/price_diff；删除 6 张 admin_manage_* 表，合并为 admin_permission；flight_instance 新增唯一约束 (flight_no, flight_date) |
+| v1.0 | 2026-05-09 | 王铿轶 | 基于 PRD v1.0 与期中 PPT 编写。相比期中 PPT 的主要变化：cabin_price 主键扩展为三元组 + 新增 available_seats；ticket 加 status/fare_type；refund_change 加 new_ticket_no/price_diff；删除 6 张 admin_manage_* 表，合并为 admin_permission；flight_instance 新增唯一约束 (flight_no, flight_date) |
+| v2.0 | 2026-05-10 | 王铿轶 | 根据 PRD v2.0同步：删除 `admin_permission` 表；删除 AC-4 应用层约束；`flight_instance.status` 移除"延误"；ticket.actual_price 明确含燃油基建费；视图 `v_flight_search` 改 JOIN 来源并新增 fuel_infra_fee 字段；DDL 末尾新增管理员账号硬编码 |
