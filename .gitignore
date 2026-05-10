@@ -1,2 +1,6 @@
 CLAUDE.md
 AGENTS.md
+.vscode/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
