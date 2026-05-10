@@ -1,20 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { userApi } from '@/api/user'
+import { ref } from 'vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import type { Passenger, UserProfile } from '@/types/user'
 
 const profile = ref<UserProfile | null>(null)
 const passengers = ref<Passenger[]>([])
-
-onMounted(async () => {
-  try {
-    profile.value = await userApi.getProfile()
-    passengers.value = await userApi.listPassengers()
-  } catch {
-    profile.value = null
-  }
-})
 </script>
 
 <template>
@@ -26,7 +16,7 @@ onMounted(async () => {
         <el-descriptions-item label="姓名">{{ profile.name }}</el-descriptions-item>
         <el-descriptions-item label="手机号">{{ profile.phone }}</el-descriptions-item>
       </el-descriptions>
-      <EmptyState v-else title="暂无个人信息" description="登录后可查看和维护个人资料。" />
+      <EmptyState v-else title="个人信息占位" description="初始化阶段不自动请求后端；用户接口接入后可查看和维护个人资料。" />
     </section>
 
     <section class="page-section">

@@ -27,8 +27,11 @@ client.interceptors.response.use(
 
     if (status === 401) {
       void import('@/router').then(({ default: router }) => {
-        if (router.currentRoute.value.path !== '/login' && router.currentRoute.value.path !== '/admin/login') {
-          router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
+        const current = router.currentRoute.value
+        const loginPath = current.path.startsWith('/admin') ? '/admin/login' : '/login'
+
+        if (current.path !== '/login' && current.path !== '/admin/login') {
+          router.push({ path: loginPath, query: { redirect: current.fullPath } })
         }
       })
     } else if (status === 403) {

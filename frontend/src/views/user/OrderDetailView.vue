@@ -1,32 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { orderApi } from '@/api/order'
 import EmptyState from '@/components/common/EmptyState.vue'
 import OrderTimeline from '@/components/order/OrderTimeline.vue'
 import { formatCurrency } from '@/utils/format'
 import type { OrderDetail } from '@/types/order'
 
 const route = useRoute()
-const loading = ref(false)
+const orderNo = computed(() => String(route.params.orderNo || ''))
 const detail = ref<OrderDetail | null>(null)
-
-async function load() {
-  const orderNo = String(route.params.orderNo || '')
-  if (!orderNo) {
-    return
-  }
-  loading.value = true
-  try {
-    detail.value = await orderApi.getDetail(orderNo)
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  void load()
-})
 </script>
 
 <template>
@@ -41,7 +23,7 @@ onMounted(() => {
           <el-descriptions-item label="金额">{{ formatCurrency(detail.total_amount) }}</el-descriptions-item>
         </el-descriptions>
       </template>
-      <EmptyState v-else :title="loading ? '正在加载订单' : '暂无订单详情'" description="后端订单接口接入后会展示客票明细。" />
+      <EmptyState v-else title="订单详情占位" :description="`当前订单号：${orderNo || '--'}。后端订单接口接入后会展示客票明细。`" />
     </section>
 
     <section class="page-section">
