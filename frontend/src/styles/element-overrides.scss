@@ -1,0 +1,24 @@
+:root {
+  --el-color-primary: var(--fa-brand);
+  --el-color-primary-dark-2: var(--fa-brand-dark);
+  --el-border-radius-base: 4px;
+  --el-border-radius-small: 4px;
+  --el-text-color-primary: var(--fa-text);
+  --el-text-color-regular: var(--fa-text-secondary);
+  --el-border-color: var(--fa-border);
+  --el-fill-color-light: var(--fa-bg);
+  --el-box-shadow-light: none;
+}
+
+.el-card,
+.el-dialog,
+.el-input__wrapper,
+.el-select__wrapper,
+.el-button {
+  box-shadow: none !important;
+}
+
+.el-card {
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-radius);
+}
