@@ -1,9 +1,9 @@
-# 航空票务管理数据库系统 — 架构设计文档（ARCHITECTURE）
+# FudanAir航空票务管理数据库系统 — 架构设计文档（ARCHITECTURE）
 
 | 项目名称 | 航空票务管理数据库系统                                       |
 | -------- | ------------------------------------------------------------ |
-| 文档版本 | v1.0                                                         |
-| 编写日期 | 2026-05-09                                                   |
+| 文档版本 | v2.0                                                         |
+| 编写日期 | 2026-05-10                                                   |
 | 配套文档 | PRD.md（业务需求）、SCHEMA.md（数据库设计）、API.md（接口定义） |
 
 ---
@@ -22,7 +22,7 @@
 - 第 6 节：认证与权限
 - 第 7 节：定时任务
 - 第 8 节：错误处理与日志
-- 第 9 节：前端设计原则（避免 AI 美学）
+- 第 9 节：前端设计原则
 - 第 10 节：开发与协作规范
 - 第 11 节：环境与部署
 
@@ -41,7 +41,7 @@
 | DB 驱动     | PyMySQL                   | 1.1+   | 纯 Python，跨平台，零编译                          |
 | 数据校验    | Pydantic                  | 2.6+   | FastAPI 原生集成                                   |
 | 密码哈希    | passlib[bcrypt]           | 1.7+   | 业界标准                                           |
-| JWT         | python-jose[cryptography] | 3.3+   | FastAPI 官方推荐                                   |
+| JWT         | python-jose[cryptography] | 3.3+   | FastAPI 官方推荐，token 通过 httpOnly cookie 传递  |
 | 定时任务    | APScheduler               | 3.10+  | 进程内调度，零额外依赖                             |
 | 测试        | pytest + httpx            | 最新   | API 测试 + 并发测试                                |
 | 前端框架    | Vue                       | 3.4+   | 工业风票务系统主流选择                             |
@@ -58,7 +58,8 @@
 - **所有写操作走事务**：哪怕是单条 INSERT，也用 `with session.begin():` 显式包裹。
 - **认证用 JWT**：无状态，前后端分离适配良好。
 - **前后端完全分离**：FastAPI 仅出 JSON，前端独立构建独立部署。
-- **前端避免 AI 美学**：详见第 9 节。
+- **前端美学**：详见第 9 节。
+- **库存双重表达的同步规则**：`cabin_price.available_seats` 与 `flight_instance.economy_left/first_left` 由 `flight.service` 封装为单一函数， `deduct_seat()` 与 `restore_seat()` 同步更新，禁止业务代码直接修改任一字段
 
 ---
 
@@ -119,7 +120,7 @@ schemas.py     旁挂  Pydantic DTO(请求/响应模型,与 ORM 解耦)
 
 ### 2.3 跨领域调用规则
 
-`workflows/` 调用 `domains/` 时，**只调对方的 service，不直接调对方的 repository**。
+`workflows/` 调用 `domains/` 时，**只调对方的 service，不直接调对方的 repository**，不允许进行违反规则的操作。
 
 ```python
 # 错误:跨领域直接 import repository
@@ -167,7 +168,7 @@ backend/
 │   │   ├── user/               # 用户、乘机人
 │   │   ├── order/              # 订单 CRUD、状态机
 │   │   ├── ticket/             # 客票 CRUD、状态机
-│   │   └── admin/              # 管理员、权限
+│   │   └── admin/              # 管理员
 │   │
 │   ├── workflows/              # 跨领域编排
 │   │   ├── booking/            # 下单
@@ -180,11 +181,12 @@ backend/
 │   ├── auth/                   # 认证(横切关注点,不属于任何领域)
 │   │   ├── router.py           # POST /login, POST /register
 │   │   ├── service.py
-│   │   └── dependencies.py     # get_current_user, require_admin_perm
+│   │   └── dependencies.py     # get_current_user, get_current_admin
 │   │
 │   └── jobs/                   # 定时任务
 │       ├── __init__.py
-│       └── expire_orders.py    # 超时订单回补库存
+│       ├── expire_orders.py    # 超时订单回补库存
+│       └── generate_instances.py   # 每日生成 3 个月后那天的航班实例（每天凌晨）
 │
 ├── tests/
 │   ├── conftest.py
@@ -194,14 +196,14 @@ backend/
 │   └── test_admin_permission.py
 │
 ├── scripts/
-│   ├── init_db.sql             # 直接复用 SCHEMA.md §9 的 DDL
-│   └── seed_data.py            # 种子数据(供队友填充)
+│   ├── schema.sql              # 纯 DDL,复用 SCHEMA.md §9
+│   ├── init_db.py              # 主初始化脚本(执行 schema.sql + 灌种子 + 创建管理员)
+│   └── seed_data.py            # 种子数据(被 init_db.py 调用)
 │
+├── start.py                    # 后端启动脚本
 ├── .env.example                # 环境变量模板
-├── pyproject.toml              # 依赖与工具配置
+├── requirements.txt            # 依赖与工具配置
 ├── README.md                   # 启动说明
-└── alembic/                    # (可选)数据库迁移
-    └── versions/
 ```
 
 ### 3.1 关键文件说明
@@ -220,6 +222,8 @@ FastAPI 实例、CORS 中间件、路由注册、应用生命周期（启动调�
 - `JWT_EXPIRE_MINUTES`（默认 1440 = 24h）
 - `ORDER_EXPIRE_MINUTES`（默认 15）
 - `SCHEDULER_INTERVAL_SECONDS`（默认 60）
+- INSTANCE_GENERATION_HOUR（默认 3，凌晨 3 点生成航班实例）
+- INSTANCE_AHEAD_DAYS（默认 90，提前 90 天生成实例）
 
 #### `app/deps.py`
 
@@ -228,7 +232,7 @@ FastAPI 实例、CORS 中间件、路由注册、应用生命周期（启动调�
 - `get_db()` 产出 SQLAlchemy Session
 - `get_current_user(token)` 解析 JWT 返回当前用户
 - `get_current_admin(token)` 解析 JWT 返回当前管理员
-- `require_perm(resource_type)` 校验管理员权限
+- `require_admin` 校验当前角色为管理员
 
 #### `app/core/database.py`
 
@@ -283,6 +287,28 @@ flight/
 ```
 
 `flight.service.lock_and_deduct_cabin` 提供给 `workflows/booking/` 调用，是防超卖的关键方法。具体代码模式见第 5 节。
+
+
+
+补充：`.env`文件，大致配置：
+
+```
+# 数据库连接 - 请把 YOUR_PASSWORD 改成自己的 MySQL root 密码
+DB_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/fudan_air?charset=utf8mb4
+
+# JWT 签名密钥 - 随便填一段长字符串即可，团队内可统一
+JWT_SECRET=please-change-me-to-a-random-string-at-least-32-chars
+JWT_EXPIRE_MINUTES=1440
+
+# 业务配置 - 一般不需要改
+ORDER_EXPIRE_MINUTES=15
+SCHEDULER_INTERVAL_SECONDS=60
+INSTANCE_GENERATION_HOUR=3
+INSTANCE_AHEAD_DAYS=90
+
+# CORS 允许的前端来源
+CORS_ORIGINS=http://localhost:5173
+```
 
 ---
 
@@ -600,84 +626,37 @@ class SearchService:
 
 MySQL InnoDB 默认 `REPEATABLE READ`，本项目不修改。关键事务（下单、退改）使用 `SELECT ... FOR UPDATE` 加行锁，天然防止幻读与丢失更新。
 
----
+### 5.7 关键事务规范
+
+**库存同步规则**（强制）：
+
+- 任何修改 `cabin_price.available_seats` 的地方，必须同时修改 `flight_instance.economy_left`（经济舱）或 `first_left`（头等舱）
+- 实现方式：`flight.service.deduct_seat(instance_id, cabin_class, fare_type, count)` 在事务内执行 UPDATE 两张表，业务代码统一调此函数
+- 反向操作：`flight.service.restore_seat(...)` 用于退改和超时回补
+
+**airport-city_near_apt 双写规则**（强制）：
+
+- `airport.service.create(iata, name, city_name)`：事务内同时插入 `airport` 和 `city_near_apt(city_name, iata, 0)`
+- `airport.service.update_city(iata, new_city)`：事务内更新 `airport.city_name`、删除旧 distance=0 记录、插入新 distance=0 记录
+- 删除 airport 由 `city_near_apt.iata_code` 上的 `ON DELETE CASCADE` 自动处理
+- 任何外部调用 `city_near_apt` 增删的入口：若 distance=0，必须先校验对应 `airport(iata).city_name == city_name`，否则抛 `IntegrityError`
 
 ## 6. 认证与权限
 
-### 6.1 JWT 方案
+**认证方式**：JWT，token 通过 httpOnly cookie 传递。
 
-- 登录成功后下发 token，payload 包含 `sub`（user_id 或 admin_id）、`role`（"user" / "admin"）、`exp`（过期时间）。
-- 前端存 `localStorage`，每次请求在 `Authorization: Bearer <token>` 头中带上。
-- 后端中间件解析 token，注入到 `request.state.current_user` 或 `current_admin`。
+**角色判定**：JWT payload 中的 `role` 字段，取值 `"user"` 或 `"admin"`。两类登录入口分别签发对应 role 的 token：
 
-### 6.2 关键代码
+- `POST /api/auth/login` 签发 role=user
+- `POST /api/auth/admin-login` 签发 role=admin
 
-```python
-# core/security.py
-from jose import jwt
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
+**依赖注入**：
 
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+- `get_current_user` — 解析 token，要求 role=user，否则 403
+- `get_current_admin` — 解析 token，要求 role=admin，否则 403
+- 所有用户接口加 `Depends(get_current_user)`，所有管理接口加 `Depends(get_current_admin)`
 
-def hash_password(plain: str) -> str:
-    return pwd.hash(plain)
-
-def verify_password(plain: str, hashed: str) -> bool:
-    return pwd.verify(plain, hashed)
-
-def create_access_token(subject: str, role: str) -> str:
-    payload = {
-        "sub": str(subject),
-        "role": role,
-        "exp": datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRE_MINUTES),
-    }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
-
-def decode_token(token: str) -> dict:
-    return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
-```
-
-### 6.3 依赖注入
-
-```python
-# auth/dependencies.py
-from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
-
-oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-def get_current_user(token: str = Depends(oauth2), db: Session = Depends(get_db)) -> User:
-    try:
-        payload = decode_token(token)
-        if payload["role"] != "user":
-            raise HTTPException(403, "需要用户身份")
-        return UserService(db).get_by_id(int(payload["sub"]))
-    except JWTError:
-        raise HTTPException(401, "token 无效")
-
-def get_current_admin(token: str = Depends(oauth2), db: Session = Depends(get_db)) -> Admin:
-    payload = decode_token(token)
-    if payload["role"] != "admin":
-        raise HTTPException(403, "需要管理员身份")
-    return AdminService(db).get_by_id(payload["sub"])
-
-def require_perm(resource_type: str):
-    def checker(admin: Admin = Depends(get_current_admin), db: Session = Depends(get_db)):
-        if not AdminService(db).has_permission(admin.admin_id, resource_type):
-            raise PermissionDeniedError(f"无 {resource_type} 操作权限")
-        return admin
-    return checker
-```
-
-### 6.4 在 router 中使用
-
-```python
-# domains/flight/router.py
-@router.post("/", dependencies=[Depends(require_perm("flight"))])
-def create_flight(payload: FlightCreate, db: Session = Depends(get_db)):
-    return FlightService(db).create(payload)
-```
+**管理员账号来源**：由 `scripts/init_db.py` 在初始化时通过 bcrypt 生成密码哈希后插入；不开放运行时创建。
 
 ---
 
@@ -745,6 +724,20 @@ def expire_orders_job():
 4. 回补 `cabin_price.available_seats`；
 5. 回补 `flight_instance.economy_left/first_left`。
 
+### 7.3 自动放票机制
+
+```python
+# jobs/generate_instances.py
+@scheduler.scheduled_job('cron', hour=settings.INSTANCE_GENERATION_HOUR)
+def generate_instances_daily():
+    """每天凌晨生成 90 天后那一天的航班实例"""
+    target_date = date.today() + timedelta(days=settings.INSTANCE_AHEAD_DAYS)
+    weekday = target_date.isoweekday()  # 1-7
+    flights = query("SELECT flight_no FROM flight_weekday WHERE weekday = :w", w=weekday)
+    for flight_no in flights:
+        create_instance(flight_no, target_date)  # 含舱位定价初始化
+```
+
 详细 SQL 见 SCHEMA.md §8.2。
 
 ---
@@ -809,7 +802,7 @@ http.interceptors.response.use(
 
 ---
 
-## 9. 前端设计原则（避免 AI 美学）
+## 9. 前端设计原则
 
 这一节是项目的"风格宪法"。**任何前端 PR 都应该过这一节的检查**。
 
@@ -825,7 +818,7 @@ http.interceptors.response.use(
 - **细描边胜过阴影**：分隔用 `1px solid #E5E6EB`，不用 box-shadow。
 - **数字用等宽字体**：价格、时间、航班号用 `font-feature-settings: 'tnum'` 等宽数字。
 
-### 9.2 严格禁止清单（"AI 味"特征）
+### 9.2 严格禁止清单
 
 以下元素一旦出现就要返工：
 
@@ -842,48 +835,7 @@ http.interceptors.response.use(
 | 卡片大量阴影叠加                | 拟物的 AI 风                | 边框替代              |
 | 全屏 hero 大图 + 大标题         | SaaS 落地页风               | 直接展示搜索框        |
 
-### 9.3 推荐设计令牌
-
-写入 `styles/tokens.scss`：
-
-```scss
-// 主色:可选两套
-$primary:        #2B66E0;   // 蓝色路线(像携程)
-// $primary:     #FF6F00;   // 橙色路线(像飞猪)
-
-// 中性色
-$text-primary:   #1F2329;
-$text-regular:   #4E5969;
-$text-secondary: #86909C;
-$text-disabled:  #C9CDD4;
-
-// 边框
-$border-1:       #E5E6EB;   // 浅,用于卡片分隔
-$border-2:       #C9CDD4;   // 深,用于输入框
-
-// 背景
-$bg-page:        #F5F7FA;
-$bg-card:        #FFFFFF;
-
-// 状态
-$success:        #00B42A;
-$warning:        #FF7D00;
-$danger:         #F53F3F;
-
-// 圆角
-$radius-sm:      2px;
-$radius:         4px;
-$radius-lg:      8px;        // 仅大卡片用
-
-// 阴影(慎用,优先用 border)
-$shadow:         0 1px 4px rgba(0,0,0,0.04);
-
-// 字体
-$font-mono:      'SF Mono', 'JetBrains Mono', Consolas, monospace;
-$font-sans:      -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
-```
-
-### 9.4 关键页面的设计参考
+### 9.3 关键页面的设计参考
 
 | 页面          | 参考对象                     | 关键点                                                       |
 | ------------- | ---------------------------- | ------------------------------------------------------------ |
@@ -895,264 +847,11 @@ $font-sans:      -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 | 订单列表      | 12306                        | 表格式或卡片式皆可，但要展示 5+ 列信息                       |
 | 管理端        | Element Plus 默认 admin 模板 | 左侧导航 + 顶部面包屑 + 中央表格                             |
 
-### 9.5 字体与字号
-
-```scss
-// 中文标题
-font-size: 16px / 18px / 20px;    // 不用更大
-
-// 价格(强调)
-font-size: 24px;
-font-family: $font-mono;          // 等宽,显得严谨
-
-// 正文
-font-size: 14px;
-
-// 辅助信息(航站楼、备注)
-font-size: 12px;
-color: $text-secondary;
-```
-
 ---
 
-## 10. 开发与协作规范
-
-### 10.1 Git 分支模型
-
-- `main`：稳定分支，可演示。
-- `dev`：开发主分支，所有 feature 分支合并到这里。
-- `feature/<name>`：功能分支。命名示例：`feature/booking-flow`、`feature/admin-flight-crud`。
-- `fix/<name>`：修复分支。
-
-合并通过 PR + code review。
-
-### 10.2 代码风格
-
-| 工具              | 用途                                              |
-| ----------------- | ------------------------------------------------- |
-| ruff              | Python lint + format(代替 black + flake8 + isort) |
-| mypy              | Python 类型检查(可选)                             |
-| eslint + prettier | 前端 lint + format                                |
-
-提交前自动跑：
-
-```bash
-# 后端
-ruff check . && ruff format .
-
-# 前端
-pnpm lint && pnpm format
-```
-
-### 10.3 命名规范
-
-- Python 文件、变量：`snake_case`
-- Python 类：`PascalCase`
-- TypeScript 变量：`camelCase`
-- TypeScript 类型/接口：`PascalCase`
-- Vue 组件文件：`PascalCase.vue`
-- API 路径：`/kebab-case/{snake_param}`，如 `/flights/instances/{instance_id}`
-
-### 10.4 任务分工建议
-
-基于"骨架由你搭、队友填数据"的现实：
-
-| 角色         | 任务                                                  |
-| ------------ | ----------------------------------------------------- |
-| 你（架构师） | core/、auth/、workflows/、jobs/、防超卖测试、API 联调 |
-| 队友 A       | scripts/seed_data.py + domains/{city,airline}/        |
-| 队友 B       | domains/{flight,user}/                                |
-| 队友 C       | 前端 views/admin/ 管理端页面                          |
-| 队友 D       | 前端 views/user/ 用户端页面                           |
-
-**关键节点**：你先完成 `core/` + `auth/` + 一个完整的领域包样板（如 `domains/city/`），队友照样板填其他领域。
-
-### 10.5 文档同步
-
-- PRD 改了 → 评估 SCHEMA / API 影响并同步
-- SCHEMA 改了 → 同步 ORM models.py 和迁移脚本
-- API 改了 → 同步前端 `api/` 和 `types/`
-
----
-
-## 11. 环境与部署
-
-### 11.1 本地开发环境
-
-| 组件         | 推荐安装方式                                                 |
-| ------------ | ------------------------------------------------------------ |
-| MySQL 8.0    | Docker 容器: `docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root mysql:8.0` |
-| Python 3.11+ | pyenv 或系统包管理器                                         |
-| Node 20+     | nvm                                                          |
-| pnpm         | `npm install -g pnpm`                                        |
-
-### 11.2 启动顺序
-
-```bash
-# 1. 启动 MySQL
-docker compose up -d mysql
-
-# 2. 初始化数据库(执行 SCHEMA.md §9 的 DDL)
-mysql -u root -p < scripts/init_db.sql
-
-# 3. 启动后端
-cd backend
-pip install -e .
-uvicorn app.main:app --reload --port 8000
-
-# 4. 启动前端
-cd frontend
-pnpm install
-pnpm dev   # 默认 5173 端口
-```
-
-### 11.3 环境变量
-
-`.env`（不入库）：
-
-```
-DB_URL=mysql+pymysql://root:root@localhost:3306/airline_ticketing?charset=utf8mb4
-JWT_SECRET=change-me-in-production
-JWT_EXPIRE_MINUTES=1440
-ORDER_EXPIRE_MINUTES=15
-SCHEDULER_INTERVAL_SECONDS=60
-CORS_ORIGINS=http://localhost:5173
-```
-
-### 11.4 部署（如有）
-
-课程作业一般本机演示即可。如果需要部署：
-
-- 前端 `pnpm build` 出静态文件，nginx 托管。
-- 后端 `uvicorn app.main:app --host 0.0.0.0 --port 8000` + systemd / docker。
-- nginx 反向代理 `/api/` 到后端，`/` 到前端。
-
----
-
-## 附录 A：核心代码模板速查
-
-### A.1 一个完整领域包的最小代码（以 `domains/airline/` 为例）
-
-**models.py**
-
-```python
-from sqlalchemy import Column, String
-from app.core.database import Base
-
-class Airline(Base):
-    __tablename__ = "airline"
-    iata_code = Column(String(2), primary_key=True)
-    airline_name = Column(String(128), nullable=False, unique=True)
-```
-
-**schemas.py**
-
-```python
-from pydantic import BaseModel, Field
-
-class AirlineCreate(BaseModel):
-    iata_code: str = Field(..., min_length=2, max_length=2)
-    airline_name: str = Field(..., max_length=128)
-
-class AirlineResponse(BaseModel):
-    iata_code: str
-    airline_name: str
-    model_config = {"from_attributes": True}
-```
-
-**repository.py**
-
-```python
-from sqlalchemy.orm import Session
-from .models import Airline
-
-class AirlineRepository:
-    def __init__(self, db: Session):
-        self.db = db
-
-    def get(self, iata_code: str) -> Airline | None:
-        return self.db.get(Airline, iata_code)
-
-    def list_all(self) -> list[Airline]:
-        return self.db.query(Airline).all()
-
-    def create(self, **data) -> Airline:
-        obj = Airline(**data)
-        self.db.add(obj)
-        self.db.flush()
-        return obj
-```
-
-**service.py**
-
-```python
-from sqlalchemy.orm import Session
-from .repository import AirlineRepository
-from .schemas import AirlineCreate
-from app.core.exceptions import AppException
-
-class AirlineService:
-    def __init__(self, db: Session):
-        self.db = db
-        self.repo = AirlineRepository(db)
-
-    def create(self, payload: AirlineCreate):
-        if self.repo.get(payload.iata_code):
-            raise AppException("航司代码已存在")
-        with self.db.begin():
-            return self.repo.create(**payload.model_dump())
-
-    def list_all(self):
-        return self.repo.list_all()
-```
-
-**router.py**
-
-```python
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from app.deps import get_db
-from app.auth.dependencies import require_perm
-from .service import AirlineService
-from .schemas import AirlineCreate, AirlineResponse
-
-router = APIRouter(prefix="/airlines", tags=["airline"])
-
-@router.get("/", response_model=list[AirlineResponse])
-def list_airlines(db: Session = Depends(get_db)):
-    return AirlineService(db).list_all()
-
-@router.post("/", response_model=AirlineResponse,
-             dependencies=[Depends(require_perm("airline"))])
-def create_airline(payload: AirlineCreate, db: Session = Depends(get_db)):
-    return AirlineService(db).create(payload)
-```
-
-### A.2 main.py 注册路由的方式
-
-```python
-from fastapi import FastAPI
-from app.domains.city.router       import router as city_router
-from app.domains.airline.router    import router as airline_router
-# ...
-from app.workflows.booking.router  import router as booking_router
-from app.workflows.search.router   import router as search_router
-from app.auth.router               import router as auth_router
-
-app = FastAPI(lifespan=lifespan, title="Airline Ticketing API")
-
-app.include_router(auth_router,    prefix="/auth")
-app.include_router(city_router,    prefix="/api")
-app.include_router(airline_router, prefix="/api")
-# ...
-app.include_router(booking_router, prefix="/api")
-app.include_router(search_router,  prefix="/api")
-```
-
----
-
-## 附录 B：变更记录
+## 附录 ：变更记录
 
 | 版本 | 日期       | 修订人 | 变更说明                                                     |
 | ---- | ---------- | ------ | ------------------------------------------------------------ |
-| v1.0 | 2026-05-09 | 王铿轶 | 基于 PRD v1.0 与 SCHEMA v1.0 编写。技术栈：FastAPI + SQLAlchemy + Vue 3 + Element Plus + JWT + APScheduler。架构：三档分层(workflows/domains/core),领域包内部四层(router/service/repository/models)。前端确立工业风设计原则,明确禁止 AI 美学元素 |
+| v1.0 | 2026-05-09 | 王铿轶 | 基于 PRD v1.0 与 SCHEMA v1.0 编写。技术栈：FastAPI + SQLAlchemy + Vue 3 + Element Plus + JWT + APScheduler。架构：三档分层(workflows/domains/core),领域包内部四层(router/service/repository/models)。前端美学设计 |
+| v2.0 | 2026-05-10 | 王铿轶 | 根据 PRD/SCHEMA v2.0同步：删除 admin_permission 资源级权限，统一为 role-based 单一管理员角色；新增"每日生成 3 个月后航班实例"定时任务；新增 airport-city_near_apt 双写规则；新增库存双重表达的事务同步规则；删除 Alembic 迁移工具；JWT 改为 httpOnly cookie 传递；前端 TS 改为可选 |
