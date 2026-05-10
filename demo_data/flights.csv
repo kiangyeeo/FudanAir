@@ -1,0 +1,2 @@
+﻿flight_no,scheduled_departure,scheduled_arrival,fuel_infra_fee,dep_airport_code,dep_terminal,arr_airport_code,arr_terminal,airline_code,aircraft_model
+CA1234,8:00:00,10:30:00,50,PEK,T3,SHA,T2,CA,B738
