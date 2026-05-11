@@ -6,15 +6,19 @@ import type { NearbyFlightCandidate } from '@/types/search'
 defineProps<{
   items: NearbyFlightCandidate[]
 }>()
+
+const emit = defineEmits<{
+  select: [candidate: NearbyFlightCandidate]
+}>()
 </script>
 
 <template>
   <section class="flight-list">
     <h2>临近机场方案</h2>
     <template v-if="items.length">
-      <div v-for="item in items" :key="item.instance_id" class="nearby-item">
+      <div v-for="item in items" :key="`${item.replacement}-${item.instance_id}`" class="nearby-item">
         <el-tag size="small" type="warning">{{ item.replacement === 'departure' ? '替换出发机场' : '替换到达机场' }}</el-tag>
-        <FlightCard :candidate="item" />
+        <FlightCard :candidate="item" @select="emit('select', item)" />
       </div>
     </template>
     <EmptyState v-else title="暂无临近机场方案" description="系统会按城市临近机场关系补充替代路线。" />

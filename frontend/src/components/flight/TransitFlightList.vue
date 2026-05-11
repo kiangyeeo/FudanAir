@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
 import { formatCurrency, formatDuration, formatTime } from '@/utils/format'
-import type { TransitCandidate } from '@/types/search'
+import type { DirectFlightCandidate, TransitCandidate } from '@/types/search'
 
 defineProps<{
   items: TransitCandidate[]
+}>()
+
+const emit = defineEmits<{
+  select: [candidate: DirectFlightCandidate]
 }>()
 </script>
 
@@ -18,7 +22,13 @@ defineProps<{
           <p>{{ item.leg1.dep_airport_code }} {{ formatTime(item.leg1.scheduled_departure) }} / {{ item.leg2.arr_airport_code }} {{ formatTime(item.leg2.scheduled_arrival) }}</p>
         </div>
         <div class="mono-num">中转 {{ item.transit_airport }} · {{ formatDuration(item.transit_minutes) }}</div>
-        <div class="price mono-num">{{ formatCurrency(item.total_min_price) }}</div>
+        <div class="price-block">
+          <div class="price mono-num">{{ formatCurrency(item.total_min_price) }}</div>
+          <div class="leg-actions">
+            <el-button size="small" @click="emit('select', item.leg1)">订第一段</el-button>
+            <el-button size="small" @click="emit('select', item.leg2)">订第二段</el-button>
+          </div>
+        </div>
       </article>
     </template>
     <EmptyState v-else title="暂无中转方案" description="中转方案需满足 2 至 6 小时衔接窗口。" />
@@ -59,5 +69,16 @@ p {
   font-size: 22px;
   font-weight: 700;
   text-align: right;
+}
+
+.price-block {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.leg-actions {
+  display: flex;
+  gap: 6px;
 }
 </style>

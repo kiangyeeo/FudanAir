@@ -1,59 +1,175 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
-import type { FlightSearchRequest } from '@/types/search'
+import { reactive, watch } from 'vue'
+import type { Airline } from '@/types/flight'
+import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   loading?: boolean
   initial?: FlightSearchRequest | null
-}>()
+  cities?: string[]
+  airlines?: Airline[]
+}>(), {
+  loading: false,
+  initial: null,
+  cities: () => [],
+  airlines: () => [],
+})
 
 const emit = defineEmits<{
   search: [payload: FlightSearchRequest]
+  reset: []
 }>()
 
-const form = reactive<FlightSearchRequest>({
-  dep_city: props.initial?.dep_city ?? '上海',
-  arr_city: props.initial?.arr_city ?? '北京',
-  flight_date: props.initial?.flight_date ?? new Date().toISOString().slice(0, 10),
-  filters: props.initial?.filters ?? { include_stopover: true },
-  sort: props.initial?.sort ?? { field: 'price', order: 'asc' },
+type SearchForm = {
+  dep_city: string
+  arr_city: string
+  flight_date: string
+  filters: Required<SearchFilters>
+  sort: SearchSort
+}
+
+const form = reactive<SearchForm>({
+  dep_city: '',
+  arr_city: '',
+  flight_date: '',
+  filters: defaultFilters(),
+  sort: defaultSort(),
 })
 
+watch(
+  () => props.initial,
+  (criteria) => {
+    applyCriteria(criteria ?? defaultCriteria())
+  },
+  { immediate: true },
+)
+
+function defaultCriteria(): FlightSearchRequest {
+  return {
+    dep_city: '上海',
+    arr_city: '北京',
+    flight_date: new Date().toISOString().slice(0, 10),
+    filters: defaultFilters(),
+    sort: defaultSort(),
+  }
+}
+
+function defaultFilters(): Required<SearchFilters> {
+  return {
+    airline_code: null,
+    cabin_class: null,
+    departure_time_range: null,
+    include_stopover: true,
+  }
+}
+
+function defaultSort(): SearchSort {
+  return { field: 'price', order: 'asc' }
+}
+
+function applyCriteria(criteria: FlightSearchRequest) {
+  form.dep_city = criteria.dep_city
+  form.arr_city = criteria.arr_city
+  form.flight_date = criteria.flight_date
+  form.filters = { ...defaultFilters(), ...criteria.filters }
+  form.sort = { ...defaultSort(), ...criteria.sort }
+}
+
+function buildPayload(): FlightSearchRequest {
+  return {
+    dep_city: form.dep_city.trim(),
+    arr_city: form.arr_city.trim(),
+    flight_date: form.flight_date,
+    filters: {
+      airline_code: form.filters.airline_code || null,
+      cabin_class: form.filters.cabin_class || null,
+      departure_time_range: form.filters.departure_time_range,
+      include_stopover: form.filters.include_stopover,
+    },
+    sort: { field: form.sort.field, order: form.sort.order },
+  }
+}
+
 function submit() {
-  const sort = form.sort ?? { field: 'price', order: 'asc' as const }
-  emit('search', {
-    ...form,
-    filters: { ...form.filters },
-    sort: { field: sort.field, order: sort.order },
-  })
+  emit('search', buildPayload())
+}
+
+function reset() {
+  applyCriteria(defaultCriteria())
+  emit('reset')
 }
 </script>
 
 <template>
   <el-form class="filter-panel" :model="form" label-position="top">
     <el-form-item label="出发城市">
-      <el-input v-model="form.dep_city" />
+      <el-select v-model="form.dep_city" filterable allow-create default-first-option>
+        <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
+      </el-select>
     </el-form-item>
     <el-form-item label="到达城市">
-      <el-input v-model="form.arr_city" />
+      <el-select v-model="form.arr_city" filterable allow-create default-first-option>
+        <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
+      </el-select>
     </el-form-item>
     <el-form-item label="出行日期">
-      <el-date-picker v-model="form.flight_date" type="date" value-format="YYYY-MM-DD" />
+      <el-date-picker v-model="form.flight_date" type="date" value-format="YYYY-MM-DD" class="full-width" />
+    </el-form-item>
+    <el-form-item label="航司">
+      <el-select v-model="form.filters.airline_code" clearable filterable>
+        <el-option v-for="airline in airlines" :key="airline.iata_code" :label="`${airline.iata_code} ${airline.airline_name}`" :value="airline.iata_code" />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="舱位">
+      <el-select v-model="form.filters.cabin_class" clearable>
+        <el-option label="经济舱" value="经济舱" />
+        <el-option label="头等舱" value="头等舱" />
+      </el-select>
+    </el-form-item>
+    <el-form-item label="起飞时间">
+      <el-time-picker
+        v-model="form.filters.departure_time_range"
+        is-range
+        clearable
+        value-format="HH:mm:ss"
+        start-placeholder="开始"
+        end-placeholder="结束"
+        class="full-width"
+      />
     </el-form-item>
     <el-form-item label="排序">
-      <el-select v-model="form.sort!.field">
+      <el-select v-model="form.sort.field">
         <el-option label="价格" value="price" />
         <el-option label="总时长" value="duration" />
         <el-option label="起飞时间" value="departure" />
       </el-select>
     </el-form-item>
-    <el-button type="primary" :loading="loading" @click="submit">搜索</el-button>
+    <el-form-item label="顺序">
+      <el-segmented v-model="form.sort.order" :options="[{ label: '升序', value: 'asc' }, { label: '降序', value: 'desc' }]" />
+    </el-form-item>
+    <el-checkbox v-model="form.filters.include_stopover">包含经停航班</el-checkbox>
+    <div class="actions">
+      <el-button type="primary" :loading="loading" @click="submit">搜索</el-button>
+      <el-button @click="reset">重置</el-button>
+    </div>
   </el-form>
 </template>
 
 <style scoped>
 .filter-panel {
   display: grid;
+  gap: 8px;
+}
+
+.full-width,
+.filter-panel :deep(.el-select),
+.filter-panel :deep(.el-segmented) {
+  width: 100%;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 </style>
