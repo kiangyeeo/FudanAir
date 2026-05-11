@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Tickets } from '@element-plus/icons-vue'
 import { formatCurrency, formatTime } from '@/utils/format'
 import type { DirectFlightCandidate, NearbyFlightCandidate } from '@/types/search'
 
 const props = defineProps<{
   candidate: DirectFlightCandidate | NearbyFlightCandidate
+}>()
+
+const emit = defineEmits<{
+  select: [candidate: DirectFlightCandidate | NearbyFlightCandidate]
 }>()
 
 const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 头等舱 ${props.candidate.first_left}`)
@@ -25,7 +30,10 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
       <strong>{{ formatTime(candidate.scheduled_arrival) }}</strong>
       <span>{{ candidate.arr_airport_code }}</span>
     </div>
-    <div class="price mono-num">{{ formatCurrency(candidate.min_price) }}</div>
+    <div class="price-block">
+      <div class="price mono-num">{{ formatCurrency(candidate.min_price) }}</div>
+      <el-button type="primary" size="small" :icon="Tickets" @click="emit('select', candidate)">预订</el-button>
+    </div>
   </article>
 </template>
 
@@ -74,5 +82,11 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
   font-size: 22px;
   font-weight: 700;
   text-align: right;
+}
+
+.price-block {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
 }
 </style>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { bookingApi } from '@/api/booking'
 import PassengerForm from '@/components/order/PassengerForm.vue'
@@ -9,6 +9,7 @@ import type { BookingRequest } from '@/types/booking'
 import type { Passenger } from '@/types/user'
 
 const router = useRouter()
+const route = useRoute()
 const bookingStore = useBookingStore()
 const loading = ref(false)
 const passengers = ref<Passenger[]>([{ id_no: '', real_name: '', birth_date: '' }])
@@ -32,6 +33,29 @@ async function submit() {
     loading.value = false
   }
 }
+
+function queryText(key: string): string | null {
+  const value = route.query[key]
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+  return value ?? null
+}
+
+onMounted(() => {
+  const instanceId = queryText('instance_id')
+  const cabinClass = queryText('cabin_class')
+  const fareType = queryText('fare_type')
+  if (instanceId) {
+    form.instance_id = instanceId
+  }
+  if (cabinClass === '经济舱' || cabinClass === '头等舱') {
+    form.cabin_class = cabinClass
+  }
+  if (fareType) {
+    form.fare_type = fareType
+  }
+})
 </script>
 
 <template>
