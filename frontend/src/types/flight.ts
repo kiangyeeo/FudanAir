@@ -5,9 +5,8 @@ export interface City {
 }
 
 export interface NearAirport {
-  city_name: string
   iata_code: string
-  airport_name?: string
+  airport_name: string
   distance: number
 }
 

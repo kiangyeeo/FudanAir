@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.schemas import AdminLoginRequest, LoginRequest, RegisterRequest
+from app.core.database import transaction
 from app.core.exceptions import (
     AuthenticationError,
     InvalidPhoneFormatError,
@@ -27,7 +28,7 @@ class AuthService:
     def register(self, payload: RegisterRequest) -> User:
         self._validate_phone(payload.phone)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if self._get_user_by_phone(payload.phone):
                     raise PhoneAlreadyExistsError()
                 user = User(
