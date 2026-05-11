@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections import defaultdict
-from datetime import date, time, timedelta
-from decimal import Decimal, ROUND_HALF_UP
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -13,17 +12,8 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.config import settings
-from app.core.constants import ECONOMY_STANDARD_RATIO
 from app.core.id_generator import gen_instance_id
-
-
-_MINUTES_PER_DAY = 24 * 60
-_ECONOMY_BASE_PRICE = Decimal("420.00")
-_ECONOMY_MINUTE_RATE = Decimal("2.10")
-_ECONOMY_SPECIAL_DISCOUNT = Decimal("0.72")
-_FIRST_CLASS_MULTIPLIER = Decimal("3.20")
-_PRICE_STEP = Decimal("10.00")
-_CENT = Decimal("0.01")
+from app.domains.flight.pricing import default_cabin_price_specs
 
 
 def generate_flight_instances(
@@ -57,16 +47,21 @@ def generate_flight_instances(
 def generate_cabin_prices(cur: Any) -> int:
     params = []
     for instance_id, economy_left, first_left, dep_time, arr_time in _fetch_instances(cur):
-        economy_standard, economy_special = _split_economy_seats(int(economy_left))
-        standard_price, special_price, first_price = _price_set(dep_time, arr_time)
-        params.extend(
-            [
-                (instance_id, "经济舱", "标准", standard_price, economy_standard),
-                (instance_id, "经济舱", "特价", special_price, economy_special),
-            ]
-        )
-        if int(first_left) > 0:
-            params.append((instance_id, "头等舱", "标准", first_price, int(first_left)))
+        for spec in default_cabin_price_specs(
+            int(economy_left),
+            int(first_left),
+            dep_time,
+            arr_time,
+        ):
+            params.append(
+                (
+                    instance_id,
+                    spec.cabin_class,
+                    spec.fare_type,
+                    spec.price,
+                    spec.available_seats,
+                )
+            )
     return _executemany(cur, _insert_cabin_price_sql(), params)
 
 
@@ -98,45 +93,6 @@ def _fetch_instances(cur: Any) -> list[tuple[Any, ...]]:
         """
     )
     return list(cur.fetchall())
-
-
-def _split_economy_seats(total: int) -> tuple[int, int]:
-    ratio = Decimal(str(ECONOMY_STANDARD_RATIO))
-    standard = int((Decimal(total) * ratio).to_integral_value(rounding=ROUND_HALF_UP))
-    standard = min(max(standard, 0), total)
-    return standard, total - standard
-
-
-def _price_set(dep_time: Any, arr_time: Any) -> tuple[Decimal, Decimal, Decimal]:
-    duration = Decimal(_flight_duration_minutes(dep_time, arr_time))
-    economy_price = _round_price(_ECONOMY_BASE_PRICE + _ECONOMY_MINUTE_RATE * duration)
-    special_price = _round_price(economy_price * _ECONOMY_SPECIAL_DISCOUNT)
-    first_price = _round_price(economy_price * _FIRST_CLASS_MULTIPLIER)
-    return economy_price, special_price, first_price
-
-
-def _flight_duration_minutes(dep_time: Any, arr_time: Any) -> int:
-    dep_minutes = _time_to_minutes(dep_time)
-    arr_minutes = _time_to_minutes(arr_time)
-    if arr_minutes <= dep_minutes:
-        arr_minutes += _MINUTES_PER_DAY
-    return arr_minutes - dep_minutes
-
-
-def _time_to_minutes(value: Any) -> int:
-    if isinstance(value, timedelta):
-        return int(value.total_seconds() // 60)
-    if isinstance(value, time):
-        return value.hour * 60 + value.minute
-    if isinstance(value, str):
-        hour, minute, *_ = value.split(":")
-        return int(hour) * 60 + int(minute)
-    raise TypeError(f"无法解析 TIME 字段: {value!r}")
-
-
-def _round_price(value: Decimal) -> Decimal:
-    rounded = (value / _PRICE_STEP).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-    return (rounded * _PRICE_STEP).quantize(_CENT)
 
 
 def _executemany(cur: Any, sql: str, params: list[tuple[Any, ...]]) -> int:

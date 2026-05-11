@@ -29,14 +29,26 @@ Base = declarative_base()
 
 @contextmanager
 def transaction(db: Session) -> Iterator[None]:
-    if not db.in_transaction():
-        with db.begin():
-            yield
+    depth = int(db.info.get("_transaction_depth", 0))
+    if depth > 0:
+        yield
         return
 
+    db.info["_transaction_depth"] = depth + 1
     try:
-        yield
-        db.commit()
-    except Exception:
-        db.rollback()
-        raise
+        if db.in_transaction():
+            try:
+                yield
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+            return
+
+        with db.begin():
+            yield
+    finally:
+        if depth:
+            db.info["_transaction_depth"] = depth
+        else:
+            db.info.pop("_transaction_depth", None)

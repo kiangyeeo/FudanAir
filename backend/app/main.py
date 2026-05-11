@@ -18,6 +18,7 @@ from app.domains.airline.router import (
     airline_router,
 )
 from app.domains.city.router import airport_router, city_router
+from app.domains.flight.router import flight_instance_router, flight_router
 
 
 configure_logging()
@@ -60,6 +61,8 @@ app.include_router(city_router, prefix="/api")
 app.include_router(airport_router, prefix="/api")
 app.include_router(airline_router, prefix="/api")
 app.include_router(aircraft_type_router, prefix="/api")
+app.include_router(flight_router, prefix="/api")
+app.include_router(flight_instance_router, prefix="/api")
 
 
 @app.exception_handler(AppException)
