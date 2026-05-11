@@ -20,8 +20,8 @@ export const flightApi = {
   listAirlines: () => http.get<Airline[]>('/airlines'),
   listAircraftTypes: () => http.get<AircraftType[]>('/aircraft-types'),
   listFlights: (params: FlightListParams = {}) => http.get<PageResult<Flight>>('/flights', { params }),
-  getFlight: (flightNo: string) => http.get<Flight>(`/flights/${flightNo}`),
+  getFlight: (flightNo: string) => http.get<Flight>(`/flights/${encodeURIComponent(flightNo)}`),
   listInstances: (params: FlightInstanceListParams = {}) => http.get<PageResult<FlightInstance>>('/flight-instances', { params }),
-  getInstance: (instanceId: string) => http.get<FlightInstance>(`/flight-instances/${instanceId}`),
-  listCabinPrices: (instanceId: string) => http.get<CabinPrice[]>(`/flight-instances/${instanceId}/cabin-prices`),
+  getInstance: (instanceId: string) => http.get<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}`),
+  listCabinPrices: (instanceId: string) => http.get<CabinPrice[]>(`/flight-instances/${encodeURIComponent(instanceId)}/cabin-prices`),
 }

@@ -1,5 +1,20 @@
 import { http } from './client'
-import type { AircraftType, Airline, Airport, City, Flight, FlightInstance, NearAirport } from '@/types/flight'
+import type {
+  AircraftType,
+  Airline,
+  Airport,
+  CabinPrice,
+  CabinPriceReplacePayload,
+  City,
+  Flight,
+  FlightCreatePayload,
+  FlightInstance,
+  FlightInstanceBatchPayload,
+  FlightInstanceCreatePayload,
+  FlightInstanceStatusPayload,
+  FlightPayload,
+  NearAirport,
+} from '@/types/flight'
 
 export const adminApi = {
   createCity: (payload: City) => http.post<City>('/cities', payload),
@@ -19,12 +34,16 @@ export const adminApi = {
   updateAircraftType: (model: string, payload: Omit<AircraftType, 'model'>) =>
     http.put<AircraftType>(`/aircraft-types/${encodeURIComponent(model)}`, payload),
   deleteAircraftType: (model: string) => http.delete<void>(`/aircraft-types/${encodeURIComponent(model)}`),
-  createFlight: (payload: Flight) => http.post<Flight>('/flights', payload),
-  updateFlight: (flightNo: string, payload: Flight) => http.put<Flight>(`/flights/${flightNo}`, payload),
-  deleteFlight: (flightNo: string) => http.delete<void>(`/flights/${flightNo}`),
-  createInstance: (payload: Partial<FlightInstance>) => http.post<FlightInstance>('/flight-instances', payload),
-  batchGenerateInstances: (payload: unknown) => http.post<void>('/flight-instances/batch-generate', payload),
-  updateInstanceStatus: (instanceId: string, payload: { status: string }) => http.patch<FlightInstance>(`/flight-instances/${instanceId}/status`, payload),
-  deleteInstance: (instanceId: string) => http.delete<void>(`/flight-instances/${instanceId}`),
-  replaceCabinPrices: (instanceId: string, payload: unknown) => http.put<void>(`/flight-instances/${instanceId}/cabin-prices`, payload),
+  createFlight: (payload: FlightCreatePayload) => http.post<Flight>('/flights', payload),
+  updateFlight: (flightNo: string, payload: FlightPayload) =>
+    http.put<Flight>(`/flights/${encodeURIComponent(flightNo)}`, payload),
+  deleteFlight: (flightNo: string) => http.delete<void>(`/flights/${encodeURIComponent(flightNo)}`),
+  createInstance: (payload: FlightInstanceCreatePayload) => http.post<FlightInstance>('/flight-instances', payload),
+  batchGenerateInstances: (payload: FlightInstanceBatchPayload) =>
+    http.post<FlightInstance[]>('/flight-instances/batch-generate', payload),
+  updateInstanceStatus: (instanceId: string, payload: FlightInstanceStatusPayload) =>
+    http.patch<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}/status`, payload),
+  deleteInstance: (instanceId: string) => http.delete<void>(`/flight-instances/${encodeURIComponent(instanceId)}`),
+  replaceCabinPrices: (instanceId: string, payload: CabinPriceReplacePayload) =>
+    http.put<CabinPrice[]>(`/flight-instances/${encodeURIComponent(instanceId)}/cabin-prices`, payload),
 }

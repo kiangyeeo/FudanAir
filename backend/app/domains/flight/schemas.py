@@ -1,15 +1,24 @@
 from __future__ import annotations
 
-from datetime import date, time
+from datetime import date, time, timedelta
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 CabinClass = Literal["经济舱", "头等舱"]
 FareType = Literal["标准", "特价"]
 InstanceStatus = Literal["计划", "可订", "已起飞", "已到达", "已取消"]
+
+
+def normalize_db_time(value: Any) -> Any:
+    if not isinstance(value, timedelta):
+        return value
+    total_seconds = int(value.total_seconds()) % (24 * 60 * 60)
+    hour, remainder = divmod(total_seconds, 60 * 60)
+    minute, second = divmod(remainder, 60)
+    return time(hour=hour, minute=minute, second=second, microsecond=value.microseconds)
 
 
 class FlightBase(BaseModel):
@@ -55,6 +64,11 @@ class FlightListResponse(BaseModel):
     aircraft_model: str
 
     model_config = {"from_attributes": True}
+
+    @field_validator("scheduled_departure", "scheduled_arrival", mode="before")
+    @classmethod
+    def normalize_time_fields(cls, value: Any) -> Any:
+        return normalize_db_time(value)
 
 
 class FlightDetailResponse(FlightListResponse):
@@ -127,6 +141,11 @@ class FlightInstanceDetailResponse(FlightInstanceListResponse):
     airline_code: str
     airline_name: str | None = None
     cabin_prices: list[CabinPriceResponse]
+
+    @field_validator("scheduled_departure", "scheduled_arrival", mode="before")
+    @classmethod
+    def normalize_time_fields(cls, value: Any) -> Any:
+        return normalize_db_time(value)
 
 
 class FlightInstancePageResponse(BaseModel):
