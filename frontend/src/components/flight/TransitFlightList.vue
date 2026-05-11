@@ -17,11 +17,11 @@ const emit = defineEmits<{
     <h2>中转方案</h2>
     <template v-if="items.length">
       <article v-for="item in items" :key="`${item.leg1.instance_id}-${item.leg2.instance_id}`" class="transit-card">
-        <div>
+        <div class="flight-summary">
           <strong>{{ item.leg1.flight_no }} → {{ item.leg2.flight_no }}</strong>
           <p>{{ item.leg1.dep_airport_code }} {{ formatTime(item.leg1.scheduled_departure) }} / {{ item.leg2.arr_airport_code }} {{ formatTime(item.leg2.scheduled_arrival) }}</p>
         </div>
-        <div class="mono-num">中转 {{ item.transit_airport }} · {{ formatDuration(item.transit_minutes) }}</div>
+        <div class="transit-info mono-num">中转 {{ item.transit_airport }} · {{ formatDuration(item.transit_minutes) }}</div>
         <div class="price-block">
           <div class="price mono-num">{{ formatCurrency(item.total_min_price) }}</div>
           <div class="leg-actions">
@@ -48,14 +48,27 @@ h2 {
 
 .transit-card {
   display: grid;
-  grid-template-columns: 1fr 180px 120px;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, max-content) minmax(160px, max-content);
   gap: 14px;
   align-items: center;
+  min-width: 0;
   min-height: 86px;
   padding: 12px 14px;
   background: var(--fa-white);
   border: 1px solid var(--fa-border);
   border-radius: var(--fa-radius);
+}
+
+.flight-summary,
+.transit-info,
+.price-block {
+  min-width: 0;
+}
+
+.flight-summary strong,
+.transit-info,
+p {
+  overflow-wrap: anywhere;
 }
 
 p {
@@ -79,6 +92,26 @@ p {
 
 .leg-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+@media (max-width: 720px) {
+  .transit-card {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .transit-info,
+  .price,
+  .price-block {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .leg-actions {
+    justify-content: flex-start;
+  }
 }
 </style>
