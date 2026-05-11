@@ -13,6 +13,11 @@ from app.config import settings
 from app.core.exceptions import AppException
 from app.core.logging import configure_logging, get_logger
 from app.core.scheduler import shutdown_scheduler, start_scheduler
+from app.domains.airline.router import (
+    aircraft_type_router,
+    airline_router,
+)
+from app.domains.city.router import airport_router, city_router
 
 
 configure_logging()
@@ -51,6 +56,10 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix="/api/auth")
+app.include_router(city_router, prefix="/api")
+app.include_router(airport_router, prefix="/api")
+app.include_router(airline_router, prefix="/api")
+app.include_router(aircraft_type_router, prefix="/api")
 
 
 @app.exception_handler(AppException)
