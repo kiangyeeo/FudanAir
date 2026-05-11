@@ -3,49 +3,54 @@ import { authApi } from '@/api/auth'
 import type { AdminLoginRequest, AuthSession, LoginRequest, RegisterRequest } from '@/types/auth'
 
 interface AuthState {
-  session: AuthSession | null
-  loaded: boolean
+  currentUser: AuthSession | null
+  initialized: boolean
+  loading: boolean
 }
 
 export const useAuthStore = defineStore('auth', {
   state: (): AuthState => ({
-    session: null,
-    loaded: false,
+    currentUser: null,
+    initialized: false,
+    loading: false,
   }),
   getters: {
-    isAuthenticated: (state) => Boolean(state.session),
-    role: (state) => state.session?.role,
-    displayName: (state) => state.session?.name ?? '',
-    isAdmin: (state) => state.session?.role === 'admin',
+    isAuthenticated: (state) => Boolean(state.currentUser),
+    role: (state) => state.currentUser?.role,
+    displayName: (state) => state.currentUser?.name ?? '',
+    isAdmin: (state) => state.currentUser?.role === 'admin',
   },
   actions: {
-    setSession(session: AuthSession | null) {
-      this.session = session
-      this.loaded = true
+    setCurrentUser(user: AuthSession | null) {
+      this.currentUser = user
+      this.initialized = true
     },
-    async ensureSession() {
-      if (this.loaded) {
-        return this.session
+    async init() {
+      if (this.initialized) {
+        return this.currentUser
       }
 
+      this.loading = true
       try {
-        const session = await authApi.me()
-        this.setSession(session)
-        return session
+        const user = await authApi.getMe()
+        this.setCurrentUser(user)
+        return user
       } catch {
-        this.setSession(null)
+        this.setCurrentUser(null)
         return null
+      } finally {
+        this.loading = false
       }
     },
     async login(payload: LoginRequest) {
-      const session = await authApi.login(payload)
-      this.setSession(session)
-      return session
+      const user = await authApi.login(payload)
+      this.setCurrentUser(user)
+      return user
     },
     async adminLogin(payload: AdminLoginRequest) {
-      const session = await authApi.adminLogin(payload)
-      this.setSession(session)
-      return session
+      const user = await authApi.adminLogin(payload)
+      this.setCurrentUser(user)
+      return user
     },
     async register(payload: RegisterRequest) {
       return authApi.register(payload)
@@ -54,7 +59,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         await authApi.logout()
       } finally {
-        this.setSession(null)
+        this.setCurrentUser(null)
       }
     },
   },
