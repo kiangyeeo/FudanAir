@@ -36,6 +36,15 @@ const form = reactive<SearchForm>({
   sort: defaultSort(),
 })
 
+const selectPanelProps = {
+  fitInputWidth: true,
+  teleported: false,
+}
+
+const pickerPanelProps = {
+  teleported: false,
+}
+
 watch(
   () => props.initial,
   (criteria) => {
@@ -103,25 +112,25 @@ function reset() {
 <template>
   <el-form class="filter-panel" :model="form" label-position="top">
     <el-form-item label="出发城市">
-      <el-select v-model="form.dep_city" filterable allow-create default-first-option>
+      <el-select v-model="form.dep_city" v-bind="selectPanelProps" filterable allow-create default-first-option>
         <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
       </el-select>
     </el-form-item>
     <el-form-item label="到达城市">
-      <el-select v-model="form.arr_city" filterable allow-create default-first-option>
+      <el-select v-model="form.arr_city" v-bind="selectPanelProps" filterable allow-create default-first-option>
         <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
       </el-select>
     </el-form-item>
     <el-form-item label="出行日期">
-      <el-date-picker v-model="form.flight_date" type="date" value-format="YYYY-MM-DD" class="full-width" />
+      <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
     </el-form-item>
     <el-form-item label="航司">
-      <el-select v-model="form.filters.airline_code" clearable filterable>
+      <el-select v-model="form.filters.airline_code" v-bind="selectPanelProps" clearable filterable>
         <el-option v-for="airline in airlines" :key="airline.iata_code" :label="`${airline.iata_code} ${airline.airline_name}`" :value="airline.iata_code" />
       </el-select>
     </el-form-item>
     <el-form-item label="舱位">
-      <el-select v-model="form.filters.cabin_class" clearable>
+      <el-select v-model="form.filters.cabin_class" v-bind="selectPanelProps" clearable>
         <el-option label="经济舱" value="经济舱" />
         <el-option label="头等舱" value="头等舱" />
       </el-select>
@@ -129,6 +138,7 @@ function reset() {
     <el-form-item label="起飞时间">
       <el-time-picker
         v-model="form.filters.departure_time_range"
+        v-bind="pickerPanelProps"
         is-range
         clearable
         value-format="HH:mm:ss"
@@ -138,7 +148,7 @@ function reset() {
       />
     </el-form-item>
     <el-form-item label="排序">
-      <el-select v-model="form.sort.field">
+      <el-select v-model="form.sort.field" v-bind="selectPanelProps">
         <el-option label="价格" value="price" />
         <el-option label="总时长" value="duration" />
         <el-option label="起飞时间" value="departure" />
@@ -159,12 +169,47 @@ function reset() {
 .filter-panel {
   display: grid;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.filter-panel :deep(.el-form-item),
+.filter-panel :deep(.el-form-item__content) {
+  min-width: 0;
 }
 
 .full-width,
 .filter-panel :deep(.el-select),
+.filter-panel :deep(.el-date-editor),
 .filter-panel :deep(.el-segmented) {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.filter-panel :deep(.el-input),
+.filter-panel :deep(.el-input__wrapper),
+.filter-panel :deep(.el-select__wrapper),
+.filter-panel :deep(.el-date-editor.el-input__wrapper),
+.filter-panel :deep(.el-date-editor--timerange.el-input__wrapper) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.filter-panel :deep(.el-range-editor.el-input__wrapper) {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.filter-panel :deep(.el-range-input) {
+  min-width: 0;
+  flex: 1;
+}
+
+.filter-panel :deep(.el-range-separator) {
+  flex: 0 0 auto;
+  padding: 0 4px;
 }
 
 .actions {

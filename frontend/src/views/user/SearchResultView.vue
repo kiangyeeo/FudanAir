@@ -180,7 +180,7 @@ onMounted(() => {
 
 <template>
   <div class="page-shell result-page">
-    <aside class="page-section">
+    <aside class="page-section search-sidebar">
       <FilterPanel
         :initial="searchStore.criteria"
         :loading="loading"
@@ -221,8 +221,14 @@ onMounted(() => {
 <style scoped lang="scss">
 .result-page {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: minmax(300px, 320px) minmax(0, 1fr);
   gap: 16px;
+  align-items: start;
+}
+
+.search-sidebar,
+.result-main {
+  min-width: 0;
 }
 
 .result-main {
