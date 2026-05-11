@@ -1,10 +1,38 @@
 import { http } from './client'
-import type { AdminLoginRequest, AdminSession, AuthSession, LoginRequest, RegisterRequest, UserSession } from '@/types/auth'
+import type {
+  AdminLoginRequest,
+  AdminSession,
+  AuthSession,
+  LoginRequest,
+  RegisterRequest,
+  RegisterResponse,
+  UserSession,
+} from '@/types/auth'
+
+export function register(payload: RegisterRequest) {
+  return http.post<RegisterResponse>('/auth/register', payload)
+}
+
+export function login(payload: LoginRequest) {
+  return http.post<UserSession>('/auth/login', payload)
+}
+
+export function adminLogin(payload: AdminLoginRequest) {
+  return http.post<AdminSession>('/auth/admin-login', payload)
+}
+
+export function logout() {
+  return http.post<void>('/auth/logout')
+}
+
+export function getMe() {
+  return http.get<AuthSession>('/auth/me', { silentAuth: true })
+}
 
 export const authApi = {
-  register: (payload: RegisterRequest) => http.post<UserSession>('/auth/register', payload),
-  login: (payload: LoginRequest) => http.post<UserSession>('/auth/login', payload),
-  adminLogin: (payload: AdminLoginRequest) => http.post<AdminSession>('/auth/admin-login', payload),
-  logout: () => http.post<void>('/auth/logout'),
-  me: () => http.get<AuthSession>('/auth/me'),
+  register,
+  login,
+  adminLogin,
+  logout,
+  getMe,
 }

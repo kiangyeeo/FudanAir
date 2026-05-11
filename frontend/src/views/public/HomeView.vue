@@ -2,10 +2,12 @@
 import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useAuthStore } from '@/stores/auth'
 import { useSearchStore } from '@/stores/search'
 import type { FlightSearchRequest } from '@/types/search'
 
 const router = useRouter()
+const auth = useAuthStore()
 const searchStore = useSearchStore()
 
 const form = reactive<FlightSearchRequest>({
@@ -34,6 +36,11 @@ function submit() {
 
 <template>
   <div class="page-shell home-view">
+    <section class="auth-band">
+      <span v-if="auth.currentUser">欢迎 {{ auth.currentUser.name }}</span>
+      <el-button v-else type="primary" @click="router.push('/login')">请登录</el-button>
+    </section>
+
     <section class="search-band">
       <h1>FudanAir 航班查询</h1>
       <el-form class="search-form" :model="form" label-position="top">
@@ -74,11 +81,19 @@ function submit() {
   gap: 16px;
 }
 
+.auth-band,
 .search-band {
   padding: 20px;
   background: var(--fa-white);
   border: 1px solid var(--fa-border);
   border-radius: var(--fa-radius);
+}
+
+.auth-band {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  color: var(--fa-text-secondary);
 }
 
 h1 {

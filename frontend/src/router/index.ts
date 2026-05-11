@@ -68,16 +68,19 @@ router.beforeEach(async (to) => {
     return true
   }
 
-  const session = await auth.ensureSession()
-  if (!session) {
+  if (!auth.initialized) {
+    await auth.init()
+  }
+
+  if (!auth.currentUser) {
     return { path: needsAdmin ? '/admin/login' : '/login', query: { redirect: to.fullPath } }
   }
 
-  if (needsAdmin && session.role !== 'admin') {
+  if (needsAdmin && auth.role !== 'admin') {
     return { path: '/' }
   }
 
-  if (needsAuth && session.role !== 'user') {
+  if (needsAuth && auth.role !== 'user') {
     return { path: '/admin' }
   }
 

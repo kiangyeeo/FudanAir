@@ -2,12 +2,16 @@ import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import type { ApiErrorResponse } from '@/types/common'
 
+export interface HttpRequestConfig extends AxiosRequestConfig {
+  silentAuth?: boolean
+}
+
 export interface HttpClient {
-  get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
-  post<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
-  put<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
-  patch<T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T>
-  delete<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T>
+  get<T = unknown>(url: string, config?: HttpRequestConfig): Promise<T>
+  post<T = unknown>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<T>
+  put<T = unknown>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<T>
+  patch<T = unknown>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<T>
+  delete<T = unknown>(url: string, config?: HttpRequestConfig): Promise<T>
 }
 
 const client = axios.create({
@@ -24,16 +28,19 @@ client.interceptors.response.use(
   (error: AxiosError<ApiErrorResponse>) => {
     const status = error.response?.status
     const data = error.response?.data
+    const config = error.config as HttpRequestConfig | undefined
 
     if (status === 401) {
-      void import('@/router').then(({ default: router }) => {
-        const current = router.currentRoute.value
-        const loginPath = current.path.startsWith('/admin') ? '/admin/login' : '/login'
+      if (!config?.silentAuth) {
+        void import('@/router').then(({ default: router }) => {
+          const current = router.currentRoute.value
+          const loginPath = current.path.startsWith('/admin') ? '/admin/login' : '/login'
 
-        if (current.path !== '/login' && current.path !== '/admin/login') {
-          router.push({ path: loginPath, query: { redirect: current.fullPath } })
-        }
-      })
+          if (current.path !== '/login' && current.path !== '/admin/login') {
+            router.push({ path: loginPath, query: { redirect: current.fullPath } })
+          }
+        })
+      }
     } else if (status === 403) {
       ElMessage.error(data?.message || '无权限')
     } else if (status && status >= 400 && status < 500) {
