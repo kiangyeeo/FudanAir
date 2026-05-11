@@ -1,11 +1,3 @@
-<div align="left">
-    <img src="assets/research_simulation.png" alt=usecase1>
-    <img src="assets/interaction.png" alt=usecase2>
-   <a href="http://www.matrix.eigent.ai">
-    <img src="assets/content_creation.png" alt=usecase3>
-   </a>
-    <img src="assets/prediction.png" alt=usecase4>
-</div>
 
 ## Quick Start
 
