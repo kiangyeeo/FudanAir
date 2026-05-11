@@ -15,6 +15,12 @@ export interface AdminSession {
 
 export type AuthSession = UserSession | AdminSession
 
+export interface RegisterResponse {
+  user_id: number
+  phone: string
+  name: string
+}
+
 export interface RegisterRequest {
   phone: string
   password: string
