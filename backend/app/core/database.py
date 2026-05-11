@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.config import settings
 
@@ -22,3 +25,18 @@ SessionLocal = sessionmaker(
 )
 
 Base = declarative_base()
+
+
+@contextmanager
+def transaction(db: Session) -> Iterator[None]:
+    if not db.in_transaction():
+        with db.begin():
+            yield
+        return
+
+    try:
+        yield
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise

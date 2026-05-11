@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.database import transaction
 from app.core.exceptions import (
     AppException,
     InconsistentAirportCityError,
@@ -45,7 +46,7 @@ class CityService:
 
     def create(self, payload: CityCreate) -> City:
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if self.repo.get(payload.city_name):
                     raise AppException(f"城市 {payload.city_name} 已存在")
                 return self.repo.create(payload.city_name)
@@ -56,7 +57,7 @@ class CityService:
         if city_name == payload.city_name:
             return self.get_or_404(city_name)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if not self.repo.get(city_name):
                     raise ResourceNotFoundError(f"城市 {city_name} 不存在")
                 if self.repo.get(payload.city_name):
@@ -67,7 +68,7 @@ class CityService:
 
     def delete(self, city_name: str) -> None:
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 city = self.repo.get(city_name)
                 if not city:
                     raise ResourceNotFoundError(f"城市 {city_name} 不存在")
@@ -98,7 +99,7 @@ class AirportService:
     def create(self, payload: AirportCreate) -> Airport:
         code = _airport_code(payload.iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if self.airport_repo.get(code):
                     raise AppException(f"机场 {code} 已存在")
                 self._ensure_city(payload.city_name)
@@ -115,7 +116,7 @@ class AirportService:
     def update(self, iata_code: str, payload: AirportUpdate) -> Airport:
         code = _airport_code(iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 airport = self.airport_repo.get(code)
                 if not airport:
                     raise ResourceNotFoundError(f"机场 {code} 不存在")
@@ -136,7 +137,7 @@ class AirportService:
     def delete(self, iata_code: str) -> None:
         code = _airport_code(iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 airport = self.airport_repo.get(code)
                 if not airport:
                     raise ResourceNotFoundError(f"机场 {code} 不存在")
@@ -167,7 +168,7 @@ class CityNearAirportService:
     def create(self, city_name: str, payload: NearAirportCreate) -> CityNearApt:
         code = _airport_code(payload.iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 self._ensure_city(city_name)
                 airport = self._ensure_airport(code)
                 if self.near_repo.get(city_name, code):
@@ -180,7 +181,7 @@ class CityNearAirportService:
     def delete(self, city_name: str, iata_code: str) -> None:
         code = _airport_code(iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 relation = self.near_repo.get(city_name, code)
                 if not relation:
                     raise ResourceNotFoundError(f"临近机场关系 {city_name}-{code} 不存在")

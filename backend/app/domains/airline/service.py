@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.core.database import transaction
 from app.core.exceptions import AppException, ResourceInUseError, ResourceNotFoundError
 from app.domains.airline.models import AircraftType, Airline
 from app.domains.airline.repository import AircraftTypeRepository, AirlineRepository
@@ -32,7 +33,7 @@ class AirlineService:
     def create(self, payload: AirlineCreate) -> Airline:
         code = _airline_code(payload.iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if self.repo.get(code):
                     raise AppException(f"航司代码 {code} 已存在")
                 return self.repo.create(code, payload.airline_name)
@@ -42,7 +43,7 @@ class AirlineService:
     def update(self, iata_code: str, payload: AirlineUpdate) -> Airline:
         code = _airline_code(iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 airline = self.repo.get(code)
                 if not airline:
                     raise ResourceNotFoundError(f"航司 {code} 不存在")
@@ -53,7 +54,7 @@ class AirlineService:
     def delete(self, iata_code: str) -> None:
         code = _airline_code(iata_code)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 airline = self.repo.get(code)
                 if not airline:
                     raise ResourceNotFoundError(f"航司 {code} 不存在")
@@ -83,7 +84,7 @@ class AircraftTypeService:
         aircraft_model = _aircraft_model(payload.model)
         _ensure_positive_seats(payload.economy_seats, payload.first_seats)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 if self.repo.get(aircraft_model):
                     raise AppException(f"机型 {aircraft_model} 已存在")
                 return self.repo.create(
@@ -98,7 +99,7 @@ class AircraftTypeService:
         aircraft_model = _aircraft_model(model)
         _ensure_positive_seats(payload.economy_seats, payload.first_seats)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 aircraft_type = self.repo.get(aircraft_model)
                 if not aircraft_type:
                     raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")
@@ -113,7 +114,7 @@ class AircraftTypeService:
     def delete(self, model: str) -> None:
         aircraft_model = _aircraft_model(model)
         try:
-            with self.db.begin():
+            with transaction(self.db):
                 aircraft_type = self.repo.get(aircraft_model)
                 if not aircraft_type:
                     raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")

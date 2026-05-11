@@ -1,21 +1,30 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from typing import Annotated
 
 from fastapi import Cookie, Depends
 from sqlalchemy.orm import Session
 
 from app.auth.service import AuthService
+from app.core.database import SessionLocal
 from app.core.exceptions import PermissionDeniedError, UnauthorizedError
 from app.core.security import decode_access_token
-from app.deps import get_db
 from app.domains.admin.models import Admin
 from app.domains.user.models import User
 
 
+def get_auth_db() -> Generator[Session, None, None]:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 def get_current_identity(
     access_token: Annotated[str | None, Cookie(alias="access_token")] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_auth_db),
 ) -> User | Admin:
     if not access_token:
         raise UnauthorizedError("未登录或登录已失效")
