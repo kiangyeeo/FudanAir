@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   status: string
 }>()
 
-const steps = ['待支付', '已支付', '部分退款', '已完成退款', '已完成']
+const steps = computed(() => (props.status === '已取消' ? ['待支付', '已取消'] : ['待支付', '已支付', '部分退款', '已完成退款', '已完成']))
 
 function statusType(item: string) {
   return props.status === item ? 'primary' : 'info'

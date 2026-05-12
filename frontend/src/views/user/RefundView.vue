@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { refundApi } from '@/api/refund'
 
+const route = useRoute()
 const loading = ref(false)
 const form = reactive({ ticket_no: '' })
 
@@ -15,6 +17,18 @@ async function submit() {
     loading.value = false
   }
 }
+
+function queryText(key: string): string | null {
+  const value = route.query[key]
+  if (Array.isArray(value)) {
+    return value[0] ?? null
+  }
+  return value ?? null
+}
+
+onMounted(() => {
+  form.ticket_no = queryText('ticket_no') ?? ''
+})
 </script>
 
 <template>

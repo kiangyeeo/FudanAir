@@ -1,10 +1,16 @@
 import type { CabinClass, FareType } from './common'
+import type { OrderStatus } from './order'
 import type { Passenger } from './user'
 
-export interface BookingRequest {
+export type BookingStep = 'select-flight' | 'passengers' | 'confirm' | 'payment' | 'completed'
+
+export interface BookingFlightSelection {
   instance_id: string
   cabin_class: CabinClass
   fare_type: FareType
+}
+
+export interface BookingRequest extends BookingFlightSelection {
   passengers: Passenger[]
 }
 
@@ -22,7 +28,7 @@ export interface BookingAmountBreakdown {
 
 export interface BookingResponse {
   order_no: string
-  status: string
+  status: Extract<OrderStatus, '待支付'>
   total_amount: number
   amount_breakdown: BookingAmountBreakdown
   created_at: string
@@ -32,6 +38,6 @@ export interface BookingResponse {
 
 export interface PayResponse {
   order_no: string
-  status: string
+  status: Extract<OrderStatus, '已支付'>
   paid_at: string
 }
