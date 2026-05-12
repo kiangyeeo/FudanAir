@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { Delete, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRoute } from 'vue-router'
@@ -8,7 +8,7 @@ import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
 import { formatCurrency, formatDate, formatTime } from '@/utils/format'
 import type { CabinClass, FareType } from '@/types/common'
-import type { CabinPricePayload, FlightInstance } from '@/types/flight'
+import type { CabinPricePayload, Flight, FlightInstance, FlightInstanceListParams } from '@/types/flight'
 
 const cabinClassOptions: CabinClass[] = ['经济舱', '头等舱']
 const fareTypeOptions: FareType[] = ['标准', '特价']
@@ -17,16 +17,31 @@ const route = useRoute()
 const instanceLoading = ref(false)
 const priceLoading = ref(false)
 const saving = ref(false)
+const flights = ref<Flight[]>([])
 const instances = ref<FlightInstance[]>([])
+const instanceTotal = ref(0)
 const selectedInstanceId = ref('')
 const selectedInstance = ref<FlightInstance | null>(null)
 const prices = ref<CabinPricePayload[]>([])
 
+const filters = reactive({
+  flight_no: '',
+  flight_date: '',
+})
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+})
+
 onMounted(async () => {
-  await loadInstances()
   const queryInstanceId = readQueryInstanceId()
   if (queryInstanceId) {
     selectedInstanceId.value = queryInstanceId
+    applyInstanceIdToFilters(queryInstanceId)
+  }
+  await Promise.all([loadFlights(), loadInstances()])
+  if (queryInstanceId) {
     await loadPrices()
   }
 })
@@ -35,10 +50,14 @@ watch(
   () => route.query.instance_id,
   async () => {
     const queryInstanceId = readQueryInstanceId()
-    if (queryInstanceId && queryInstanceId !== selectedInstanceId.value) {
-      selectedInstanceId.value = queryInstanceId
-      await loadPrices()
+    if (!queryInstanceId || queryInstanceId === selectedInstanceId.value) {
+      return
     }
+    selectedInstanceId.value = queryInstanceId
+    applyInstanceIdToFilters(queryInstanceId)
+    pagination.page = 1
+    await loadInstances()
+    await loadPrices()
   },
 )
 
@@ -47,14 +66,68 @@ function readQueryInstanceId() {
   return typeof value === 'string' ? value : ''
 }
 
+function applyInstanceIdToFilters(instanceId: string) {
+  const match = instanceId.match(/^(.+)_([0-9]{8})$/)
+  if (!match) {
+    return
+  }
+  filters.flight_no = match[1]
+  const rawDate = match[2]
+  filters.flight_date = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
+}
+
+async function loadFlights() {
+  const page = await flightApi.listFlights({ page: 1, page_size: 100 })
+  flights.value = page.items
+}
+
 async function loadInstances() {
   instanceLoading.value = true
   try {
-    const page = await flightApi.listInstances({ page: 1, page_size: 100 })
+    const params: FlightInstanceListParams = {
+      page: pagination.page,
+      page_size: pagination.pageSize,
+    }
+    if (filters.flight_no) {
+      params.flight_no = filters.flight_no
+    }
+    if (filters.flight_date) {
+      params.flight_date = filters.flight_date
+    }
+    const page = await flightApi.listInstances(params)
     instances.value = page.items
+    instanceTotal.value = page.total
   } finally {
     instanceLoading.value = false
   }
+}
+
+async function applyFilters() {
+  pagination.page = 1
+  await loadInstances()
+  if (filters.flight_no && filters.flight_date && instances.value.length === 1) {
+    await selectInstance(instances.value[0])
+  }
+}
+
+function resetFilters() {
+  Object.assign(filters, {
+    flight_no: '',
+    flight_date: '',
+  })
+  pagination.page = 1
+  void loadInstances()
+}
+
+function handlePageSizeChange(size: number) {
+  pagination.pageSize = size
+  pagination.page = 1
+  void loadInstances()
+}
+
+async function selectInstance(row: FlightInstance) {
+  selectedInstanceId.value = row.instance_id
+  await loadPrices()
 }
 
 async function loadPrices() {
@@ -84,8 +157,8 @@ async function loadPrices() {
 
 function addPriceRow() {
   prices.value.push({
-    cabin_class: '经济舱',
-    fare_type: '标准',
+    cabin_class: cabinClassOptions[0],
+    fare_type: fareTypeOptions[0],
     price: 0,
     available_seats: 0,
   })
@@ -93,22 +166,22 @@ function addPriceRow() {
 
 async function removePriceRow(index: number) {
   try {
-    await ElMessageBox.confirm('确认删除该档位？保存后才会写入后端。', '删除档位', { type: 'warning' })
+    await ElMessageBox.confirm('确认删除该票价档位？如果已有客票引用，保存时会被后端拒绝。', '删除档位', { type: 'warning' })
     prices.value.splice(index, 1)
   } catch {
-    // 取消删除。
+    // 用户取消删除
   }
 }
 
 function validatePrices() {
   if (!prices.value.length) {
-    ElMessage.error('至少保留一个舱位定价档位')
+    ElMessage.error('请至少保留一个票价档位')
     return false
   }
   const keys = new Set<string>()
   for (const row of prices.value) {
     if (row.price < 0 || row.available_seats < 0) {
-      ElMessage.error('价格和可售座位不能为负数')
+      ElMessage.error('价格和剩余数量不能为负')
       return false
     }
     const key = `${row.cabin_class}-${row.fare_type}`
@@ -124,7 +197,7 @@ function validatePrices() {
 async function savePrices() {
   const instanceId = selectedInstanceId.value.trim()
   if (!instanceId) {
-    ElMessage.error('请先选择实例')
+    ElMessage.error('请选择航班实例')
     return
   }
   if (!validatePrices()) {
@@ -147,7 +220,8 @@ async function savePrices() {
       available_seats: Number(row.available_seats),
     }))
     selectedInstance.value = await flightApi.getInstance(instanceId)
-    ElMessage.success('舱位定价已保存')
+    await loadInstances()
+    ElMessage.success('票价和余票已保存')
   } finally {
     saving.value = false
   }
@@ -161,40 +235,81 @@ async function savePrices() {
         <h1 class="page-title">票价管理</h1>
         <div class="toolbar-actions">
           <el-select
-            v-model="selectedInstanceId"
-            :loading="instanceLoading"
+            v-model="filters.flight_no"
             clearable
             filterable
             allow-create
             default-first-option
-            placeholder="选择或输入实例 ID"
-            class="instance-select"
+            placeholder="航班号"
+            class="flight-filter"
           >
-            <el-option
-              v-for="instance in instances"
-              :key="instance.instance_id"
-              :label="`${instance.instance_id} / ${instance.status}`"
-              :value="instance.instance_id"
-            />
+            <el-option v-for="flight in flights" :key="flight.flight_no" :label="flight.flight_no" :value="flight.flight_no" />
           </el-select>
-          <el-button :icon="Search" @click="loadPrices">查询</el-button>
-          <el-button :icon="Refresh" @click="loadInstances">刷新实例</el-button>
+          <el-date-picker
+            v-model="filters.flight_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="运行日期"
+            class="date-filter"
+          />
+          <el-button :icon="Search" @click="applyFilters">查询实例</el-button>
+          <el-button @click="resetFilters">重置</el-button>
+          <el-button :icon="Refresh" @click="loadInstances">刷新</el-button>
         </div>
       </div>
 
+      <el-table
+        v-if="instances.length || instanceLoading"
+        v-loading="instanceLoading"
+        :data="instances"
+        border
+        row-key="instance_id"
+        class="instance-table"
+        @row-dblclick="selectInstance"
+      >
+        <el-table-column prop="instance_id" label="实例 ID" min-width="180" />
+        <el-table-column prop="flight_no" label="航班号" width="110" />
+        <el-table-column label="运行日期" width="130">
+          <template #default="{ row }">{{ formatDate(row.flight_date) }}</template>
+        </el-table-column>
+        <el-table-column prop="status" label="状态" width="100" />
+        <el-table-column prop="economy_left" label="经济舱余票" width="120" />
+        <el-table-column prop="first_left" label="头等舱余票" width="120" />
+        <el-table-column label="操作" width="110" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="primary" :disabled="selectedInstanceId === row.instance_id" @click="selectInstance(row)">
+              调整
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <EmptyState v-else title="暂无航班实例" description="按航班号和运行日期查询要调整的航班实例。" />
+
+      <el-pagination
+        v-if="instanceTotal > 0"
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        class="pager"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="instanceTotal"
+        layout="total, sizes, prev, pager, next"
+        @current-change="loadInstances"
+        @size-change="handlePageSizeChange"
+      />
+
       <el-descriptions v-if="selectedInstance" :column="4" border class="instance-summary">
         <el-descriptions-item label="航班号">{{ selectedInstance.flight_no }}</el-descriptions-item>
-        <el-descriptions-item label="日期">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
+        <el-descriptions-item label="运行日期">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ selectedInstance.status }}</el-descriptions-item>
         <el-descriptions-item label="燃油基建费">
           {{ formatCurrency(selectedInstance.fuel_infra_fee ?? null) }}
         </el-descriptions-item>
         <el-descriptions-item label="航线">
-          {{ selectedInstance.dep_airport_code }} → {{ selectedInstance.arr_airport_code }}
+          {{ selectedInstance.dep_airport_code }} -> {{ selectedInstance.arr_airport_code }}
         </el-descriptions-item>
         <el-descriptions-item label="起飞">{{ formatTime(selectedInstance.scheduled_departure) }}</el-descriptions-item>
         <el-descriptions-item label="到达">{{ formatTime(selectedInstance.scheduled_arrival) }}</el-descriptions-item>
-        <el-descriptions-item label="余票">
+        <el-descriptions-item label="汇总余票">
           经济舱 {{ selectedInstance.economy_left }} / 头等舱 {{ selectedInstance.first_left }}
         </el-descriptions-item>
       </el-descriptions>
@@ -232,7 +347,7 @@ async function savePrices() {
             <el-input-number v-model="row.price" :min="0" :precision="2" :step="50" class="full-width" />
           </template>
         </el-table-column>
-        <el-table-column label="可售座位" width="180">
+        <el-table-column label="剩余数量" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.available_seats" :min="0" :precision="0" :step="1" class="full-width" />
           </template>
@@ -245,8 +360,8 @@ async function savePrices() {
       </el-table>
       <EmptyState
         v-else
-        :title="selectedInstanceId ? '暂无票价档位' : '未选择实例'"
-        :description="selectedInstanceId ? '当前实例没有舱位定价档位。' : '选择一个航班实例后维护价格和可售库存。'"
+        :title="selectedInstanceId ? '暂无票价档位' : '未选择航班实例'"
+        :description="selectedInstanceId ? '当前实例还没有舱位定价档位。' : '先按航班号和运行日期选择航班实例。'"
       />
     </section>
   </div>
@@ -273,12 +388,25 @@ async function savePrices() {
   gap: 8px;
 }
 
-.instance-select {
-  width: 320px;
+.flight-filter {
+  width: 150px;
+}
+
+.date-filter {
+  width: 150px;
+}
+
+.instance-table {
+  margin-top: 8px;
+}
+
+.pager {
+  justify-self: end;
+  margin-top: 8px;
 }
 
 .instance-summary {
-  margin-top: 8px;
+  margin-top: 12px;
 }
 
 .section-title {

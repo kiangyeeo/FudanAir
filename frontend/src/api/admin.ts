@@ -1,4 +1,5 @@
 import { http } from './client'
+import type { AdminDashboard } from '@/types/admin'
 import type {
   AircraftType,
   Airline,
@@ -17,6 +18,7 @@ import type {
 } from '@/types/flight'
 
 export const adminApi = {
+  getDashboard: () => http.get<AdminDashboard>('/admin/dashboard'),
   createCity: (payload: City) => http.post<City>('/cities', payload),
   updateCity: (name: string, payload: City) => http.put<City>(`/cities/${encodeURIComponent(name)}`, payload),
   deleteCity: (name: string) => http.delete<void>(`/cities/${encodeURIComponent(name)}`),

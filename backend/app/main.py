@@ -17,9 +17,12 @@ from app.domains.airline.router import (
     aircraft_type_router,
     airline_router,
 )
+from app.domains.admin.router import router as admin_router
 from app.domains.city.router import airport_router, city_router
 from app.domains.flight.router import flight_instance_router, flight_router
 from app.domains.order.router import admin_order_router, order_router
+from app.domains.passenger.router import router as passenger_router
+from app.domains.user.router import router as user_router
 from app.workflows.booking.router import router as booking_router
 from app.workflows.refund.router import router as refund_router
 from app.workflows.search.router import router as search_router
@@ -68,8 +71,11 @@ app.include_router(aircraft_type_router, prefix="/api")
 app.include_router(flight_router, prefix="/api")
 app.include_router(flight_instance_router, prefix="/api")
 app.include_router(booking_router, prefix="/api/booking")
+app.include_router(user_router, prefix="/api")
+app.include_router(passenger_router, prefix="/api")
 app.include_router(order_router, prefix="/api")
 app.include_router(admin_order_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 app.include_router(refund_router, prefix="/api/refund")
 app.include_router(search_router, prefix="/api/search")
 

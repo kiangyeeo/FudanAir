@@ -304,7 +304,7 @@ class FlightService:
                 )
                 return cabin_prices
         except IntegrityError as exc:
-            raise AppException(f"航班实例 {instance_id} 舱位定价更新失败") from exc
+            raise ResourceInUseError(f"航班实例 {instance_id} 的部分票价档位已有客票引用,无法删除") from exc
 
     def deduct_seat(
         self,

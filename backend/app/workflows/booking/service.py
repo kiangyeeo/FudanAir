@@ -20,7 +20,7 @@ from app.domains.order.models import AptOrder
 from app.domains.order.service import OrderService
 from app.domains.ticket.models import Ticket
 from app.domains.ticket.service import TicketService
-from app.domains.user.service import PassengerService
+from app.domains.passenger.service import PassengerService
 from app.workflows.booking.schemas import BookingRequest, BookingSegment
 
 
