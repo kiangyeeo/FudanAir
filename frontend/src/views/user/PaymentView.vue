@@ -31,6 +31,7 @@ const expiresAt = computed(() => order.value?.expires_at ?? fallbackExpiresAt(de
 const totalAmount = computed(() => order.value?.total_amount ?? detail.value?.total_amount ?? null)
 const ticketCount = computed(() => order.value?.tickets.length ?? detail.value?.tickets.length ?? null)
 const isPending = computed(() => status.value === '待支付')
+const quantityLabel = computed(() => (isPending.value ? '锁座数量' : '客票数量'))
 const isExpired = computed(() => {
   if (!expiresAt.value || !isPending.value) {
     return false
@@ -138,7 +139,7 @@ watch(orderNo, () => {
         <el-descriptions-item label="应付金额">
           <span class="price mono-num">{{ formatCurrency(totalAmount) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="出票数量">{{ ticketCount ?? '--' }}</el-descriptions-item>
+        <el-descriptions-item :label="quantityLabel">{{ ticketCount ?? '--' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatDate(order?.created_at ?? detail?.created_at) }}</el-descriptions-item>
         <el-descriptions-item label="支付截止">{{ formatDate(expiresAt) }}</el-descriptions-item>
       </el-descriptions>

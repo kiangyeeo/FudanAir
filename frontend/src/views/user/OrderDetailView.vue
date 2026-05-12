@@ -12,6 +12,12 @@ const router = useRouter()
 const orderNo = computed(() => String(route.params.orderNo || ''))
 const detail = ref<OrderDetail | null>(null)
 const loading = ref(false)
+const hasIssuedTickets = computed(() => {
+  if (!detail.value) {
+    return false
+  }
+  return detail.value.status !== '待支付' && detail.value.status !== '已取消'
+})
 
 async function loadDetail() {
   if (!orderNo.value) {
@@ -68,15 +74,22 @@ onMounted(() => {
           <el-descriptions-item label="金额">{{ formatCurrency(detail.total_amount) }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDate(detail.created_at) }}</el-descriptions-item>
           <el-descriptions-item label="用户 ID">{{ detail.user_id }}</el-descriptions-item>
-          <el-descriptions-item label="客票数">{{ detail.tickets.length }}</el-descriptions-item>
+          <el-descriptions-item :label="hasIssuedTickets ? '客票数' : '锁座人数'">{{ detail.tickets.length }}</el-descriptions-item>
         </el-descriptions>
       </template>
       <EmptyState v-else title="暂无订单详情" :description="`当前订单号：${orderNo || '--'}`" />
     </section>
 
     <section class="page-section">
-      <h2>客票</h2>
-      <el-table :data="detail?.tickets ?? []" border row-key="ticket_no">
+      <h2>{{ hasIssuedTickets ? '客票' : '锁座信息' }}</h2>
+      <el-alert
+        v-if="detail && !hasIssuedTickets"
+        type="info"
+        show-icon
+        :closable="false"
+        title="订单未支付完成，暂不展示客票号和退改入口。支付成功后再查看客票。"
+      />
+      <el-table v-else :data="detail?.tickets ?? []" border row-key="ticket_no">
         <el-table-column prop="ticket_no" label="票号" min-width="180" />
         <el-table-column label="乘机人" min-width="160">
           <template #default="{ row }">

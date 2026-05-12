@@ -72,6 +72,10 @@ function statusTagType(status: OrderStatus) {
   return map[status]
 }
 
+function hasIssuedTickets(status: OrderStatus) {
+  return status !== '待支付' && status !== '已取消'
+}
+
 onMounted(() => {
   void loadOrders()
 })
@@ -103,9 +107,17 @@ onMounted(() => {
         <el-table-column label="创建时间" width="180">
           <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column prop="ticket_count" label="票数" width="90" />
-        <el-table-column prop="active_count" label="有效票" width="90" />
-        <el-table-column prop="refunded_count" label="已退票" width="90" />
+        <el-table-column label="数量" width="110">
+          <template #default="{ row }">
+            {{ hasIssuedTickets(row.status) ? `客票 ${row.ticket_count}` : `锁座 ${row.ticket_count}` }}
+          </template>
+        </el-table-column>
+        <el-table-column label="有效票" width="90">
+          <template #default="{ row }">{{ hasIssuedTickets(row.status) ? row.active_count : '--' }}</template>
+        </el-table-column>
+        <el-table-column label="已退票" width="90">
+          <template #default="{ row }">{{ hasIssuedTickets(row.status) ? row.refunded_count : '--' }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button v-if="row.status === '待支付'" link type="primary" @click="router.push(`/payment/${row.order_no}`)">支付</el-button>

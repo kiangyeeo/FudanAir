@@ -43,7 +43,7 @@ async function submit() {
   try {
     const order = await bookingApi.createOrder(payload)
     bookingStore.setCurrentOrder(order)
-    ElMessage.success('订单已创建')
+    ElMessage.success('订单已创建，请在 15 分钟内支付')
     router.push(`/payment/${order.order_no}`)
   } finally {
     loading.value = false
