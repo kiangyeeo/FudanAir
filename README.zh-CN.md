@@ -1,3 +1,5 @@
+![Weixin Image_20260512233912](E:\Project\FudanAir\docs\logo\Weixin Image_20260512233912.png)
+
 [English](./README.md) | 简体中文
 
 ## 快速开始
@@ -12,7 +14,7 @@ cd FudanAir
 2. **安装依赖**
 
 ```bash
-conda activate ... % Recommend using a virtual environment.
+conda activate ... % 建议虚拟环境下运行
 pip install -r requirements.txt
 ```
 
@@ -22,7 +24,7 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
- `.env` 中需要更新自己的MySQL密码。
+ `.env` 中需要替换自己的MySQL密码。
 
 4. **初始化数据库**
 
