@@ -12,7 +12,7 @@ import TransitFlightList from '@/components/flight/TransitFlightList.vue'
 import { useSearchStore } from '@/stores/search'
 import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
-import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate } from '@/types/search'
+import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
 
 const route = useRoute()
 const router = useRouter()
@@ -61,6 +61,18 @@ function selectFlight(candidate: DirectFlightCandidate | NearbyFlightCandidate) 
     name: 'booking',
     query: {
       instance_id: candidate.instance_id,
+      cabin_class: cabinClass,
+      fare_type: '标准',
+    },
+  })
+}
+
+function selectTransit(candidate: TransitCandidate) {
+  const cabinClass = searchStore.criteria?.filters?.cabin_class ?? '经济舱'
+  router.push({
+    name: 'booking',
+    query: {
+      segments: [candidate.leg1.instance_id, candidate.leg2.instance_id].join(','),
       cabin_class: cabinClass,
       fare_type: '标准',
     },
@@ -210,7 +222,7 @@ onMounted(() => {
         <EmptyState v-else-if="searched && result && totalCount === 0" title="暂无匹配航班" description="可以调整日期、城市或筛选条件后重新搜索。" />
         <template v-else>
           <DirectFlightList :items="result?.direct ?? []" @select="selectFlight" />
-          <TransitFlightList :items="result?.transit ?? []" @select="selectFlight" />
+          <TransitFlightList :items="result?.transit ?? []" @select="selectTransit" />
           <NearbyFlightList :items="result?.nearby ?? []" @select="selectFlight" />
         </template>
       </div>

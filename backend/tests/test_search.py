@@ -52,6 +52,8 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
                     "scheduled_arrival": time(10, 20),
                     "airline_code": "MU",
                     "airline_name": "中国东方航空",
+                    "min_ticket_price": Decimal("800.00"),
+                    "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("850.00"),
                     "economy_left": 12,
                     "first_left": 2,
@@ -82,6 +84,7 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
     assert "JOIN city_near_apt arr_rel" in sql
     assert "dep_rel.distance = 0" in sql
     assert "arr_rel.distance = 0" in sql
+    assert "MIN(cp.price) AS min_ticket_price" in sql
     assert "MIN(cp.price + v.fuel_infra_fee) AS min_price" in sql
     assert "cp.available_seats > 0" in sql
     assert "NOT EXISTS" in sql
@@ -105,6 +108,8 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
                     "leg1_scheduled_arrival": time(10, 0),
                     "leg1_airline_code": "CA",
                     "leg1_airline_name": "中国国际航空",
+                    "leg1_min_ticket_price": Decimal("450.00"),
+                    "leg1_fuel_infra_fee": Decimal("50.00"),
                     "leg1_min_price": Decimal("500.00"),
                     "leg1_economy_left": 10,
                     "leg1_first_left": 1,
@@ -116,12 +121,16 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
                     "leg2_scheduled_arrival": time(15, 0),
                     "leg2_airline_code": "MU",
                     "leg2_airline_name": "中国东方航空",
+                    "leg2_min_ticket_price": Decimal("640.00"),
+                    "leg2_fuel_infra_fee": Decimal("60.00"),
                     "leg2_min_price": Decimal("700.00"),
                     "leg2_economy_left": 9,
                     "leg2_first_left": 1,
                     "transit_airport": "XIY",
                     "transit_minutes": 180,
                     "total_duration_minutes": 420,
+                    "total_ticket_price": Decimal("1090.00"),
+                    "total_fuel_infra_fee": Decimal("110.00"),
                     "total_min_price": Decimal("1200.00"),
                 }
             ]
@@ -147,6 +156,7 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
     assert rows[0]["leg2"]["dep_airport_code"] == "XIY"
     assert rows[0]["transit_minutes"] == 180
     assert rows[0]["total_min_price"] == 1200.0
+    assert rows[0]["total_ticket_price"] == 1090.0
 
 
 def test_nearby_search_always_uses_positive_distance_replacements() -> None:
@@ -166,6 +176,8 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
                     "scheduled_arrival": time(11, 10),
                     "airline_code": "HO",
                     "airline_name": "吉祥航空",
+                    "min_ticket_price": Decimal("730.00"),
+                    "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("780.00"),
                     "economy_left": 8,
                     "first_left": 0,
@@ -204,6 +216,8 @@ def test_search_flights_endpoint_returns_frontend_contract_shape() -> None:
                     "scheduled_arrival": time(10, 20),
                     "airline_code": "MU",
                     "airline_name": "中国东方航空",
+                    "min_ticket_price": Decimal("800.00"),
+                    "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("850.00"),
                     "economy_left": 12,
                     "first_left": 2,

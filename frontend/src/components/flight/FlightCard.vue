@@ -32,6 +32,9 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
     </div>
     <div class="price-block">
       <div class="price mono-num">{{ formatCurrency(candidate.min_price) }}</div>
+      <div class="price-detail mono-num">
+        机票 {{ formatCurrency(candidate.min_ticket_price) }} + 燃油基建 {{ formatCurrency(candidate.fuel_infra_fee) }}
+      </div>
       <el-button type="primary" size="small" :icon="Tickets" @click="emit('select', candidate)">预订</el-button>
     </div>
   </article>
@@ -40,7 +43,7 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
 <style scoped lang="scss">
 .flight-card {
   display: grid;
-  grid-template-columns: 92px 1fr 92px 120px;
+  grid-template-columns: 92px 1fr 92px minmax(170px, max-content);
   gap: 14px;
   align-items: center;
   min-height: 86px;
@@ -88,5 +91,27 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
   display: grid;
   justify-items: end;
   gap: 6px;
+}
+
+.price-detail {
+  color: var(--fa-text-secondary);
+  font-size: 12px;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .flight-card {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .price-block {
+    justify-items: start;
+  }
+
+  .price,
+  .price-detail {
+    text-align: left;
+  }
 }
 </style>
