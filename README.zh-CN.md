@@ -1,4 +1,4 @@
-![Weixin Image_20260512233912](.\docs\logo\Weixin Image_20260512233912.png)
+![Weixin Image_20260512233912](./docs/logo/Weixin Image_20260512233912.png)
 
 [English](./README.md) | 简体中文
 
