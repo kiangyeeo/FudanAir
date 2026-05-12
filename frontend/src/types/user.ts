@@ -19,3 +19,8 @@ export interface Passenger {
   real_name: string
   birth_date: string
 }
+
+export interface PassengerUpdate {
+  real_name: string
+  birth_date: string
+}
