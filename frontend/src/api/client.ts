@@ -4,6 +4,7 @@ import type { ApiErrorResponse } from '@/types/common'
 
 export interface HttpRequestConfig extends AxiosRequestConfig {
   silentAuth?: boolean
+  silentError?: boolean
 }
 
 export interface HttpClient {
@@ -29,6 +30,10 @@ client.interceptors.response.use(
     const status = error.response?.status
     const data = error.response?.data
     const config = error.config as HttpRequestConfig | undefined
+
+    if (config?.silentError) {
+      return Promise.reject(error)
+    }
 
     if (status === 401) {
       if (!config?.silentAuth) {

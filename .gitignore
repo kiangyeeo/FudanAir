@@ -4,3 +4,6 @@ AGENTS.md
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+.pytest_cache/
+__pycache__/
+*.py[cod]

@@ -30,7 +30,16 @@ function submit() {
     filters: { ...form.filters },
     sort: { field: sort.field, order: sort.order },
   })
-  router.push('/search')
+  router.push({
+    name: 'search',
+    query: {
+      dep_city: form.dep_city,
+      arr_city: form.arr_city,
+      flight_date: form.flight_date,
+      sort_field: sort.field,
+      sort_order: sort.order,
+    },
+  })
 }
 </script>
 

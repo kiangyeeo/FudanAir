@@ -1,12 +1,19 @@
 import type { CabinClass, FareType } from './common'
 import type { Passenger } from './user'
 
+export type OrderStatus = '待支付' | '已支付' | '已取消' | '已完成' | '部分退款' | '已完成退款'
+export type TicketStatus = '有效' | '已退' | '已改签作废' | '已使用'
+
 export interface OrderListItem {
   order_no: string
-  status: string
+  user_id: number
+  user_name?: string | null
+  status: OrderStatus
   total_amount: number
   created_at: string
-  ticket_count?: number
+  ticket_count: number
+  active_count: number
+  refunded_count: number
 }
 
 export interface OrderTicket {
@@ -16,18 +23,21 @@ export interface OrderTicket {
   flight_no: string
   flight_date: string
   scheduled_departure: string
+  scheduled_arrival?: string | null
   dep_airport_code: string
   arr_airport_code: string
   cabin_class: CabinClass
   fare_type: FareType
+  ticket_price?: number | null
+  fuel_infra_fee?: number | null
   actual_price: number
-  status: string
+  status: TicketStatus
 }
 
 export interface OrderDetail {
   order_no: string
   user_id: number
-  status: string
+  status: OrderStatus
   total_amount: number
   created_at: string
   tickets: OrderTicket[]
@@ -36,7 +46,7 @@ export interface OrderDetail {
 export interface OrderQuery {
   page?: number
   page_size?: number
-  status?: string
+  status?: OrderStatus | ''
 }
 
 export interface AdminOrderQuery extends OrderQuery {
