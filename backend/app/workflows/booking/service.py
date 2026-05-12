@@ -21,7 +21,7 @@ from app.domains.order.service import OrderService
 from app.domains.ticket.models import Ticket
 from app.domains.ticket.service import TicketService
 from app.domains.user.service import PassengerService
-from app.workflows.booking.schemas import BookingRequest
+from app.workflows.booking.schemas import BookingRequest, BookingSegment
 
 
 ORDER_STATUS_PENDING = "待支付"
@@ -43,52 +43,75 @@ class BookingService:
         self.passenger_svc = PassengerService(db)
 
     def create_order(self, user_id: int, payload: BookingRequest) -> dict[str, Any]:
-        seat_count = len(payload.passengers)
+        passenger_count = len(payload.passengers)
+        segments = _booking_segments(payload)
         _ensure_unique_payload_passengers(payload)
+        _ensure_unique_payload_segments(segments)
         with transaction(self.db):
-            cabin_price = self.flight_svc.deduct_seat(
-                payload.instance_id,
-                payload.cabin_class,
-                payload.fare_type,
-                seat_count,
-            )
-            instance_detail = self.flight_svc.get_instance_detail(payload.instance_id)
-            fuel_fee = _money(instance_detail["fuel_infra_fee"])
-            ticket_price = _money(cabin_price.price)
-            actual_price = _money(ticket_price + fuel_fee)
-
             for passenger in payload.passengers:
                 self.passenger_svc.upsert(
                     passenger.id_no,
                     passenger.real_name,
                     passenger.birth_date,
                 )
-                self.ticket_svc.check_passenger_duplicate(
-                    passenger.id_no,
-                    payload.instance_id,
-                )
 
-            order = self.order_svc.create(user_id, actual_price * seat_count)
-            tickets = [
-                self.ticket_svc.create(
-                    order.order_no,
-                    passenger.id_no,
-                    payload.instance_id,
-                    payload.cabin_class,
-                    payload.fare_type,
-                    actual_price,
-                )
-                for passenger in payload.passengers
-            ]
+            for segment in segments:
+                for passenger in payload.passengers:
+                    self.ticket_svc.check_passenger_duplicate(
+                        passenger.id_no,
+                        segment.instance_id,
+                    )
 
+            segment_prices = []
+            total_amount = Decimal("0.00")
+            for segment in segments:
+                cabin_price = self.flight_svc.deduct_seat(
+                    segment.instance_id,
+                    segment.cabin_class,
+                    segment.fare_type,
+                    passenger_count,
+                )
+                instance_detail = self.flight_svc.get_instance_detail(segment.instance_id)
+                fuel_fee = _money(instance_detail["fuel_infra_fee"])
+                ticket_price = _money(cabin_price.price)
+                actual_price = _money(ticket_price + fuel_fee)
+                segment_prices.append(
+                    {
+                        "instance_id": segment.instance_id,
+                        "cabin_class": segment.cabin_class,
+                        "fare_type": segment.fare_type,
+                        "ticket_price": ticket_price,
+                        "fuel_fee": fuel_fee,
+                        "actual_price": actual_price,
+                    }
+                )
+                total_amount += actual_price * passenger_count
+
+            order = self.order_svc.create(user_id, total_amount)
+            tickets = []
+            for segment_price in segment_prices:
+                for passenger in payload.passengers:
+                    tickets.append(
+                        self.ticket_svc.create(
+                            order.order_no,
+                            passenger.id_no,
+                            segment_price["instance_id"],
+                            segment_price["cabin_class"],
+                            segment_price["fare_type"],
+                            segment_price["actual_price"],
+                        )
+                    )
+
+        instance_ids = ",".join(segment.instance_id for segment in segments)
         logger.info(
-            "下单成功 order_no=%s user_id=%s instance_id=%s quantity=%s",
+            "下单成功 order_no=%s user_id=%s instances=%s passengers=%s tickets=%s",
             order.order_no,
             user_id,
-            payload.instance_id,
-            seat_count,
+            instance_ids,
+            passenger_count,
+            len(tickets),
         )
-        return _booking_response(order, tickets, ticket_price, fuel_fee)
+        return _booking_response(order, tickets, segment_prices, passenger_count)
 
     def pay_order(self, user_id: int, order_no: str) -> dict[str, Any]:
         expired = False
@@ -157,9 +180,11 @@ class BookingService:
 def _booking_response(
     order: AptOrder,
     tickets: list[Ticket],
-    ticket_price: Decimal,
-    fuel_fee: Decimal,
+    segment_prices: list[dict[str, Any]],
+    passenger_count: int,
 ) -> dict[str, Any]:
+    ticket_price = _money(sum((item["ticket_price"] for item in segment_prices), Decimal("0.00")))
+    fuel_fee = _money(sum((item["fuel_fee"] for item in segment_prices), Decimal("0.00")))
     return {
         "order_no": order.order_no,
         "status": order.status,
@@ -167,7 +192,22 @@ def _booking_response(
         "amount_breakdown": {
             "ticket_price_per_seat": ticket_price,
             "fuel_infra_fee_per_seat": fuel_fee,
-            "seat_count": len(tickets),
+            "seat_count": passenger_count,
+            "passenger_count": passenger_count,
+            "segment_count": len(segment_prices),
+            "segments": [
+                {
+                    "instance_id": item["instance_id"],
+                    "cabin_class": item["cabin_class"],
+                    "fare_type": item["fare_type"],
+                    "ticket_price_per_seat": item["ticket_price"],
+                    "fuel_infra_fee_per_seat": item["fuel_fee"],
+                    "actual_price_per_seat": item["actual_price"],
+                    "passenger_count": passenger_count,
+                    "subtotal": item["actual_price"] * passenger_count,
+                }
+                for item in segment_prices
+            ],
         },
         "created_at": order.created_at,
         "expires_at": order.created_at + timedelta(minutes=settings.ORDER_EXPIRE_MINUTES),
@@ -175,6 +215,9 @@ def _booking_response(
             {
                 "ticket_no": ticket.ticket_no,
                 "passenger_id": ticket.passenger_id,
+                "instance_id": ticket.instance_id,
+                "cabin_class": ticket.cabin_class,
+                "fare_type": ticket.fare_type,
                 "actual_price": ticket.actual_price,
             }
             for ticket in tickets
@@ -192,3 +235,21 @@ def _ensure_unique_payload_passengers(payload: BookingRequest) -> None:
     passenger_ids = [passenger.id_no for passenger in payload.passengers]
     if len(passenger_ids) != len(set(passenger_ids)):
         raise PassengerDuplicateError("同一订单内乘机人不能重复")
+
+
+def _ensure_unique_payload_segments(segments: list[BookingSegment]) -> None:
+    instance_ids = [segment.instance_id for segment in segments]
+    if len(instance_ids) != len(set(instance_ids)):
+        raise PassengerDuplicateError("同一订单内不能重复选择同一航班实例")
+
+
+def _booking_segments(payload: BookingRequest) -> list[BookingSegment]:
+    if payload.segments:
+        return payload.segments
+    return [
+        BookingSegment(
+            instance_id=payload.instance_id or "",
+            cabin_class=payload.cabin_class or "经济舱",
+            fare_type=payload.fare_type or "标准",
+        )
+    ]

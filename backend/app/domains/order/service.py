@@ -102,6 +102,9 @@ class OrderService:
 
 
 def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
+    actual_price = row["actual_price"]
+    fuel_fee = row["fuel_infra_fee"]
+    ticket_price = actual_price - fuel_fee if actual_price is not None and fuel_fee is not None else None
     return {
         "ticket_no": row["ticket_no"],
         "passenger": {
@@ -117,7 +120,9 @@ def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
         "arr_airport_code": row["arr_airport_code"],
         "cabin_class": row["cabin_class"],
         "fare_type": row["fare_type"],
-        "actual_price": row["actual_price"],
+        "ticket_price": ticket_price,
+        "fuel_infra_fee": fuel_fee,
+        "actual_price": actual_price,
         "status": row["ticket_status"],
     }
 

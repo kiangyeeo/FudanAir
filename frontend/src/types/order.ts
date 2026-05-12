@@ -27,6 +27,8 @@ export interface OrderTicket {
   arr_airport_code: string
   cabin_class: CabinClass
   fare_type: FareType
+  ticket_price?: number | null
+  fuel_infra_fee?: number | null
   actual_price: number
   status: TicketStatus
 }

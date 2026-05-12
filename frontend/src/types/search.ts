@@ -31,6 +31,8 @@ export interface DirectFlightCandidate {
   airline_code: string
   airline_name: string
   min_price: number
+  min_ticket_price: number
+  fuel_infra_fee: number
   economy_left: number
   first_left: number
 }
@@ -43,6 +45,8 @@ export interface TransitCandidate {
   transit_minutes: number
   total_duration_minutes: number
   total_min_price: number
+  total_ticket_price: number
+  total_fuel_infra_fee: number
 }
 
 export interface NearbyFlightCandidate extends Omit<DirectFlightCandidate, 'type'> {

@@ -109,10 +109,13 @@ onMounted(() => {
             <span class="subtle">{{ formatTime(row.scheduled_departure) }} - {{ formatTime(row.scheduled_arrival) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="舱位票价" min-width="130">
+        <el-table-column label="舱位票价" min-width="230">
           <template #default="{ row }">
             <div>{{ row.cabin_class }} · {{ row.fare_type }}</div>
-            <span class="price mono-num">{{ formatCurrency(row.actual_price) }}</span>
+            <span class="subtle mono-num">
+              机票 {{ formatCurrency(row.ticket_price) }} + 燃油基建 {{ formatCurrency(row.fuel_infra_fee) }}
+            </span>
+            <div class="price mono-num">{{ formatCurrency(row.actual_price) }}</div>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="120">

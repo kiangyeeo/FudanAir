@@ -32,6 +32,63 @@ const totalAmount = computed(() => order.value?.total_amount ?? detail.value?.to
 const ticketCount = computed(() => order.value?.tickets.length ?? detail.value?.tickets.length ?? null)
 const isPending = computed(() => status.value === '待支付')
 const quantityLabel = computed(() => (isPending.value ? '锁座数量' : '客票数量'))
+const priceRows = computed(() => {
+  const segments = order.value?.amount_breakdown.segments ?? []
+  if (segments.length) {
+    return segments.map((item, index) => ({
+      key: `${index}-${item.instance_id}`,
+      label: segments.length > 1 ? `第 ${index + 1} 段` : '航段',
+      instance_id: item.instance_id,
+      cabin_class: item.cabin_class,
+      fare_type: item.fare_type,
+      ticketPrice: item.ticket_price_per_seat,
+      fuelFee: item.fuel_infra_fee_per_seat,
+      actualPrice: item.actual_price_per_seat,
+      count: item.passenger_count,
+      subtotal: item.subtotal,
+    }))
+  }
+
+  const grouped = new Map<string, {
+    key: string
+    label: string
+    instance_id: string
+    cabin_class: string
+    fare_type: string
+    ticketPrice: number | null
+    fuelFee: number | null
+    actualPrice: number
+    count: number
+    subtotal: number
+  }>()
+  for (const ticket of detail.value?.tickets ?? []) {
+    const fuelFee = ticket.fuel_infra_fee ?? null
+    const ticketPrice = ticket.ticket_price ?? (fuelFee !== null ? ticket.actual_price - fuelFee : null)
+    const key = `${ticket.instance_id}-${ticket.cabin_class}-${ticket.fare_type}-${ticket.actual_price}`
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.count += 1
+      existing.subtotal += ticket.actual_price
+      continue
+    }
+    grouped.set(key, {
+      key,
+      label: '航段',
+      instance_id: ticket.instance_id,
+      cabin_class: ticket.cabin_class,
+      fare_type: ticket.fare_type,
+      ticketPrice,
+      fuelFee,
+      actualPrice: ticket.actual_price,
+      count: 1,
+      subtotal: ticket.actual_price,
+    })
+  }
+  return Array.from(grouped.values()).map((item, index, rows) => ({
+    ...item,
+    label: rows.length > 1 ? `第 ${index + 1} 段` : item.label,
+  }))
+})
 const isExpired = computed(() => {
   if (!expiresAt.value || !isPending.value) {
     return false
@@ -143,6 +200,26 @@ watch(orderNo, () => {
         <el-descriptions-item label="创建时间">{{ formatDate(order?.created_at ?? detail?.created_at) }}</el-descriptions-item>
         <el-descriptions-item label="支付截止">{{ formatDate(expiresAt) }}</el-descriptions-item>
       </el-descriptions>
+      <el-table v-if="priceRows.length" :data="priceRows" border row-key="key">
+        <el-table-column prop="label" label="航段" width="90" />
+        <el-table-column prop="instance_id" label="航班实例" min-width="180" />
+        <el-table-column label="舱位票价" min-width="240">
+          <template #default="{ row }">
+            <div>{{ row.cabin_class }} · {{ row.fare_type }}</div>
+            <span class="subtle mono-num">
+              机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="数量" width="90">
+          <template #default="{ row }">{{ row.count }}</template>
+        </el-table-column>
+        <el-table-column label="小计" width="130">
+          <template #default="{ row }">
+            <span class="price mono-num">{{ formatCurrency(row.subtotal) }}</span>
+          </template>
+        </el-table-column>
+      </el-table>
       <div class="actions">
         <el-button :disabled="!isPending" :loading="cancelLoading" @click="cancelOrder">取消订单</el-button>
         <el-button type="primary" :disabled="!canPay" :loading="loading" @click="pay">确认支付</el-button>
@@ -160,6 +237,11 @@ watch(orderNo, () => {
 .price {
   color: var(--fa-danger);
   font-weight: 700;
+}
+
+.subtle {
+  color: var(--fa-text-secondary);
+  font-size: 12px;
 }
 
 .actions {

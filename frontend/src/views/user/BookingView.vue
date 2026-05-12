@@ -3,11 +3,14 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { bookingApi } from '@/api/booking'
+import { flightApi } from '@/api/flight'
 import { passengerApi } from '@/api/passenger'
 import PassengerForm from '@/components/order/PassengerForm.vue'
 import { useBookingStore } from '@/stores/booking'
-import type { BookingRequest } from '@/types/booking'
+import { formatCurrency, formatTime } from '@/utils/format'
+import type { BookingRequest, BookingSegmentSelection } from '@/types/booking'
 import type { CabinClass, FareType } from '@/types/common'
+import type { FlightInstance } from '@/types/flight'
 import type { Passenger } from '@/types/user'
 
 const router = useRouter()
@@ -15,14 +18,58 @@ const route = useRoute()
 const bookingStore = useBookingStore()
 const loading = ref(false)
 const passengerLoading = ref(false)
+const detailLoading = ref(false)
 const savedPassengers = ref<Passenger[]>([])
 const selectedSavedIds = ref<string[]>([])
 const passengers = ref<Passenger[]>([{ id_no: '', real_name: '', birth_date: '' }])
+const transitInstanceIds = ref<string[]>([])
+const segmentDetails = ref<Record<string, FlightInstance | null>>({})
 
-const form = reactive<Omit<BookingRequest, 'passengers'>>({
+const form = reactive({
   instance_id: '',
-  cabin_class: '经济舱',
-  fare_type: '标准',
+  cabin_class: '经济舱' as CabinClass,
+  fare_type: '标准' as FareType,
+})
+
+const isTransitBooking = computed(() => transitInstanceIds.value.length > 1)
+const selectedSegments = computed<BookingSegmentSelection[]>(() => {
+  const ids = isTransitBooking.value ? transitInstanceIds.value : [form.instance_id.trim()].filter(Boolean)
+  return ids.map((instanceId) => ({
+    instance_id: instanceId,
+    cabin_class: form.cabin_class,
+    fare_type: form.fare_type,
+  }))
+})
+const segmentKey = computed(() =>
+  selectedSegments.value
+    .map((item) => `${item.instance_id}:${item.cabin_class}:${item.fare_type}`)
+    .join('|'),
+)
+const priceRows = computed(() =>
+  selectedSegments.value.map((segment, index) => {
+    const detail = segmentDetails.value[segment.instance_id] ?? null
+    const cabinPrice = detail?.cabin_prices?.find(
+      (item) => item.cabin_class === segment.cabin_class && item.fare_type === segment.fare_type,
+    )
+    const ticketPrice = cabinPrice?.price ?? null
+    const fuelFee = detail?.fuel_infra_fee ?? null
+    const actualPrice = ticketPrice !== null && fuelFee !== null ? ticketPrice + fuelFee : null
+    return {
+      key: `${index}-${segment.instance_id}`,
+      label: isTransitBooking.value ? `第 ${index + 1} 段` : '航段',
+      segment,
+      detail,
+      ticketPrice,
+      fuelFee,
+      actualPrice,
+    }
+  }),
+)
+const totalPerPassenger = computed(() => {
+  if (!priceRows.value.length || priceRows.value.some((item) => item.actualPrice === null)) {
+    return null
+  }
+  return priceRows.value.reduce((sum, item) => sum + (item.actualPrice ?? 0), 0)
 })
 
 const savedPassengerOptions = computed(() =>
@@ -61,6 +108,26 @@ async function loadSavedPassengers() {
   }
 }
 
+async function loadSegmentDetails() {
+  const ids = selectedSegments.value.map((item) => item.instance_id)
+  if (!ids.length) {
+    segmentDetails.value = {}
+    return
+  }
+
+  detailLoading.value = true
+  try {
+    const results = await Promise.allSettled(ids.map((id) => flightApi.getInstance(id, { silentError: true })))
+    const next: Record<string, FlightInstance | null> = {}
+    results.forEach((result, index) => {
+      next[ids[index]] = result.status === 'fulfilled' ? result.value : null
+    })
+    segmentDetails.value = next
+  } finally {
+    detailLoading.value = false
+  }
+}
+
 function appendSavedPassengers() {
   const selected = savedPassengers.value.filter((item) => selectedSavedIds.value.includes(item.id_no))
   if (!selected.length) {
@@ -81,8 +148,8 @@ function appendSavedPassengers() {
 }
 
 function normalizePayload(): BookingRequest | null {
-  const instanceId = form.instance_id.trim()
-  if (!instanceId) {
+  const bookingSegments = selectedSegments.value
+  if (!bookingSegments.length) {
     ElMessage.warning('请填写航班实例 ID')
     return null
   }
@@ -111,11 +178,18 @@ function normalizePayload(): BookingRequest | null {
     ids.add(passenger.id_no)
   }
 
-  return {
-    instance_id: instanceId,
-    cabin_class: form.cabin_class,
-    fare_type: form.fare_type,
+  const basePayload = {
     passengers: normalizedPassengers,
+  }
+  if (bookingSegments.length === 1) {
+    return {
+      ...bookingSegments[0],
+      ...basePayload,
+    }
+  }
+  return {
+    segments: bookingSegments,
+    ...basePayload,
   }
 }
 
@@ -140,30 +214,50 @@ function fareType(value: string | null): FareType | null {
 }
 
 watch(
-  () => ({ ...form, passengers: passengers.value }),
+  () => ({ segmentKey: segmentKey.value, passengers: passengers.value }),
   () => {
-    bookingStore.setDraft({ ...form, passengers: passengers.value })
+    bookingStore.setDraft(currentDraft())
   },
   { deep: true },
 )
 
+watch(segmentKey, () => {
+  void loadSegmentDetails()
+})
+
 onMounted(() => {
   const instanceId = queryText('instance_id')
+  const routeSegments = queryText('segments')
+    ?.split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  const draft = bookingStore.draft
+  const draftSegments = draft?.segments?.map((item) => item.instance_id) ?? []
   const cabin = cabinClass(queryText('cabin_class'))
   const fare = fareType(queryText('fare_type'))
-  const draft = bookingStore.draft
 
-  form.instance_id = instanceId ?? draft?.instance_id ?? ''
-  form.cabin_class = cabin ?? draft?.cabin_class ?? '经济舱'
-  form.fare_type = fare ?? draft?.fare_type ?? '标准'
+  transitInstanceIds.value = instanceId ? [] : routeSegments?.length ? routeSegments : draftSegments
+  form.instance_id = instanceId ?? routeSegments?.[0] ?? draft?.instance_id ?? draftSegments[0] ?? ''
+  form.cabin_class = cabin ?? draft?.cabin_class ?? draft?.segments?.[0]?.cabin_class ?? '经济舱'
+  form.fare_type = fare ?? draft?.fare_type ?? draft?.segments?.[0]?.fare_type ?? '标准'
   passengers.value = draft?.passengers?.length ? draft.passengers : passengers.value
-  bookingStore.setSelection({
+  bookingStore.setDraft(currentDraft())
+  void loadSegmentDetails()
+  void loadSavedPassengers()
+})
+
+function currentDraft(): BookingRequest | null {
+  const draft = { passengers: passengers.value }
+  if (selectedSegments.value.length > 1) {
+    return { segments: selectedSegments.value, ...draft }
+  }
+  return {
     instance_id: form.instance_id,
     cabin_class: form.cabin_class,
     fare_type: form.fare_type,
-  })
-  void loadSavedPassengers()
-})
+    ...draft,
+  }
+}
 </script>
 
 <template>
@@ -171,8 +265,15 @@ onMounted(() => {
     <section class="page-section">
       <h1 class="page-title">填写订单</h1>
       <el-form :model="form" label-position="top" class="booking-form">
-        <el-form-item label="航班实例 ID">
+        <el-form-item v-if="!isTransitBooking" label="航班实例 ID">
           <el-input v-model="form.instance_id" placeholder="如 CA1234_20260510" />
+        </el-form-item>
+        <el-form-item v-else label="中转航段">
+          <div class="segment-tags">
+            <el-tag v-for="row in priceRows" :key="row.key" type="info">
+              {{ row.label }} · {{ row.segment.instance_id }}
+            </el-tag>
+          </div>
         </el-form-item>
         <el-form-item label="舱位">
           <el-select v-model="form.cabin_class">
@@ -187,6 +288,35 @@ onMounted(() => {
           </el-select>
         </el-form-item>
       </el-form>
+      <div v-if="selectedSegments.length" v-loading="detailLoading" class="price-summary">
+        <h2>价格明细</h2>
+        <el-table :data="priceRows" border row-key="key">
+          <el-table-column prop="label" label="航段" width="90" />
+          <el-table-column label="航班实例" min-width="190">
+            <template #default="{ row }">
+              <div>{{ row.detail?.flight_no ?? '--' }} · {{ row.segment.instance_id }}</div>
+              <span class="subtle">
+                {{ row.detail?.dep_airport_code ?? '--' }} → {{ row.detail?.arr_airport_code ?? '--' }}
+                {{ formatTime(row.detail?.scheduled_departure) }} - {{ formatTime(row.detail?.scheduled_arrival) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="舱位票价" min-width="240">
+            <template #default="{ row }">
+              <div>{{ row.segment.cabin_class }} · {{ row.segment.fare_type }}</div>
+              <span class="subtle mono-num">
+                机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="单人合计" width="130">
+            <template #default="{ row }">
+              <span class="price mono-num">{{ formatCurrency(row.actualPrice) }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div class="price-total mono-num">单人行程合计 {{ formatCurrency(totalPerPassenger) }}</div>
+      </div>
     </section>
 
     <section class="page-section">
@@ -224,7 +354,7 @@ onMounted(() => {
 
 .booking-form {
   display: grid;
-  grid-template-columns: 1fr 160px 160px;
+  grid-template-columns: minmax(260px, 1fr) 160px 160px;
   gap: 12px;
 }
 
@@ -252,6 +382,34 @@ h2 {
   display: flex;
   justify-content: flex-end;
   margin-top: 14px;
+}
+
+.segment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.price-summary {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.price-total {
+  justify-self: end;
+  color: var(--fa-text-primary);
+  font-weight: 700;
+}
+
+.price {
+  color: var(--fa-danger);
+  font-weight: 700;
+}
+
+.subtle {
+  color: var(--fa-text-secondary);
+  font-size: 12px;
 }
 
 @media (max-width: 760px) {

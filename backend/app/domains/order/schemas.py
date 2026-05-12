@@ -54,6 +54,8 @@ class OrderTicketDetail(BaseModel):
     arr_airport_code: str
     cabin_class: Literal["经济舱", "头等舱"]
     fare_type: Literal["标准", "特价"]
+    ticket_price: float | None = None
+    fuel_infra_fee: float | None = None
     actual_price: float
     status: Literal["有效", "已退", "已改签作废", "已使用"]
 

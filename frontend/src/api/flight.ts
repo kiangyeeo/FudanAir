@@ -1,4 +1,5 @@
 import { http } from './client'
+import type { HttpRequestConfig } from './client'
 import type { PageResult } from '@/types/common'
 import type {
   Airline,
@@ -22,6 +23,7 @@ export const flightApi = {
   listFlights: (params: FlightListParams = {}) => http.get<PageResult<Flight>>('/flights', { params }),
   getFlight: (flightNo: string) => http.get<Flight>(`/flights/${encodeURIComponent(flightNo)}`),
   listInstances: (params: FlightInstanceListParams = {}) => http.get<PageResult<FlightInstance>>('/flight-instances', { params }),
-  getInstance: (instanceId: string) => http.get<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}`),
+  getInstance: (instanceId: string, config?: HttpRequestConfig) =>
+    http.get<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}`, config),
   listCabinPrices: (instanceId: string) => http.get<CabinPrice[]>(`/flight-instances/${encodeURIComponent(instanceId)}/cabin-prices`),
 }

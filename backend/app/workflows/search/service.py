@@ -49,6 +49,8 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                MIN(cp.price) AS min_ticket_price,
+                v.fuel_infra_fee,
                 MIN(cp.price + v.fuel_infra_fee) AS min_price,
                 v.economy_left,
                 v.first_left,
@@ -86,6 +88,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.fuel_infra_fee,
                 v.economy_left,
                 v.first_left,
                 v.flight_date
@@ -109,6 +112,8 @@ class SearchService:
                     v.scheduled_arrival,
                     v.airline_code,
                     v.airline_name,
+                    MIN(cp.price) AS min_ticket_price,
+                    v.fuel_infra_fee,
                     MIN(cp.price + v.fuel_infra_fee) AS min_price,
                     v.economy_left,
                     v.first_left,
@@ -141,6 +146,7 @@ class SearchService:
                     v.scheduled_arrival,
                     v.airline_code,
                     v.airline_name,
+                    v.fuel_infra_fee,
                     v.economy_left,
                     v.first_left
             )
@@ -153,6 +159,8 @@ class SearchService:
                 leg1.scheduled_arrival AS leg1_scheduled_arrival,
                 leg1.airline_code AS leg1_airline_code,
                 leg1.airline_name AS leg1_airline_name,
+                leg1.min_ticket_price AS leg1_min_ticket_price,
+                leg1.fuel_infra_fee AS leg1_fuel_infra_fee,
                 leg1.min_price AS leg1_min_price,
                 leg1.economy_left AS leg1_economy_left,
                 leg1.first_left AS leg1_first_left,
@@ -164,12 +172,16 @@ class SearchService:
                 leg2.scheduled_arrival AS leg2_scheduled_arrival,
                 leg2.airline_code AS leg2_airline_code,
                 leg2.airline_name AS leg2_airline_name,
+                leg2.min_ticket_price AS leg2_min_ticket_price,
+                leg2.fuel_infra_fee AS leg2_fuel_infra_fee,
                 leg2.min_price AS leg2_min_price,
                 leg2.economy_left AS leg2_economy_left,
                 leg2.first_left AS leg2_first_left,
                 leg1.arr_airport_code AS transit_airport,
                 TIMESTAMPDIFF(MINUTE, leg1.arr_dt, leg2.dep_dt) AS transit_minutes,
                 TIMESTAMPDIFF(MINUTE, leg1.dep_dt, leg2.arr_dt) AS total_duration_minutes,
+                leg1.min_ticket_price + leg2.min_ticket_price AS total_ticket_price,
+                leg1.fuel_infra_fee + leg2.fuel_infra_fee AS total_fuel_infra_fee,
                 leg1.min_price + leg2.min_price AS total_min_price
             FROM candidates leg1
             JOIN candidates leg2
@@ -223,6 +235,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.fuel_infra_fee,
                 v.economy_left,
                 v.first_left,
                 v.flight_date
@@ -240,6 +253,8 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                MIN(cp.price) AS min_ticket_price,
+                v.fuel_infra_fee,
                 MIN(cp.price + v.fuel_infra_fee) AS min_price,
                 v.economy_left,
                 v.first_left,
@@ -386,6 +401,8 @@ def _direct_candidate(row: Any, prefix: str = "") -> dict[str, Any]:
         "airline_code": data[f"{prefix}airline_code"],
         "airline_name": data[f"{prefix}airline_name"],
         "min_price": _number(data[f"{prefix}min_price"]),
+        "min_ticket_price": _number(data[f"{prefix}min_ticket_price"]),
+        "fuel_infra_fee": _number(data[f"{prefix}fuel_infra_fee"]),
         "economy_left": int(data[f"{prefix}economy_left"]),
         "first_left": int(data[f"{prefix}first_left"]),
     }
@@ -412,6 +429,8 @@ def _transit_candidate(row: Any) -> dict[str, Any]:
         "transit_minutes": int(data["transit_minutes"]),
         "total_duration_minutes": int(data["total_duration_minutes"]),
         "total_min_price": _number(data["total_min_price"]),
+        "total_ticket_price": _number(data["total_ticket_price"]),
+        "total_fuel_infra_fee": _number(data["total_fuel_infra_fee"]),
     }
 
 

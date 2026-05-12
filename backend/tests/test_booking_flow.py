@@ -73,7 +73,7 @@ class FakeOrderService:
             user_id=7,
             total_amount=Decimal("0.00"),
             status="待支付",
-            created_at=datetime(2026, 5, 12, 9, 0, 0),
+            created_at=datetime.now(),
         )
         self.status_updates: list[str] = []
 
@@ -182,7 +182,51 @@ def test_create_order_deducts_stock_and_price_includes_fuel_fee() -> None:
     ]
     assert service.order_svc.order.total_amount == Decimal("1700.00")
     assert response["amount_breakdown"]["fuel_infra_fee_per_seat"] == Decimal("50.00")
+    assert response["amount_breakdown"]["segments"][0]["ticket_price_per_seat"] == Decimal("800.00")
     assert response["tickets"][0]["actual_price"] == Decimal("850.00")
+
+
+def test_create_order_can_book_transit_segments_in_one_order() -> None:
+    service = make_service()
+    payload = BookingRequest.model_validate(
+        {
+            "segments": [
+                {
+                    "instance_id": "MU1001_20260512",
+                    "cabin_class": "经济舱",
+                    "fare_type": "标准",
+                },
+                {
+                    "instance_id": "CA2001_20260512",
+                    "cabin_class": "经济舱",
+                    "fare_type": "标准",
+                },
+            ],
+            "passengers": [
+                {
+                    "id_no": "110101199001011234",
+                    "real_name": "张三",
+                    "birth_date": "1990-01-01",
+                },
+                {
+                    "id_no": "110101199203033456",
+                    "real_name": "李四",
+                    "birth_date": "1992-03-03",
+                },
+            ],
+        }
+    )
+
+    response = service.create_order(7, payload)
+
+    assert service.flight_svc.deduct_calls == [
+        ("MU1001_20260512", "经济舱", "标准", 2),
+        ("CA2001_20260512", "经济舱", "标准", 2),
+    ]
+    assert service.order_svc.order.total_amount == Decimal("3400.00")
+    assert len(response["tickets"]) == 4
+    assert response["amount_breakdown"]["segment_count"] == 2
+    assert response["amount_breakdown"]["passenger_count"] == 2
 
 
 def test_pay_order_only_updates_order_status() -> None:

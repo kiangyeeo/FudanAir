@@ -69,6 +69,8 @@ class DirectFlightCandidate(BaseModel):
     airline_code: str
     airline_name: str
     min_price: float
+    min_ticket_price: float
+    fuel_infra_fee: float
     economy_left: int
     first_left: int
 
@@ -86,6 +88,8 @@ class TransitCandidate(BaseModel):
     transit_minutes: int
     total_duration_minutes: int
     total_min_price: float
+    total_ticket_price: float
+    total_fuel_infra_fee: float
 
 
 class NearbyFlightCandidate(BaseModel):
@@ -103,6 +107,8 @@ class NearbyFlightCandidate(BaseModel):
     airline_code: str
     airline_name: str
     min_price: float
+    min_ticket_price: float
+    fuel_infra_fee: float
     economy_left: int
     first_left: int
 

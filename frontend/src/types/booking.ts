@@ -10,20 +10,43 @@ export interface BookingFlightSelection {
   fare_type: FareType
 }
 
-export interface BookingRequest extends BookingFlightSelection {
+export type BookingSegmentSelection = BookingFlightSelection
+
+export interface BookingRequest {
+  instance_id?: string
+  cabin_class?: CabinClass
+  fare_type?: FareType
+  segments?: BookingSegmentSelection[]
   passengers: Passenger[]
 }
 
 export interface BookingTicket {
   ticket_no: string
   passenger_id: string
+  instance_id: string
+  cabin_class: CabinClass
+  fare_type: FareType
   actual_price: number
+}
+
+export interface BookingSegmentBreakdown {
+  instance_id: string
+  cabin_class: CabinClass
+  fare_type: FareType
+  ticket_price_per_seat: number
+  fuel_infra_fee_per_seat: number
+  actual_price_per_seat: number
+  passenger_count: number
+  subtotal: number
 }
 
 export interface BookingAmountBreakdown {
   ticket_price_per_seat: number
   fuel_infra_fee_per_seat: number
   seat_count: number
+  passenger_count: number
+  segment_count: number
+  segments: BookingSegmentBreakdown[]
 }
 
 export interface BookingResponse {
