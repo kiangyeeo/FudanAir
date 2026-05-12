@@ -23,6 +23,7 @@ export interface OrderTicket {
   flight_no: string
   flight_date: string
   scheduled_departure: string
+  scheduled_arrival?: string | null
   dep_airport_code: string
   arr_airport_code: string
   cabin_class: CabinClass

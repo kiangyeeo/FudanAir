@@ -48,11 +48,11 @@ function statusTagType(status: OrderStatus | string) {
 }
 
 function refund(ticket: OrderTicket) {
-  router.push({ name: 'refund', query: { ticket_no: ticket.ticket_no } })
+  router.push({ name: 'refund', query: { ticket_no: ticket.ticket_no, order_no: orderNo.value } })
 }
 
 function change(ticket: OrderTicket) {
-  router.push({ name: 'change', query: { ticket_no: ticket.ticket_no } })
+  router.push({ name: 'change', query: { ticket_no: ticket.ticket_no, order_no: orderNo.value } })
 }
 
 onMounted(() => {
