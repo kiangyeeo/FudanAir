@@ -384,17 +384,36 @@ class CabinPriceRepository:
         instance_id: str,
         rows: Iterable[dict[str, Any]],
     ) -> list[CabinPrice]:
-        self.db.execute(delete(CabinPrice).where(CabinPrice.instance_id == instance_id))
-        created = [
-            self.create(
-                instance_id,
-                row["cabin_class"],
-                row["fare_type"],
-                row["price"],
-                row["available_seats"],
+        current = {
+            (item.cabin_class, item.fare_type): item
+            for item in self.list_by_instance(instance_id)
+        }
+        created: list[CabinPrice] = []
+        kept_keys: set[tuple[str, str]] = set()
+
+        for row in rows:
+            key = (row["cabin_class"], row["fare_type"])
+            kept_keys.add(key)
+            cabin_price = current.get(key)
+            if cabin_price:
+                cabin_price.price = row["price"]
+                cabin_price.available_seats = row["available_seats"]
+                created.append(cabin_price)
+                continue
+            created.append(
+                self.create(
+                    instance_id,
+                    row["cabin_class"],
+                    row["fare_type"],
+                    row["price"],
+                    row["available_seats"],
+                )
             )
-            for row in rows
-        ]
+
+        for key, cabin_price in current.items():
+            if key not in kept_keys:
+                self.db.delete(cabin_price)
+
         self.db.flush()
         return created
 
