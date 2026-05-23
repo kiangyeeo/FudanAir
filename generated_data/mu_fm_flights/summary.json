@@ -1,0 +1,9 @@
+{
+  "total_flights": 2000,
+  "crawled_flights": 0,
+  "completed_or_generated_flights": 2000,
+  "airlines": [
+    "FM",
+    "MU"
+  ]
+}
