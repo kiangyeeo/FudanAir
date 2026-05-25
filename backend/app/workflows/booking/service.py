@@ -55,13 +55,6 @@ class BookingService:
                     passenger.birth_date,
                 )
 
-            for segment in segments:
-                for passenger in payload.passengers:
-                    self.ticket_svc.check_passenger_duplicate(
-                        passenger.id_no,
-                        segment.instance_id,
-                    )
-
             segment_prices = []
             total_amount = Decimal("0.00")
             for segment in segments:
@@ -86,6 +79,11 @@ class BookingService:
                     }
                 )
                 total_amount += actual_price * passenger_count
+                for passenger in payload.passengers:
+                    self.ticket_svc.check_passenger_duplicate(
+                        passenger.id_no,
+                        segment.instance_id,
+                    )
 
             order = self.order_svc.create(user_id, total_amount)
             tickets = []

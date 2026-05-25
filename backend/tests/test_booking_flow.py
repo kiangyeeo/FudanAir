@@ -9,6 +9,7 @@ from typing import Any
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from app.core.exceptions import PassengerDuplicateError
 from app.workflows.booking.schemas import BookingRequest
 from app.workflows.booking.service import BookingService
 
@@ -99,6 +100,13 @@ class FakeTicketService:
 
     def check_passenger_duplicate(self, passenger_id: str, instance_id: str) -> None:
         self.duplicate_checks.append((passenger_id, instance_id))
+        for ticket in self.tickets:
+            if (
+                ticket.passenger_id == passenger_id
+                and ticket.instance_id == instance_id
+                and ticket.status == "有效"
+            ):
+                raise PassengerDuplicateError()
 
     def create(
         self,
@@ -184,6 +192,43 @@ def test_create_order_deducts_stock_and_price_includes_fuel_fee() -> None:
     assert response["amount_breakdown"]["fuel_infra_fee_per_seat"] == Decimal("50.00")
     assert response["amount_breakdown"]["segments"][0]["ticket_price_per_seat"] == Decimal("800.00")
     assert response["tickets"][0]["actual_price"] == Decimal("850.00")
+
+
+def test_create_order_allows_rebooking_after_refund() -> None:
+    service = make_service()
+    service.ticket_svc.tickets = [
+        SimpleNamespace(
+            ticket_no="T0",
+            passenger_id="110101199001011234",
+            instance_id="MU1001_20260512",
+            cabin_class="经济舱",
+            fare_type="标准",
+            actual_price=Decimal("850.00"),
+            status="已退",
+        )
+    ]
+    payload = BookingRequest.model_validate(
+        {
+            "instance_id": "MU1001_20260512",
+            "cabin_class": "经济舱",
+            "fare_type": "标准",
+            "passengers": [
+                {
+                    "id_no": "110101199001011234",
+                    "real_name": "张三",
+                    "birth_date": "1990-01-01",
+                }
+            ],
+        }
+    )
+
+    response = service.create_order(7, payload)
+
+    assert service.ticket_svc.duplicate_checks == [
+        ("110101199001011234", "MU1001_20260512")
+    ]
+    assert len(response["tickets"]) == 1
+    assert response["tickets"][0]["passenger_id"] == "110101199001011234"
 
 
 def test_create_order_can_book_transit_segments_in_one_order() -> None:
