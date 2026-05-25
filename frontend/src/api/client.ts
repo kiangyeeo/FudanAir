@@ -36,6 +36,9 @@ client.interceptors.response.use(
     }
 
     if (status === 401) {
+      if (!config?.silentAuth && data?.message) {
+        ElMessage.error(data.message)
+      }
       if (!config?.silentAuth) {
         void import('@/router').then(({ default: router }) => {
           const current = router.currentRoute.value

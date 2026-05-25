@@ -44,9 +44,12 @@ class AuthService:
             raise PhoneAlreadyExistsError() from exc
 
     def login(self, payload: LoginRequest) -> User:
+        self._validate_phone(payload.phone)
         user = self._get_user_by_phone(payload.phone)
-        if not user or not verify_password(payload.password, user.user_password):
-            raise AuthenticationError("手机号或密码错误")
+        if not user:
+            raise AuthenticationError("用户暂未注册")
+        if not verify_password(payload.password, user.user_password):
+            raise AuthenticationError("密码错误，请重试")
         return user
 
     def admin_login(self, payload: AdminLoginRequest) -> Admin:
