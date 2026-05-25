@@ -3,6 +3,7 @@ import { reactive, watch } from 'vue'
 import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import type { Airline } from '@/types/flight'
 import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
+import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
 
 const props = withDefaults(defineProps<{
   loading?: boolean
@@ -25,8 +26,15 @@ type SearchForm = {
   dep_city: string
   arr_city: string
   flight_date: string
-  filters: Required<SearchFilters>
+  filters: SearchFormFilters
   sort: SearchSort
+}
+
+type SearchFormFilters = {
+  airline_codes: string[]
+  cabin_class: SearchFilters['cabin_class'] | null
+  departure_time_range: NonNullable<SearchFilters['departure_time_range']> | null
+  include_stopover: boolean
 }
 
 const form = reactive<SearchForm>({
@@ -64,9 +72,9 @@ function defaultCriteria(): FlightSearchRequest {
   }
 }
 
-function defaultFilters(): Required<SearchFilters> {
+function defaultFilters(): SearchFormFilters {
   return {
-    airline_code: null,
+    airline_codes: [],
     cabin_class: null,
     departure_time_range: null,
     include_stopover: true,
@@ -81,17 +89,23 @@ function applyCriteria(criteria: FlightSearchRequest) {
   form.dep_city = criteria.dep_city
   form.arr_city = criteria.arr_city
   form.flight_date = criteria.flight_date
-  form.filters = { ...defaultFilters(), ...criteria.filters }
+  form.filters = {
+    airline_codes: normalizeAirlineCodes(criteria.filters),
+    cabin_class: criteria.filters?.cabin_class ?? null,
+    departure_time_range: criteria.filters?.departure_time_range ?? null,
+    include_stopover: criteria.filters?.include_stopover ?? true,
+  }
   form.sort = { ...defaultSort(), ...criteria.sort }
 }
 
 function buildPayload(): FlightSearchRequest {
+  const airlineFilter = buildAirlineFilter(form.filters.airline_codes)
   return {
     dep_city: form.dep_city.trim(),
     arr_city: form.arr_city.trim(),
     flight_date: form.flight_date,
     filters: {
-      airline_code: form.filters.airline_code || null,
+      ...airlineFilter,
       cabin_class: form.filters.cabin_class || null,
       departure_time_range: form.filters.departure_time_range,
       include_stopover: form.filters.include_stopover,
@@ -122,7 +136,7 @@ function reset() {
       <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
     </el-form-item>
     <el-form-item label="航司">
-      <el-select v-model="form.filters.airline_code" v-bind="selectPanelProps" clearable filterable>
+      <el-select v-model="form.filters.airline_codes" v-bind="selectPanelProps" multiple collapse-tags collapse-tags-tooltip clearable filterable>
         <el-option v-for="airline in airlines" :key="airline.iata_code" :label="`${airline.iata_code} ${airline.airline_name}`" :value="airline.iata_code" />
       </el-select>
     </el-form-item>

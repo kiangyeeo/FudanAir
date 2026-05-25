@@ -2,6 +2,7 @@ import type { CabinClass, SortOrder } from './common'
 
 export interface SearchFilters {
   airline_code?: string | null
+  airline_codes?: string[] | null
   cabin_class?: CabinClass | null
   departure_time_range?: [string, string] | null
   include_stopover?: boolean

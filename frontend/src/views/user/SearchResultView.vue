@@ -13,6 +13,7 @@ import { useSearchStore } from '@/stores/search'
 import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
 import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
+import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,12 +94,13 @@ async function loadOptions() {
 }
 
 function normalizeCriteria(payload: FlightSearchRequest): FlightSearchRequest {
+  const airlineFilter = buildAirlineFilter(normalizeAirlineCodes(payload.filters))
   return {
     dep_city: payload.dep_city.trim(),
     arr_city: payload.arr_city.trim(),
     flight_date: payload.flight_date,
     filters: {
-      airline_code: payload.filters?.airline_code || null,
+      ...airlineFilter,
       cabin_class: payload.filters?.cabin_class || null,
       departure_time_range: payload.filters?.departure_time_range ?? null,
       include_stopover: payload.filters?.include_stopover ?? true,
@@ -111,6 +113,7 @@ function normalizeCriteria(payload: FlightSearchRequest): FlightSearchRequest {
 }
 
 function criteriaToQuery(payload: FlightSearchRequest) {
+  const airlineCodes = normalizeAirlineCodes(payload.filters)
   const query: Record<string, string> = {
     dep_city: payload.dep_city,
     arr_city: payload.arr_city,
@@ -118,8 +121,8 @@ function criteriaToQuery(payload: FlightSearchRequest) {
     sort_field: payload.sort?.field ?? 'price',
     sort_order: payload.sort?.order ?? 'asc',
   }
-  if (payload.filters?.airline_code) {
-    query.airline_code = payload.filters.airline_code
+  if (airlineCodes.length) {
+    query.airline_codes = airlineCodes.join(',')
   }
   if (payload.filters?.cabin_class) {
     query.cabin_class = payload.filters.cabin_class
@@ -150,6 +153,7 @@ function criteriaFromRoute(): FlightSearchRequest | null {
     flight_date: flightDate,
     filters: {
       airline_code: queryText('airline_code'),
+      airline_codes: queryTextList('airline_codes'),
       cabin_class: cabinClassQuery(queryText('cabin_class')),
       departure_time_range: departureTimeRange,
       include_stopover: queryText('include_stopover') !== 'false',
@@ -167,6 +171,12 @@ function queryText(key: string): string | null {
     return value[0] ?? null
   }
   return value ?? null
+}
+
+function queryTextList(key: string): string[] {
+  const value = route.query[key]
+  const rawValues = Array.isArray(value) ? value : value ? [value] : []
+  return rawValues.flatMap((item) => String(item ?? '').split(',')).filter(Boolean)
 }
 
 function cabinClassQuery(value: string | null): CabinClass | null {
