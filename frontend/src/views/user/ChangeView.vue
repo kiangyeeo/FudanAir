@@ -7,6 +7,7 @@ import { flightApi } from '@/api/flight'
 import { orderApi } from '@/api/order'
 import { refundApi } from '@/api/refund'
 import { searchApi } from '@/api/search'
+import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import { formatCurrency, formatDate, formatTime } from '@/utils/format'
 import type { CabinClass, FareType } from '@/types/common'
 import type { CabinPrice, FlightInstance } from '@/types/flight'
@@ -36,6 +37,7 @@ const selectedInstance = ref<FlightInstance | null>(null)
 const selectedPriceKey = ref('')
 const quote = ref<RefundQuote | null>(null)
 const result = ref<ChangeTicketResponse | null>(null)
+const cities = ref<string[]>([])
 
 const form = reactive<ChangeRequest>({
   ticket_no: '',
@@ -102,6 +104,14 @@ async function fillSearchCities(ticket: OrderTicket) {
   ])
   searchForm.dep_city = depAirport.city_name
   searchForm.arr_city = arrAirport.city_name
+}
+
+async function loadCities() {
+  try {
+    cities.value = await flightApi.listCities()
+  } catch {
+    cities.value = []
+  }
 }
 
 async function runSearch() {
@@ -286,6 +296,7 @@ watch(
 onMounted(() => {
   form.ticket_no = queryText('ticket_no') ?? ''
   orderNo.value = queryText('order_no') ?? ''
+  void loadCities()
   void loadOriginalTicket()
 })
 </script>
@@ -335,10 +346,10 @@ onMounted(() => {
       <h2>搜索新航班</h2>
       <el-form :model="searchForm" label-position="top" class="search-form">
         <el-form-item label="出发城市">
-          <el-input v-model="searchForm.dep_city" placeholder="如 上海" />
+          <CityAutocomplete v-model="searchForm.dep_city" :cities="cities" placeholder="输入出发城市" />
         </el-form-item>
         <el-form-item label="到达城市">
-          <el-input v-model="searchForm.arr_city" placeholder="如 北京" />
+          <CityAutocomplete v-model="searchForm.arr_city" :cities="cities" placeholder="输入到达城市" />
         </el-form-item>
         <el-form-item label="目标日期">
           <el-date-picker v-model="searchForm.flight_date" type="date" value-format="YYYY-MM-DD" placeholder="选择目标日期" />

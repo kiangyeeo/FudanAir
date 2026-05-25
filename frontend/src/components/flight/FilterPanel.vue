@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue'
+import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import type { Airline } from '@/types/flight'
 import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
 
@@ -55,8 +56,8 @@ watch(
 
 function defaultCriteria(): FlightSearchRequest {
   return {
-    dep_city: '上海',
-    arr_city: '北京',
+    dep_city: '',
+    arr_city: '',
     flight_date: new Date().toISOString().slice(0, 10),
     filters: defaultFilters(),
     sort: defaultSort(),
@@ -112,14 +113,10 @@ function reset() {
 <template>
   <el-form class="filter-panel" :model="form" label-position="top">
     <el-form-item label="出发城市">
-      <el-select v-model="form.dep_city" v-bind="selectPanelProps" filterable allow-create default-first-option>
-        <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
-      </el-select>
+      <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
     </el-form-item>
     <el-form-item label="到达城市">
-      <el-select v-model="form.arr_city" v-bind="selectPanelProps" filterable allow-create default-first-option>
-        <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
-      </el-select>
+      <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
     </el-form-item>
     <el-form-item label="出行日期">
       <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
