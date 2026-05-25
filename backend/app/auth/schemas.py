@@ -5,9 +5,12 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 
+REGISTER_PASSWORD_MIN_LENGTH = 6
+
+
 class RegisterRequest(BaseModel):
     phone: str = Field(..., min_length=1, max_length=20)
-    password: str = Field(..., min_length=6, max_length=32)
+    password: str = Field(..., min_length=REGISTER_PASSWORD_MIN_LENGTH, max_length=32)
     name: str = Field(..., min_length=1, max_length=64)
 
     model_config = {"str_strip_whitespace": True}

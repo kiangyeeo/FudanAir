@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.auth.router import router as auth_router
+from app.auth.schemas import REGISTER_PASSWORD_MIN_LENGTH
 from app.config import settings
 from app.core.exceptions import AppException
 from app.core.logging import configure_logging, get_logger
@@ -30,6 +31,14 @@ from app.workflows.search.router import router as search_router
 
 configure_logging()
 logger = get_logger(__name__)
+REGISTER_PATH = "/api/auth/register"
+REGISTER_REQUIRED_FIELDS = (
+    ("name", "姓名"),
+    ("password", "密码"),
+    ("phone", "手机号"),
+)
+PASSWORD_TOO_SHORT_MESSAGE = "请输入至少六位的密码"
+DEFAULT_VALIDATION_MESSAGE = "请求参数校验失败"
 
 
 @asynccontextmanager
@@ -93,13 +102,54 @@ async def app_exception_handler(
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
-    _request: Request,
-    _exc: RequestValidationError,
+    request: Request,
+    exc: RequestValidationError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=422,
-        content={"code": "VALIDATION_ERROR", "message": "请求参数校验失败"},
+        content={
+            "code": "VALIDATION_ERROR",
+            "message": _validation_message(request, exc),
+        },
     )
+
+
+def _validation_message(request: Request, exc: RequestValidationError) -> str:
+    if request.url.path == REGISTER_PATH:
+        return _register_validation_message(exc.body)
+    return DEFAULT_VALIDATION_MESSAGE
+
+
+def _register_validation_message(body: object) -> str:
+    if not isinstance(body, dict):
+        return "请输入姓名,密码,手机号"
+
+    missing_labels = [
+        label
+        for field, label in REGISTER_REQUIRED_FIELDS
+        if _is_blank(body.get(field))
+    ]
+    if len(missing_labels) >= 2:
+        return f"请输入{','.join(missing_labels)}"
+    if missing_labels == ["姓名"]:
+        return "请输入姓名"
+    if missing_labels == ["手机号"]:
+        return "请输入手机号"
+    if missing_labels == ["密码"]:
+        return PASSWORD_TOO_SHORT_MESSAGE
+
+    password = body.get("password")
+    if isinstance(password, str) and len(password.strip()) < REGISTER_PASSWORD_MIN_LENGTH:
+        return PASSWORD_TOO_SHORT_MESSAGE
+    return DEFAULT_VALIDATION_MESSAGE
+
+
+def _is_blank(value: object) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return not value.strip()
+    return False
 
 
 @app.exception_handler(Exception)
