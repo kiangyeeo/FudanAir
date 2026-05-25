@@ -60,16 +60,23 @@ class TicketRepository:
         )
 
     def has_active_ticket(self, passenger_id: str, instance_id: str) -> bool:
-        row = (
-            self.db.query(Ticket.ticket_no)
-            .filter(
+        tickets = self.list_for_passenger_instance_for_update(passenger_id, instance_id)
+        return any(ticket.status == "有效" for ticket in tickets)
+
+    def list_for_passenger_instance_for_update(
+        self,
+        passenger_id: str,
+        instance_id: str,
+    ) -> list[Ticket]:
+        stmt = (
+            select(Ticket)
+            .where(
                 Ticket.passenger_id == passenger_id,
                 Ticket.instance_id == instance_id,
-                Ticket.status == "有效",
             )
-            .first()
+            .with_for_update()
         )
-        return row is not None
+        return list(self.db.execute(stmt).scalars().all())
 
     def next_ticket_sequence(self) -> int:
         prefix = f"T{date.today():%Y%m%d}"
