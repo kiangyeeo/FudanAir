@@ -7,6 +7,7 @@ from typing import Any
 
 import pymysql
 from sqlalchemy.engine import make_url
+from tqdm import tqdm
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -14,10 +15,14 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.config import settings
-from scripts import generate_data, generate_demo, load_csv
+from app.core.security import hash_password
+from scripts import generate_data, load_csv
 
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "schema.sql"
+ADMIN_ACCOUNTS = (
+    ("A001", "admin123", "系统管理员"),
+)
 
 
 def main() -> None:
@@ -32,11 +37,18 @@ def main() -> None:
     )
     try:
         with conn.cursor() as cur:
+            progress = tqdm(total=5, desc="初始化数据库", unit="step")
             _recreate_database(cur, config["database"])
+            progress.update()
             _execute_schema(cur)
+            progress.update()
             counts = _load_initial_data(cur)
+            progress.update(3)
+            progress.close()
         conn.commit()
     except Exception:
+        if "progress" in locals():
+            progress.close()
         conn.rollback()
         raise
     finally:
@@ -78,7 +90,8 @@ def _quote_identifier(identifier: str) -> str:
 def _execute_schema(cur: Any) -> None:
     if not SCHEMA_PATH.exists():
         raise FileNotFoundError(f"schema.sql 不存在: {SCHEMA_PATH}")
-    for statement in _split_sql(SCHEMA_PATH.read_text(encoding="utf-8")):
+    statements = _split_sql(SCHEMA_PATH.read_text(encoding="utf-8"))
+    for statement in tqdm(statements, desc="执行 schema", unit="stmt"):
         cur.execute(statement)
 
 
@@ -91,22 +104,26 @@ def _split_sql(script: str) -> list[str]:
 
 
 def _load_initial_data(cur: Any) -> dict[str, int]:
-    counts = {
-        "city": load_csv.load_cities(cur),
-        "airport": load_csv.load_airports(cur),
-        "city_near_apt": load_csv.load_city_near_apt(cur),
-        "airline": load_csv.load_airlines(cur),
-        "aircraft_type": load_csv.load_aircraft_types(cur),
-        "flight": load_csv.load_flights(cur),
-        "flight_weekday": load_csv.load_flight_weekdays(cur),
-        "flight_stopover": load_csv.load_flight_stopovers(cur),
-    }
+    counts = load_csv.load_all(cur)
     counts["flight_instance"] = generate_data.generate_flight_instances(cur)
     counts["cabin_price"] = generate_data.generate_cabin_prices(cur)
-    counts["admin"] = generate_demo.create_admins(cur)
-    counts["user"] = generate_demo.generate_demo_users(cur, n=20)
-    counts["passenger"] = generate_demo.generate_demo_passengers(cur, n=50)
+    counts["admin"] = _create_admins(cur)
     return counts
+
+
+def _create_admins(cur: Any) -> int:
+    params = [
+        (admin_id, hash_password(password), admin_name)
+        for admin_id, password, admin_name in ADMIN_ACCOUNTS
+    ]
+    cur.executemany(
+        """
+        INSERT INTO admin (admin_id, admin_password, admin_name)
+        VALUES (%s, %s, %s)
+        """,
+        params,
+    )
+    return len(params)
 
 
 def _print_summary(counts: dict[str, int]) -> None:

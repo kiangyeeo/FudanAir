@@ -1086,11 +1086,11 @@ city_name,iata_code,distance
 甘南,XNN,300
 嘉峪关,JGN,0
 嘉峪关,YZY,220
-嘉峪关,JIC,400
-嘉峪关,DNH,300
+嘉峪关,JIC,300
+嘉峪关,DNH,280
 金昌,JIC,0
 金昌,YZY,180
-金昌,JGN,400
+金昌,JGN,300
 金昌,LHW,250
 白银,LHW,80
 白银,JIC,200
@@ -1113,7 +1113,7 @@ city_name,iata_code,distance
 平凉,INC,280
 酒泉,JGN,30
 酒泉,YZY,200
-酒泉,DNH,400
+酒泉,DNH,300
 敦煌,DNH,0
 敦煌,JGN,300
 敦煌,YZY,300

@@ -4,7 +4,9 @@ import csv
 import sys
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
+
+from tqdm import tqdm
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -15,6 +17,14 @@ from app.core.constants import NEARBY_DISTANCE_MAX_KM
 
 
 DATA_DIR = BACKEND_DIR / "data"
+CSV_ENCODINGS = ("utf-8-sig", "gbk")
+
+
+def load_all(cur: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for table_name, loader in tqdm(_csv_loaders(), desc="导入 CSV", unit="table"):
+        counts[table_name] = loader(cur)
+    return counts
 
 
 def _read_csv(file_name: str, headers: list[str]) -> list[dict[str, str]]:
@@ -22,7 +32,22 @@ def _read_csv(file_name: str, headers: list[str]) -> list[dict[str, str]]:
     if not path.exists():
         raise FileNotFoundError(f"CSV 文件不存在: {path}")
 
-    with path.open("r", encoding="utf-8-sig", newline="") as file:
+    last_error: UnicodeDecodeError | None = None
+    for encoding in CSV_ENCODINGS:
+        try:
+            return _read_csv_with_encoding(path, file_name, headers, encoding)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    raise ValueError(f"CSV 文件编码无法识别: {path}") from last_error
+
+
+def _read_csv_with_encoding(
+    path: Path,
+    file_name: str,
+    headers: list[str],
+    encoding: str,
+) -> list[dict[str, str]]:
+    with path.open("r", encoding=encoding, newline="") as file:
         reader = csv.DictReader(file)
         if reader.fieldnames != headers:
             raise ValueError(
@@ -157,6 +182,19 @@ def load_flight_stopovers(cur: Any) -> int:
         for row in rows
     ]
     return _executemany(cur, _flight_stopover_sql(), params)
+
+
+def _csv_loaders() -> list[tuple[str, Callable[[Any], int]]]:
+    return [
+        ("city", load_cities),
+        ("airport", load_airports),
+        ("city_near_apt", load_city_near_apt),
+        ("airline", load_airlines),
+        ("aircraft_type", load_aircraft_types),
+        ("flight", load_flights),
+        ("flight_weekday", load_flight_weekdays),
+        ("flight_stopover", load_flight_stopovers),
+    ]
 
 
 def _flight_params(row: dict[str, str]) -> tuple[Any, ...]:
