@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, time, timedelta
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -25,6 +26,8 @@ class SearchFilters(BaseModel):
     airline_codes: list[str] | None = None
     cabin_class: CabinClass | None = None
     departure_time_range: tuple[time, time] | None = None
+    price_min: Decimal | None = Field(default=None, ge=0)
+    price_max: Decimal | None = Field(default=None, ge=0)
     include_stopover: bool = True
 
     model_config = {"str_strip_whitespace": True}
@@ -67,11 +70,12 @@ class SearchFilters(BaseModel):
         self.airline_codes = codes or None
         self.airline_code = codes[0] if len(codes) == 1 else None
 
-        if self.departure_time_range is None:
-            return self
-        start, end = self.departure_time_range
-        if start > end:
-            raise ValueError("起飞时间段结束时间不能早于开始时间")
+        if self.departure_time_range is not None:
+            start, end = self.departure_time_range
+            if start > end:
+                raise ValueError("起飞时间段结束时间不能早于开始时间")
+        if self.price_min is not None and self.price_max is not None and self.price_min > self.price_max:
+            raise ValueError("价格区间上限不能小于下限")
         return self
 
 

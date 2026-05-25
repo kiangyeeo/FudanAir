@@ -34,6 +34,8 @@ type SearchFormFilters = {
   airline_codes: string[]
   cabin_class: SearchFilters['cabin_class'] | null
   departure_time_range: NonNullable<SearchFilters['departure_time_range']> | null
+  price_min: number | null
+  price_max: number | null
   include_stopover: boolean
 }
 
@@ -77,6 +79,8 @@ function defaultFilters(): SearchFormFilters {
     airline_codes: [],
     cabin_class: null,
     departure_time_range: null,
+    price_min: null,
+    price_max: null,
     include_stopover: true,
   }
 }
@@ -93,6 +97,8 @@ function applyCriteria(criteria: FlightSearchRequest) {
     airline_codes: normalizeAirlineCodes(criteria.filters),
     cabin_class: criteria.filters?.cabin_class ?? null,
     departure_time_range: criteria.filters?.departure_time_range ?? null,
+    price_min: normalizePriceValue(criteria.filters?.price_min),
+    price_max: normalizePriceValue(criteria.filters?.price_max),
     include_stopover: criteria.filters?.include_stopover ?? true,
   }
   form.sort = { ...defaultSort(), ...criteria.sort }
@@ -108,6 +114,8 @@ function buildPayload(): FlightSearchRequest {
       ...airlineFilter,
       cabin_class: form.filters.cabin_class || null,
       departure_time_range: form.filters.departure_time_range,
+      price_min: normalizePriceValue(form.filters.price_min),
+      price_max: normalizePriceValue(form.filters.price_max),
       include_stopover: form.filters.include_stopover,
     },
     sort: { field: form.sort.field, order: form.sort.order },
@@ -121,6 +129,10 @@ function submit() {
 function reset() {
   applyCriteria(defaultCriteria())
   emit('reset')
+}
+
+function normalizePriceValue(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 </script>
 
@@ -157,6 +169,29 @@ function reset() {
         end-placeholder="结束"
         class="full-width"
       />
+    </el-form-item>
+    <el-form-item label="价格区间">
+      <div class="price-range">
+        <el-input-number
+          v-model="form.filters.price_min"
+          :min="0"
+          :precision="0"
+          :step="100"
+          :controls="false"
+          placeholder="最低价"
+          class="price-input"
+        />
+        <span class="range-separator">至</span>
+        <el-input-number
+          v-model="form.filters.price_max"
+          :min="0"
+          :precision="0"
+          :step="100"
+          :controls="false"
+          placeholder="最高价"
+          class="price-input"
+        />
+      </div>
     </el-form-item>
     <el-form-item label="排序">
       <el-select v-model="form.sort.field" v-bind="selectPanelProps">
@@ -206,6 +241,24 @@ function reset() {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+}
+
+.price-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+.price-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.range-separator {
+  color: var(--fa-text-secondary);
+  font-size: 13px;
 }
 
 .filter-panel :deep(.el-range-editor.el-input__wrapper) {

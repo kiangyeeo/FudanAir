@@ -167,6 +167,33 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
     assert rows[0]["total_ticket_price"] == 1090.0
 
 
+def test_price_range_filters_displayed_direct_and_transit_prices() -> None:
+    payload = FlightSearchRequest.model_validate(
+        {
+            "dep_city": "上海",
+            "arr_city": "北京",
+            "flight_date": "2026-05-10",
+            "filters": {"price_min": 800, "price_max": 1200},
+        }
+    )
+    direct_db = FakeSession([[]])
+    transit_db = FakeSession([[]])
+
+    SearchService(direct_db)._search_direct(payload)
+    SearchService(transit_db)._search_transit(payload)
+
+    direct_sql, direct_params = direct_db.calls[0]
+    transit_sql, transit_params = transit_db.calls[0]
+    assert "cp.price + v.fuel_infra_fee >= :price_min" in direct_sql
+    assert "cp.price + v.fuel_infra_fee <= :price_max" in direct_sql
+    assert "leg1.min_price + leg2.min_price >= :price_min" in transit_sql
+    assert "leg1.min_price + leg2.min_price <= :price_max" in transit_sql
+    assert str(direct_params["price_min"]) == "800"
+    assert str(direct_params["price_max"]) == "1200"
+    assert transit_params["price_min"] == direct_params["price_min"]
+    assert transit_params["price_max"] == direct_params["price_max"]
+
+
 def test_nearby_search_always_uses_positive_distance_replacements() -> None:
     db = FakeSession(
         [

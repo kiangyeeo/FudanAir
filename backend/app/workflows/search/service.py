@@ -69,6 +69,8 @@ class SearchService:
               AND cp.available_seats > 0
               AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
+              AND (:price_min IS NULL OR cp.price + v.fuel_infra_fee >= :price_min)
+              AND (:price_max IS NULL OR cp.price + v.fuel_infra_fee <= :price_max)
               AND (:time_start IS NULL OR v.scheduled_departure >= :time_start)
               AND (:time_end IS NULL OR v.scheduled_departure <= :time_end)
               AND (
@@ -199,6 +201,8 @@ class SearchService:
               ON arr_rel.iata_code = leg2.arr_airport_code
              AND arr_rel.city_name = :arr_city
              AND arr_rel.distance = 0
+            WHERE (:price_min IS NULL OR leg1.min_price + leg2.min_price >= :price_min)
+              AND (:price_max IS NULL OR leg1.min_price + leg2.min_price <= :price_max)
             {_order_by(payload.sort, TRANSIT_SORT_COLUMNS, "leg1_scheduled_departure", "leg1_flight_no")}
             """
         )
@@ -210,6 +214,8 @@ class SearchService:
               AND cp.available_seats > 0
               AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
+              AND (:price_min IS NULL OR cp.price + v.fuel_infra_fee >= :price_min)
+              AND (:price_max IS NULL OR cp.price + v.fuel_infra_fee <= :price_max)
               AND (:time_start IS NULL OR v.scheduled_departure >= :time_start)
               AND (:time_end IS NULL OR v.scheduled_departure <= :time_end)
               AND (
@@ -351,6 +357,8 @@ def _query_params(payload: FlightSearchRequest) -> dict[str, Any]:
         "airline_codes": airline_codes,
         "airline_filter_enabled": bool(airline_codes),
         "cabin_class": filters.cabin_class,
+        "price_min": filters.price_min,
+        "price_max": filters.price_max,
         "time_start": time_start,
         "time_end": time_end,
         "include_stopover": filters.include_stopover,
