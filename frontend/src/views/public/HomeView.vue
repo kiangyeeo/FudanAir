@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { flightApi } from '@/api/flight'
+import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSearchStore } from '@/stores/search'
 import type { FlightSearchRequest } from '@/types/search'
@@ -9,38 +11,59 @@ import type { FlightSearchRequest } from '@/types/search'
 const router = useRouter()
 const auth = useAuthStore()
 const searchStore = useSearchStore()
+const cities = ref<string[]>([])
 
 const form = reactive<FlightSearchRequest>({
-  dep_city: '上海',
-  arr_city: '北京',
-  flight_date: new Date().toISOString().slice(0, 10),
+  dep_city: searchStore.criteria?.dep_city ?? '',
+  arr_city: searchStore.criteria?.arr_city ?? '',
+  flight_date: searchStore.criteria?.flight_date ?? new Date().toISOString().slice(0, 10),
   filters: { include_stopover: true },
-  sort: { field: 'price', order: 'asc' },
+  sort: {
+    field: searchStore.criteria?.sort?.field ?? 'price',
+    order: searchStore.criteria?.sort?.order ?? 'asc',
+  },
 })
 
+async function loadCities() {
+  try {
+    cities.value = await flightApi.listCities()
+  } catch {
+    cities.value = []
+  }
+}
+
 function submit() {
-  if (!form.dep_city || !form.arr_city || !form.flight_date) {
+  const depCity = form.dep_city.trim()
+  const arrCity = form.arr_city.trim()
+  if (!depCity || !arrCity || !form.flight_date) {
     ElMessage.warning('请填写出发城市、到达城市和日期')
     return
   }
 
   const sort = form.sort ?? { field: 'price', order: 'asc' as const }
-  searchStore.setCriteria({
-    ...form,
+  const criteria: FlightSearchRequest = {
+    dep_city: depCity,
+    arr_city: arrCity,
+    flight_date: form.flight_date,
     filters: { ...form.filters },
     sort: { field: sort.field, order: sort.order },
-  })
+  }
+  searchStore.setCriteria(criteria)
   router.push({
     name: 'search',
     query: {
-      dep_city: form.dep_city,
-      arr_city: form.arr_city,
+      dep_city: criteria.dep_city,
+      arr_city: criteria.arr_city,
       flight_date: form.flight_date,
       sort_field: sort.field,
       sort_order: sort.order,
     },
   })
 }
+
+onMounted(() => {
+  void loadCities()
+})
 </script>
 
 <template>
@@ -54,10 +77,10 @@ function submit() {
       <h1>FudanAir 航班查询</h1>
       <el-form class="search-form" :model="form" label-position="top">
         <el-form-item label="出发城市">
-          <el-input v-model="form.dep_city" />
+          <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
         </el-form-item>
         <el-form-item label="到达城市">
-          <el-input v-model="form.arr_city" />
+          <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
         </el-form-item>
         <el-form-item label="出行日期">
           <el-date-picker v-model="form.flight_date" type="date" value-format="YYYY-MM-DD" />
