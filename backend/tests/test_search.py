@@ -88,7 +88,8 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
     assert "MIN(cp.price + v.fuel_infra_fee) AS min_price" in sql
     assert "cp.available_seats > 0" in sql
     assert "NOT EXISTS" in sql
-    assert params["airline_code"] == "MU"
+    assert params["airline_codes"] == ["MU"]
+    assert params["airline_filter_enabled"] is True
     assert params["cabin_class"] == "经济舱"
     assert params["include_stopover"] is False
     assert rows[0]["type"] == "direct"
@@ -140,6 +141,7 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
         dep_city="上海",
         arr_city="北京",
         flight_date=date(2026, 5, 10),
+        filters={"airline_codes": ["ca", "mu"]},
         sort={"field": "duration", "order": "asc"},
     )
 
@@ -148,15 +150,48 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
     sql, params = db.calls[0]
     assert "WITH candidates AS" in sql
     assert "leg1.arr_airport_code = leg2.dep_airport_code" in sql
+    assert "leg1.airline_code = leg2.airline_code" not in sql
+    assert "v.airline_code IN" in sql
     assert "BETWEEN :min_transit_minutes AND :max_transit_minutes" in sql
+    assert params["airline_codes"] == ["CA", "MU"]
+    assert params["airline_filter_enabled"] is True
     assert params["min_transit_minutes"] == TRANSIT_MIN_MINUTES
     assert params["max_transit_minutes"] == TRANSIT_MAX_MINUTES
     assert rows[0]["type"] == "transit"
     assert rows[0]["leg1"]["type"] == "direct"
+    assert rows[0]["leg1"]["airline_code"] == "CA"
+    assert rows[0]["leg2"]["airline_code"] == "MU"
     assert rows[0]["leg2"]["dep_airport_code"] == "XIY"
     assert rows[0]["transit_minutes"] == 180
     assert rows[0]["total_min_price"] == 1200.0
     assert rows[0]["total_ticket_price"] == 1090.0
+
+
+def test_price_range_filters_displayed_direct_and_transit_prices() -> None:
+    payload = FlightSearchRequest.model_validate(
+        {
+            "dep_city": "上海",
+            "arr_city": "北京",
+            "flight_date": "2026-05-10",
+            "filters": {"price_min": 800, "price_max": 1200},
+        }
+    )
+    direct_db = FakeSession([[]])
+    transit_db = FakeSession([[]])
+
+    SearchService(direct_db)._search_direct(payload)
+    SearchService(transit_db)._search_transit(payload)
+
+    direct_sql, direct_params = direct_db.calls[0]
+    transit_sql, transit_params = transit_db.calls[0]
+    assert "cp.price + v.fuel_infra_fee >= :price_min" in direct_sql
+    assert "cp.price + v.fuel_infra_fee <= :price_max" in direct_sql
+    assert "leg1.min_price + leg2.min_price >= :price_min" in transit_sql
+    assert "leg1.min_price + leg2.min_price <= :price_max" in transit_sql
+    assert str(direct_params["price_min"]) == "800"
+    assert str(direct_params["price_max"]) == "1200"
+    assert transit_params["price_min"] == direct_params["price_min"]
+    assert transit_params["price_max"] == direct_params["price_max"]
 
 
 def test_nearby_search_always_uses_positive_distance_replacements() -> None:

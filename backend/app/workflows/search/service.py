@@ -4,7 +4,7 @@ from datetime import time, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from app.core.constants import TRANSIT_MAX_MINUTES, TRANSIT_MIN_MINUTES
@@ -38,7 +38,7 @@ class SearchService:
         return self._search_transit(payload)
 
     def _search_direct(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
-        sql = text(
+        sql = _search_sql(
             f"""
             SELECT
                 v.instance_id,
@@ -67,8 +67,10 @@ class SearchService:
             JOIN cabin_price cp ON cp.instance_id = v.instance_id
             WHERE v.flight_date = :flight_date
               AND cp.available_seats > 0
-              AND (:airline_code IS NULL OR v.airline_code = :airline_code)
+              AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
+              AND (:price_min IS NULL OR cp.price + v.fuel_infra_fee >= :price_min)
+              AND (:price_max IS NULL OR cp.price + v.fuel_infra_fee <= :price_max)
               AND (:time_start IS NULL OR v.scheduled_departure >= :time_start)
               AND (:time_end IS NULL OR v.scheduled_departure <= :time_end)
               AND (
@@ -99,7 +101,7 @@ class SearchService:
         return [_direct_candidate(row) for row in rows]
 
     def _search_transit(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
-        sql = text(
+        sql = _search_sql(
             f"""
             WITH candidates AS (
                 SELECT
@@ -124,7 +126,7 @@ class SearchService:
                 JOIN cabin_price cp ON cp.instance_id = v.instance_id
                 WHERE v.flight_date IN (:flight_date, DATE_ADD(:flight_date, INTERVAL 1 DAY))
                   AND cp.available_seats > 0
-                  AND (:airline_code IS NULL OR v.airline_code = :airline_code)
+                  AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
                   AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
                   AND (:time_start IS NULL OR v.scheduled_departure >= :time_start)
                   AND (:time_end IS NULL OR v.scheduled_departure <= :time_end)
@@ -199,6 +201,8 @@ class SearchService:
               ON arr_rel.iata_code = leg2.arr_airport_code
              AND arr_rel.city_name = :arr_city
              AND arr_rel.distance = 0
+            WHERE (:price_min IS NULL OR leg1.min_price + leg2.min_price >= :price_min)
+              AND (:price_max IS NULL OR leg1.min_price + leg2.min_price <= :price_max)
             {_order_by(payload.sort, TRANSIT_SORT_COLUMNS, "leg1_scheduled_departure", "leg1_flight_no")}
             """
         )
@@ -208,8 +212,10 @@ class SearchService:
     def _search_nearby(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
         common_where = """
               AND cp.available_seats > 0
-              AND (:airline_code IS NULL OR v.airline_code = :airline_code)
+              AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
+              AND (:price_min IS NULL OR cp.price + v.fuel_infra_fee >= :price_min)
+              AND (:price_max IS NULL OR cp.price + v.fuel_infra_fee <= :price_max)
               AND (:time_start IS NULL OR v.scheduled_departure >= :time_start)
               AND (:time_end IS NULL OR v.scheduled_departure <= :time_end)
               AND (
@@ -260,7 +266,7 @@ class SearchService:
                 v.first_left,
                 {_duration_minutes_expr("v")} AS duration_minutes
         """
-        sql = text(
+        sql = _search_sql(
             f"""
             SELECT {select_columns}
             FROM (
@@ -343,18 +349,26 @@ def _query_params(payload: FlightSearchRequest) -> dict[str, Any]:
     time_end = None
     if filters.departure_time_range is not None:
         time_start, time_end = filters.departure_time_range
+    airline_codes = filters.airline_codes or ([filters.airline_code] if filters.airline_code else [])
     return {
         "dep_city": payload.dep_city,
         "arr_city": payload.arr_city,
         "flight_date": payload.flight_date,
-        "airline_code": filters.airline_code,
+        "airline_codes": airline_codes,
+        "airline_filter_enabled": bool(airline_codes),
         "cabin_class": filters.cabin_class,
+        "price_min": filters.price_min,
+        "price_max": filters.price_max,
         "time_start": time_start,
         "time_end": time_end,
         "include_stopover": filters.include_stopover,
         "min_transit_minutes": TRANSIT_MIN_MINUTES,
         "max_transit_minutes": TRANSIT_MAX_MINUTES,
     }
+
+
+def _search_sql(sql: str):
+    return text(sql).bindparams(bindparam("airline_codes", expanding=True))
 
 
 def _order_by(

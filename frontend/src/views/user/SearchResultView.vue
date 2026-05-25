@@ -13,6 +13,7 @@ import { useSearchStore } from '@/stores/search'
 import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
 import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
+import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,6 +35,11 @@ async function runSearch(payload: FlightSearchRequest) {
   const criteria = normalizeCriteria(payload)
   if (!criteria.dep_city || !criteria.arr_city || !criteria.flight_date) {
     ElMessage.warning('请填写出发城市、到达城市和日期')
+    return
+  }
+  const { price_min: priceMin, price_max: priceMax } = criteria.filters ?? {}
+  if (priceMin !== null && priceMin !== undefined && priceMax !== null && priceMax !== undefined && priceMin > priceMax) {
+    ElMessage.warning('价格区间上限不能小于下限')
     return
   }
 
@@ -93,14 +99,19 @@ async function loadOptions() {
 }
 
 function normalizeCriteria(payload: FlightSearchRequest): FlightSearchRequest {
+  const airlineFilter = buildAirlineFilter(normalizeAirlineCodes(payload.filters))
+  const priceMin = normalizePriceValue(payload.filters?.price_min)
+  const priceMax = normalizePriceValue(payload.filters?.price_max)
   return {
     dep_city: payload.dep_city.trim(),
     arr_city: payload.arr_city.trim(),
     flight_date: payload.flight_date,
     filters: {
-      airline_code: payload.filters?.airline_code || null,
+      ...airlineFilter,
       cabin_class: payload.filters?.cabin_class || null,
       departure_time_range: payload.filters?.departure_time_range ?? null,
+      price_min: priceMin,
+      price_max: priceMax,
       include_stopover: payload.filters?.include_stopover ?? true,
     },
     sort: {
@@ -111,6 +122,7 @@ function normalizeCriteria(payload: FlightSearchRequest): FlightSearchRequest {
 }
 
 function criteriaToQuery(payload: FlightSearchRequest) {
+  const airlineCodes = normalizeAirlineCodes(payload.filters)
   const query: Record<string, string> = {
     dep_city: payload.dep_city,
     arr_city: payload.arr_city,
@@ -118,8 +130,8 @@ function criteriaToQuery(payload: FlightSearchRequest) {
     sort_field: payload.sort?.field ?? 'price',
     sort_order: payload.sort?.order ?? 'asc',
   }
-  if (payload.filters?.airline_code) {
-    query.airline_code = payload.filters.airline_code
+  if (airlineCodes.length) {
+    query.airline_codes = airlineCodes.join(',')
   }
   if (payload.filters?.cabin_class) {
     query.cabin_class = payload.filters.cabin_class
@@ -127,6 +139,12 @@ function criteriaToQuery(payload: FlightSearchRequest) {
   if (payload.filters?.departure_time_range) {
     query.time_start = payload.filters.departure_time_range[0]
     query.time_end = payload.filters.departure_time_range[1]
+  }
+  if (payload.filters?.price_min !== null && payload.filters?.price_min !== undefined) {
+    query.price_min = String(payload.filters.price_min)
+  }
+  if (payload.filters?.price_max !== null && payload.filters?.price_max !== undefined) {
+    query.price_max = String(payload.filters.price_max)
   }
   if (payload.filters?.include_stopover === false) {
     query.include_stopover = 'false'
@@ -150,8 +168,11 @@ function criteriaFromRoute(): FlightSearchRequest | null {
     flight_date: flightDate,
     filters: {
       airline_code: queryText('airline_code'),
+      airline_codes: queryTextList('airline_codes'),
       cabin_class: cabinClassQuery(queryText('cabin_class')),
       departure_time_range: departureTimeRange,
+      price_min: queryNumber('price_min'),
+      price_max: queryNumber('price_max'),
       include_stopover: queryText('include_stopover') !== 'false',
     },
     sort: {
@@ -167,6 +188,25 @@ function queryText(key: string): string | null {
     return value[0] ?? null
   }
   return value ?? null
+}
+
+function queryTextList(key: string): string[] {
+  const value = route.query[key]
+  const rawValues = Array.isArray(value) ? value : value ? [value] : []
+  return rawValues.flatMap((item) => String(item ?? '').split(',')).filter(Boolean)
+}
+
+function queryNumber(key: string): number | null {
+  const raw = queryText(key)
+  if (raw === null || raw === '') {
+    return null
+  }
+  const value = Number(raw)
+  return Number.isFinite(value) && value >= 0 ? value : null
+}
+
+function normalizePriceValue(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
 function cabinClassQuery(value: string | null): CabinClass | null {

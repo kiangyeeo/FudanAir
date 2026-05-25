@@ -3,6 +3,7 @@ import { reactive, watch } from 'vue'
 import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import type { Airline } from '@/types/flight'
 import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
+import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
 
 const props = withDefaults(defineProps<{
   loading?: boolean
@@ -25,8 +26,17 @@ type SearchForm = {
   dep_city: string
   arr_city: string
   flight_date: string
-  filters: Required<SearchFilters>
+  filters: SearchFormFilters
   sort: SearchSort
+}
+
+type SearchFormFilters = {
+  airline_codes: string[]
+  cabin_class: SearchFilters['cabin_class'] | null
+  departure_time_range: NonNullable<SearchFilters['departure_time_range']> | null
+  price_min: number | null
+  price_max: number | null
+  include_stopover: boolean
 }
 
 const form = reactive<SearchForm>({
@@ -64,11 +74,13 @@ function defaultCriteria(): FlightSearchRequest {
   }
 }
 
-function defaultFilters(): Required<SearchFilters> {
+function defaultFilters(): SearchFormFilters {
   return {
-    airline_code: null,
+    airline_codes: [],
     cabin_class: null,
     departure_time_range: null,
+    price_min: null,
+    price_max: null,
     include_stopover: true,
   }
 }
@@ -81,19 +93,29 @@ function applyCriteria(criteria: FlightSearchRequest) {
   form.dep_city = criteria.dep_city
   form.arr_city = criteria.arr_city
   form.flight_date = criteria.flight_date
-  form.filters = { ...defaultFilters(), ...criteria.filters }
+  form.filters = {
+    airline_codes: normalizeAirlineCodes(criteria.filters),
+    cabin_class: criteria.filters?.cabin_class ?? null,
+    departure_time_range: criteria.filters?.departure_time_range ?? null,
+    price_min: normalizePriceValue(criteria.filters?.price_min),
+    price_max: normalizePriceValue(criteria.filters?.price_max),
+    include_stopover: criteria.filters?.include_stopover ?? true,
+  }
   form.sort = { ...defaultSort(), ...criteria.sort }
 }
 
 function buildPayload(): FlightSearchRequest {
+  const airlineFilter = buildAirlineFilter(form.filters.airline_codes)
   return {
     dep_city: form.dep_city.trim(),
     arr_city: form.arr_city.trim(),
     flight_date: form.flight_date,
     filters: {
-      airline_code: form.filters.airline_code || null,
+      ...airlineFilter,
       cabin_class: form.filters.cabin_class || null,
       departure_time_range: form.filters.departure_time_range,
+      price_min: normalizePriceValue(form.filters.price_min),
+      price_max: normalizePriceValue(form.filters.price_max),
       include_stopover: form.filters.include_stopover,
     },
     sort: { field: form.sort.field, order: form.sort.order },
@@ -107,6 +129,10 @@ function submit() {
 function reset() {
   applyCriteria(defaultCriteria())
   emit('reset')
+}
+
+function normalizePriceValue(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 </script>
 
@@ -122,7 +148,7 @@ function reset() {
       <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
     </el-form-item>
     <el-form-item label="航司">
-      <el-select v-model="form.filters.airline_code" v-bind="selectPanelProps" clearable filterable>
+      <el-select v-model="form.filters.airline_codes" v-bind="selectPanelProps" multiple collapse-tags collapse-tags-tooltip clearable filterable>
         <el-option v-for="airline in airlines" :key="airline.iata_code" :label="`${airline.iata_code} ${airline.airline_name}`" :value="airline.iata_code" />
       </el-select>
     </el-form-item>
@@ -143,6 +169,29 @@ function reset() {
         end-placeholder="结束"
         class="full-width"
       />
+    </el-form-item>
+    <el-form-item label="价格区间">
+      <div class="price-range">
+        <el-input-number
+          v-model="form.filters.price_min"
+          :min="0"
+          :precision="0"
+          :step="100"
+          :controls="false"
+          placeholder="最低价"
+          class="price-input"
+        />
+        <span class="range-separator">至</span>
+        <el-input-number
+          v-model="form.filters.price_max"
+          :min="0"
+          :precision="0"
+          :step="100"
+          :controls="false"
+          placeholder="最高价"
+          class="price-input"
+        />
+      </div>
     </el-form-item>
     <el-form-item label="排序">
       <el-select v-model="form.sort.field" v-bind="selectPanelProps">
@@ -192,6 +241,24 @@ function reset() {
   width: 100%;
   min-width: 0;
   max-width: 100%;
+}
+
+.price-range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+.price-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.range-separator {
+  color: var(--fa-text-secondary);
+  font-size: 13px;
 }
 
 .filter-panel :deep(.el-range-editor.el-input__wrapper) {
