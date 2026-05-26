@@ -59,6 +59,7 @@ class RefundService:
                 return self._refund_quote_response(ticket, fee_quote)
             target = _change_target(new_instance_id, new_cabin_class, new_fare_type)
             self._ensure_not_same_target(ticket, target)
+            self.flight_svc.ensure_instance_bookable(target["instance_id"])
             new_actual_price = self._new_actual_price(target)
             return self._change_quote_response(ticket, fee_quote, new_actual_price)
 
@@ -98,6 +99,7 @@ class RefundService:
             old_ticket, _order = self._lock_ticket_order(user_id, ticket_no, "change")
             self._ensure_not_same_target(old_ticket, target)
             fee_quote = self._fee_quote(old_ticket, "change")
+            self.flight_svc.ensure_instance_bookable(target["instance_id"])
             new_ticket, price_diff = self._replace_ticket(old_ticket, target)
             record = self.refund_svc.create_record(
                 old_ticket.ticket_no,

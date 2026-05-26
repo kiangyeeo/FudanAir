@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import time, timedelta
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -8,6 +8,7 @@ from sqlalchemy import bindparam, text
 from sqlalchemy.orm import Session
 
 from app.core.constants import TRANSIT_MAX_MINUTES, TRANSIT_MIN_MINUTES
+from app.domains.flight.service import INSTANCE_STATUS_BOOKABLE
 from app.workflows.search.schemas import FlightSearchRequest, SearchSort
 
 
@@ -66,6 +67,8 @@ class SearchService:
              AND arr_rel.distance = 0
             JOIN cabin_price cp ON cp.instance_id = v.instance_id
             WHERE v.flight_date = :flight_date
+              AND v.instance_status = :bookable_status
+              AND TIMESTAMP(v.flight_date, v.scheduled_departure) > :now
               AND cp.available_seats > 0
               AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
@@ -125,6 +128,8 @@ class SearchService:
                 FROM v_flight_search v
                 JOIN cabin_price cp ON cp.instance_id = v.instance_id
                 WHERE v.flight_date IN (:flight_date, DATE_ADD(:flight_date, INTERVAL 1 DAY))
+                  AND v.instance_status = :bookable_status
+                  AND TIMESTAMP(v.flight_date, v.scheduled_departure) > :now
                   AND cp.available_seats > 0
                   AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
                   AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
@@ -212,6 +217,8 @@ class SearchService:
     def _search_nearby(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
         common_where = """
               AND cp.available_seats > 0
+              AND v.instance_status = :bookable_status
+              AND TIMESTAMP(v.flight_date, v.scheduled_departure) > :now
               AND (:airline_filter_enabled = FALSE OR v.airline_code IN :airline_codes)
               AND (:cabin_class IS NULL OR cp.cabin_class = :cabin_class)
               AND (:price_min IS NULL OR cp.price + v.fuel_infra_fee >= :price_min)
@@ -278,6 +285,7 @@ class SearchService:
                     v.instance_id,
                     v.flight_no,
                     v.flight_date,
+                    v.instance_status,
                     v.scheduled_departure,
                     v.scheduled_arrival,
                     v.fuel_infra_fee,
@@ -310,6 +318,7 @@ class SearchService:
                     v.instance_id,
                     v.flight_no,
                     v.flight_date,
+                    v.instance_status,
                     v.scheduled_departure,
                     v.scheduled_arrival,
                     v.fuel_infra_fee,
@@ -354,6 +363,8 @@ def _query_params(payload: FlightSearchRequest) -> dict[str, Any]:
         "dep_city": payload.dep_city,
         "arr_city": payload.arr_city,
         "flight_date": payload.flight_date,
+        "bookable_status": INSTANCE_STATUS_BOOKABLE,
+        "now": datetime.now(),
         "airline_codes": airline_codes,
         "airline_filter_enabled": bool(airline_codes),
         "cabin_class": filters.cabin_class,

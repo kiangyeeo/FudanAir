@@ -13,6 +13,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.core.constants import REFUND_FEE_TIERS
 from app.core.exceptions import (
+    InstanceNotBookableError,
     ResourceNotFoundError,
     SameTicketNotAllowedError,
     TicketNotRefundableError,
@@ -56,9 +57,17 @@ class FakeFlightService:
         }
         self.restore_calls: list[tuple[str, str, str, int]] = []
         self.deduct_calls: list[tuple[str, str, str, int]] = []
+        self.bookable_checks: list[str] = []
 
     def get_instance_detail(self, instance_id: str) -> dict[str, Any]:
         return self.details[instance_id]
+
+    def ensure_instance_bookable(self, instance_id: str) -> None:
+        self.bookable_checks.append(instance_id)
+        detail = self.details[instance_id]
+        departure_at = datetime.combine(detail["flight_date"], detail["scheduled_departure"])
+        if departure_at <= datetime.now():
+            raise InstanceNotBookableError(f"航班实例 {instance_id} 已起飞,不可订")
 
     def restore_seat(
         self,
@@ -245,6 +254,7 @@ def test_change_ticket_replaces_old_ticket_and_creates_refund_record() -> None:
     assert service.order_svc.status_updates == []
     assert response["new_ticket_no"] == "T2"
     assert response["amount_user_pays"] == Decimal("370.00")
+    assert service.flight_svc.bookable_checks == ["NEW"]
 
 
 def test_refund_rejects_ticket_from_other_user() -> None:
@@ -276,3 +286,21 @@ def test_change_rejects_same_target_by_ac3() -> None:
 
     with pytest.raises(SameTicketNotAllowedError):
         service.change_ticket(7, "T1", "OLD", "经济舱", "标准")
+
+
+def test_change_quote_rejects_departed_target() -> None:
+    service = make_service()
+
+    with pytest.raises(InstanceNotBookableError):
+        service.quote(7, "T1", "change", "PAST", "经济舱", "标准")
+
+
+def test_change_ticket_rejects_departed_target_before_mutation() -> None:
+    service = make_service()
+
+    with pytest.raises(InstanceNotBookableError):
+        service.change_ticket(7, "T1", "PAST", "经济舱", "标准")
+
+    assert service.ticket_svc.status_updates == []
+    assert service.flight_svc.restore_calls == []
+    assert service.flight_svc.deduct_calls == []

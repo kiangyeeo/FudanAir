@@ -86,12 +86,16 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
     assert "arr_rel.distance = 0" in sql
     assert "MIN(cp.price) AS min_ticket_price" in sql
     assert "MIN(cp.price + v.fuel_infra_fee) AS min_price" in sql
+    assert "v.instance_status = :bookable_status" in sql
+    assert "TIMESTAMP(v.flight_date, v.scheduled_departure) > :now" in sql
     assert "cp.available_seats > 0" in sql
     assert "NOT EXISTS" in sql
     assert params["airline_codes"] == ["MU"]
     assert params["airline_filter_enabled"] is True
     assert params["cabin_class"] == "经济舱"
     assert params["include_stopover"] is False
+    assert params["bookable_status"] == "可订"
+    assert params["now"] is not None
     assert rows[0]["type"] == "direct"
     assert rows[0]["min_price"] == 850.0
 
@@ -152,6 +156,8 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
     assert "leg1.arr_airport_code = leg2.dep_airport_code" in sql
     assert "leg1.airline_code = leg2.airline_code" not in sql
     assert "v.airline_code IN" in sql
+    assert "v.instance_status = :bookable_status" in sql
+    assert "TIMESTAMP(v.flight_date, v.scheduled_departure) > :now" in sql
     assert "BETWEEN :min_transit_minutes AND :max_transit_minutes" in sql
     assert params["airline_codes"] == ["CA", "MU"]
     assert params["airline_filter_enabled"] is True
@@ -231,6 +237,8 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
     sql, _params = db.calls[0]
     assert "dep_near.distance > 0" in sql
     assert "arr_near.distance > 0" in sql
+    assert "v.instance_status = :bookable_status" in sql
+    assert "TIMESTAMP(v.flight_date, v.scheduled_departure) > :now" in sql
     assert "UNION ALL" in sql
     assert rows[0]["type"] == "nearby"
     assert rows[0]["replacement"] == "departure"

@@ -22,6 +22,8 @@ interface CabinPriceChoice extends CabinPrice {
   actual_price: number
 }
 
+const BOOKABLE_INSTANCE_STATUS = '可订'
+
 const route = useRoute()
 const router = useRouter()
 const orderNo = ref('')
@@ -144,6 +146,10 @@ async function selectCandidate(candidate: ChangeCandidate) {
   detailLoading.value = true
   try {
     selectedInstance.value = await flightApi.getInstance(candidate.instance_id)
+    if (!isChangeTargetBookable(selectedInstance.value)) {
+      clearSelectedTarget()
+      return
+    }
     const first = cabinPriceChoices.value[0]
     if (!first) {
       ElMessage.warning('该航班暂无可售舱位票价')
@@ -237,12 +243,36 @@ function validateQuoteParams() {
 
 function resetTarget() {
   candidates.value = []
+  clearSelectedTarget()
+}
+
+function clearSelectedTarget() {
   selectedCandidate.value = null
   selectedInstance.value = null
   selectedPriceKey.value = ''
   form.new_instance_id = ''
   quote.value = null
   result.value = null
+}
+
+function isChangeTargetBookable(instance: FlightInstance) {
+  if (instance.status !== BOOKABLE_INSTANCE_STATUS) {
+    ElMessage.warning(`该航班实例当前为${instance.status},不可改签`)
+    return false
+  }
+  if (isDeparted(instance)) {
+    ElMessage.warning('该航班已起飞,不可改签')
+    return false
+  }
+  return true
+}
+
+function isDeparted(instance: FlightInstance) {
+  if (!instance.scheduled_departure) {
+    return false
+  }
+  const departureAt = new Date(`${instance.flight_date}T${instance.scheduled_departure.slice(0, 8)}`)
+  return Number.isFinite(departureAt.getTime()) && departureAt.getTime() <= Date.now()
 }
 
 function backToOrder() {
