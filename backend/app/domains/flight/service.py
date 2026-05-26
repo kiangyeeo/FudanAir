@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy.exc import IntegrityError
@@ -164,6 +164,11 @@ class FlightService:
             raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
         return instance
 
+    def ensure_instance_bookable(self, instance_id: str) -> FlightInstance:
+        instance = self.get_instance_or_404(instance_id)
+        self._ensure_instance_bookable(instance)
+        return instance
+
     def create_instance(
         self,
         flight_no: str | FlightInstanceCreate,
@@ -321,8 +326,7 @@ class FlightService:
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
                     raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
-                if instance.status not in BOOKABLE_INSTANCE_STATUSES:
-                    raise InstanceNotBookableError(f"航班实例 {instance_id} 当前不可订")
+                self._ensure_instance_bookable(instance)
                 cabin_price = self.cabin_repo.lock(instance_id, cabin, fare)
                 if not cabin_price:
                     raise ResourceNotFoundError("舱位价格档位不存在")
@@ -472,6 +476,15 @@ class FlightService:
         if quantity <= 0:
             raise AppException("座位数量必须大于0")
 
+    def _ensure_instance_bookable(self, instance: FlightInstance) -> None:
+        if instance.status not in BOOKABLE_INSTANCE_STATUSES:
+            raise InstanceNotBookableError(f"航班实例 {instance.instance_id} 当前不可订")
+        flight = self.flight_repo.get(instance.flight_no)
+        if not flight:
+            raise ResourceNotFoundError(f"航班 {instance.flight_no} 不存在")
+        if _departure_at(instance.flight_date, flight.scheduled_departure) <= datetime.now():
+            raise InstanceNotBookableError(f"航班实例 {instance.instance_id} 已起飞,不可订")
+
     @staticmethod
     def _validate_cabin_price_rows(rows: list[dict[str, Any]]) -> None:
         keys = [(row["cabin_class"], row["fare_type"]) for row in rows]
@@ -535,6 +548,14 @@ def _status(value: str) -> str:
 
 def _optional_status(value: str | None) -> str | None:
     return _status(value) if value else None
+
+
+def _departure_at(flight_date: date, scheduled_departure: Any) -> datetime:
+    if isinstance(scheduled_departure, timedelta):
+        return datetime.combine(flight_date, time.min) + scheduled_departure
+    if isinstance(scheduled_departure, str):
+        scheduled_departure = time.fromisoformat(scheduled_departure)
+    return datetime.combine(flight_date, scheduled_departure)
 
 
 def _cabin_class(value: str) -> str:
