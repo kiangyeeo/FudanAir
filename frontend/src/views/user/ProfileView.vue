@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Check, Close, Edit, Lock, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Check, Close, Delete, Edit, Lock, Plus, Refresh } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { passengerApi } from '@/api/passenger'
 import { userApi } from '@/api/user'
 import { useAuthStore } from '@/stores/auth'
-import type { Passenger, PassengerUpdate, UserProfile, UserProfileUpdate } from '@/types/user'
+import type { Passenger, PassengerCreate, UserProfile, UserProfileUpdate } from '@/types/user'
 import { isPassword, isPhone } from '@/utils/validators'
 
 type PasswordForm = {
@@ -23,6 +23,8 @@ const passengerLoading = ref(false)
 const profileSaving = ref(false)
 const passwordSaving = ref(false)
 const passengerSaving = ref(false)
+const passengerCreating = ref(false)
+const passengerDeletingId = ref('')
 const editingId = ref('')
 
 const profileForm = reactive<UserProfileUpdate>({
@@ -34,7 +36,13 @@ const passwordForm = reactive<PasswordForm>({
   new_password: '',
   confirm_password: '',
 })
-const editForm = reactive<PassengerUpdate>({
+const createForm = reactive<PassengerCreate>({
+  id_no: '',
+  real_name: '',
+  birth_date: '',
+})
+const editForm = reactive<PassengerCreate>({
+  id_no: '',
   real_name: '',
   birth_date: '',
 })
@@ -122,18 +130,37 @@ async function loadPassengers() {
 
 function startEdit(row: Passenger) {
   editingId.value = row.id_no
+  editForm.id_no = row.id_no
   editForm.real_name = row.real_name
   editForm.birth_date = row.birth_date
 }
 
 function cancelEdit() {
   editingId.value = ''
+  editForm.id_no = ''
   editForm.real_name = ''
   editForm.birth_date = ''
 }
 
+async function createPassenger() {
+  const payload = normalizePassenger(createForm)
+  if (!payload) {
+    return
+  }
+
+  passengerCreating.value = true
+  try {
+    const saved = await passengerApi.create(payload)
+    replacePassenger(payload.id_no, saved)
+    resetCreateForm()
+    ElMessage.success('乘机人已新增')
+  } finally {
+    passengerCreating.value = false
+  }
+}
+
 async function savePassenger(row: Passenger) {
-  const payload = normalizePassenger()
+  const payload = normalizePassenger(editForm)
   if (!payload) {
     return
   }
@@ -141,11 +168,34 @@ async function savePassenger(row: Passenger) {
   passengerSaving.value = true
   try {
     const saved = await passengerApi.update(row.id_no, payload)
-    passengers.value = passengers.value.map((item) => (item.id_no === saved.id_no ? saved : item))
+    replacePassenger(row.id_no, saved)
     cancelEdit()
     ElMessage.success('乘机人信息已更新')
   } finally {
     passengerSaving.value = false
+  }
+}
+
+async function deletePassenger(row: Passenger) {
+  const confirmed = await ElMessageBox.confirm(`确定解绑乘机人 ${row.real_name} 吗？`, '解绑乘机人', {
+    type: 'warning',
+    confirmButtonText: '解绑',
+    cancelButtonText: '取消',
+  }).catch(() => false)
+  if (!confirmed) {
+    return
+  }
+
+  passengerDeletingId.value = row.id_no
+  try {
+    await passengerApi.delete(row.id_no)
+    passengers.value = passengers.value.filter((item) => item.id_no !== row.id_no)
+    if (editingId.value === row.id_no) {
+      cancelEdit()
+    }
+    ElMessage.success('乘机人已解绑')
+  } finally {
+    passengerDeletingId.value = ''
   }
 }
 
@@ -163,16 +213,29 @@ function normalizeProfile(): UserProfileUpdate | null {
   return { name, phone }
 }
 
-function normalizePassenger(): PassengerUpdate | null {
-  const realName = editForm.real_name.trim()
-  if (!realName || !editForm.birth_date) {
-    ElMessage.warning('请完整填写乘机人姓名和出生日期')
+function normalizePassenger(form: PassengerCreate): PassengerCreate | null {
+  const idNo = form.id_no.trim()
+  const realName = form.real_name.trim()
+  if (!idNo || !realName || !form.birth_date) {
+    ElMessage.warning('请完整填写乘机人证件号、姓名和出生日期')
     return null
   }
   return {
+    id_no: idNo,
     real_name: realName,
-    birth_date: editForm.birth_date,
+    birth_date: form.birth_date,
   }
+}
+
+function resetCreateForm() {
+  createForm.id_no = ''
+  createForm.real_name = ''
+  createForm.birth_date = ''
+}
+
+function replacePassenger(oldId: string, saved: Passenger) {
+  const rest = passengers.value.filter((item) => item.id_no !== oldId && item.id_no !== saved.id_no)
+  passengers.value = [saved, ...rest]
 }
 
 onMounted(() => {
@@ -244,14 +307,37 @@ onMounted(() => {
               <h2>乘机人</h2>
               <el-button :icon="Refresh" :loading="passengerLoading" @click="loadPassengers">刷新</el-button>
             </div>
+            <el-form :model="createForm" label-position="top" class="passenger-create-form">
+              <div class="passenger-form-grid">
+                <el-form-item label="证件号">
+                  <el-input v-model="createForm.id_no" maxlength="32" />
+                </el-form-item>
+                <el-form-item label="姓名">
+                  <el-input v-model="createForm.real_name" maxlength="64" />
+                </el-form-item>
+                <el-form-item label="出生日期">
+                  <el-date-picker v-model="createForm.birth_date" type="date" value-format="YYYY-MM-DD" />
+                </el-form-item>
+                <el-form-item label="操作" class="create-actions">
+                  <el-button type="primary" :icon="Plus" :loading="passengerCreating" @click="createPassenger">
+                    新增乘机人
+                  </el-button>
+                </el-form-item>
+              </div>
+            </el-form>
             <el-table
               v-loading="passengerLoading"
               :data="passengers"
               border
               row-key="id_no"
-              empty-text="暂无历史乘机人"
+              empty-text="暂无常用乘机人"
             >
-              <el-table-column prop="id_no" label="证件号" min-width="210" />
+              <el-table-column label="证件号" min-width="220">
+                <template #default="{ row }">
+                  <el-input v-if="editingId === row.id_no" v-model="editForm.id_no" maxlength="32" />
+                  <span v-else>{{ row.id_no }}</span>
+                </template>
+              </el-table-column>
               <el-table-column label="姓名" min-width="160">
                 <template #default="{ row }">
                   <el-input v-if="editingId === row.id_no" v-model="editForm.real_name" maxlength="64" />
@@ -269,7 +355,7 @@ onMounted(() => {
                   <span v-else>{{ row.birth_date }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right">
+              <el-table-column label="操作" width="220" fixed="right">
                 <template #default="{ row }">
                   <template v-if="editingId === row.id_no">
                     <el-button link type="primary" :icon="Check" :loading="passengerSaving" @click="savePassenger(row)">
@@ -277,16 +363,27 @@ onMounted(() => {
                     </el-button>
                     <el-button link :icon="Close" :disabled="passengerSaving" @click="cancelEdit">取消</el-button>
                   </template>
-                  <el-button
-                    v-else
-                    link
-                    type="primary"
-                    :icon="Edit"
-                    :disabled="Boolean(editingId)"
-                    @click="startEdit(row)"
-                  >
-                    编辑
-                  </el-button>
+                  <template v-else>
+                    <el-button
+                      link
+                      type="primary"
+                      :icon="Edit"
+                      :disabled="Boolean(editingId)"
+                      @click="startEdit(row)"
+                    >
+                      编辑
+                    </el-button>
+                    <el-button
+                      link
+                      type="danger"
+                      :icon="Delete"
+                      :disabled="Boolean(editingId)"
+                      :loading="passengerDeletingId === row.id_no"
+                      @click="deletePassenger(row)"
+                    >
+                      解绑
+                    </el-button>
+                  </template>
                 </template>
               </el-table-column>
             </el-table>
@@ -325,6 +422,23 @@ onMounted(() => {
   margin-top: 4px;
 }
 
+.passenger-create-form {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--fa-border);
+}
+
+.passenger-form-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(160px, 0.8fr) minmax(180px, 0.8fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.create-actions :deep(.el-form-item__content) {
+  align-items: center;
+}
+
 .table-toolbar {
   justify-content: space-between;
   margin-bottom: 12px;
@@ -337,7 +451,8 @@ h2 {
 }
 
 @media (max-width: 760px) {
-  .form-grid {
+  .form-grid,
+  .passenger-form-grid {
     grid-template-columns: 1fr;
   }
 }

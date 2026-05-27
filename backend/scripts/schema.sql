@@ -157,6 +157,18 @@ CREATE TABLE passenger (
     PRIMARY KEY (id_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE user_passenger (
+    user_id     BIGINT UNSIGNED NOT NULL,
+    id_no       VARCHAR(32)     NOT NULL,
+    created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, id_no),
+    KEY idx_user_passenger_id_no (id_no),
+    CONSTRAINT fk_user_passenger_user FOREIGN KEY (user_id)
+        REFERENCES user(user_id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_passenger_passenger FOREIGN KEY (id_no)
+        REFERENCES passenger(id_no) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ---------- 订单、客票与退改记录 ----------
 
 CREATE TABLE aptorder (

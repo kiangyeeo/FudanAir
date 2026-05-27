@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.domains.passenger.models import Passenger
+from app.domains.passenger.models import Passenger, UserPassenger
 
 
 class PassengerRepository:
@@ -28,19 +28,38 @@ class PassengerRepository:
         self.db.flush()
         return passenger
 
+    def bind_to_user(self, user_id: int, id_no: str) -> UserPassenger:
+        binding = self.get_binding(user_id, id_no)
+        if binding:
+            return binding
+        binding = UserPassenger(user_id=user_id, id_no=id_no)
+        self.db.add(binding)
+        self.db.flush()
+        return binding
+
+    def unbind_from_user(self, user_id: int, id_no: str) -> bool:
+        binding = self.get_binding(user_id, id_no)
+        if not binding:
+            return False
+        self.db.delete(binding)
+        self.db.flush()
+        return True
+
+    def get_binding(self, user_id: int, id_no: str) -> UserPassenger | None:
+        return self.db.get(UserPassenger, (user_id, id_no))
+
     def list_by_user(self, user_id: int) -> list[dict[str, Any]]:
         rows = self.db.execute(
             text(
                 """
-                SELECT DISTINCT
+                SELECT
                     p.id_no,
                     p.real_name,
                     p.birth_date
-                FROM passenger p
-                JOIN ticket t ON t.passenger_id = p.id_no
-                JOIN aptorder o ON o.order_no = t.order_no
-                WHERE o.user_id = :user_id
-                ORDER BY p.real_name, p.id_no
+                FROM user_passenger up
+                JOIN passenger p ON p.id_no = up.id_no
+                WHERE up.user_id = :user_id
+                ORDER BY up.created_at DESC, p.real_name, p.id_no
                 """
             ),
             {"user_id": user_id},
@@ -48,17 +67,4 @@ class PassengerRepository:
         return [dict(row) for row in rows]
 
     def belongs_to_user(self, user_id: int, id_no: str) -> bool:
-        row = self.db.execute(
-            text(
-                """
-                SELECT 1
-                FROM ticket t
-                JOIN aptorder o ON o.order_no = t.order_no
-                WHERE o.user_id = :user_id
-                  AND t.passenger_id = :id_no
-                LIMIT 1
-                """
-            ),
-            {"user_id": user_id, "id_no": id_no},
-        ).first()
-        return row is not None
+        return self.get_binding(user_id, id_no) is not None

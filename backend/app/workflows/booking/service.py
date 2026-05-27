@@ -49,7 +49,8 @@ class BookingService:
         _ensure_unique_payload_segments(segments)
         with transaction(self.db):
             for passenger in payload.passengers:
-                self.passenger_svc.upsert(
+                self.passenger_svc.save_for_user(
+                    user_id,
                     passenger.id_no,
                     passenger.real_name,
                     passenger.birth_date,

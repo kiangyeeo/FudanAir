@@ -20,7 +20,14 @@ export interface Passenger {
   birth_date: string
 }
 
+export interface PassengerCreate {
+  id_no: string
+  real_name: string
+  birth_date: string
+}
+
 export interface PassengerUpdate {
+  id_no?: string
   real_name: string
   birth_date: string
 }
