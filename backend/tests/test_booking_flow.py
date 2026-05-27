@@ -141,10 +141,10 @@ class FakeTicketService:
 
 class FakePassengerService:
     def __init__(self) -> None:
-        self.upserts: list[tuple[str, str, date]] = []
+        self.saved: list[tuple[int, str, str, date]] = []
 
-    def upsert(self, id_no: str, real_name: str, birth_date: date) -> None:
-        self.upserts.append((id_no, real_name, birth_date))
+    def save_for_user(self, user_id: int, id_no: str, real_name: str, birth_date: date) -> None:
+        self.saved.append((user_id, id_no, real_name, birth_date))
 
 
 def make_service() -> BookingService:
@@ -189,6 +189,10 @@ def test_create_order_deducts_stock_and_price_includes_fuel_fee() -> None:
         ("110101199203033456", "MU1001_20260512"),
     ]
     assert service.order_svc.order.total_amount == Decimal("1700.00")
+    assert service.passenger_svc.saved == [
+        (7, "110101199001011234", "张三", date(1990, 1, 1)),
+        (7, "110101199203033456", "李四", date(1992, 3, 3)),
+    ]
     assert response["amount_breakdown"]["fuel_infra_fee_per_seat"] == Decimal("50.00")
     assert response["amount_breakdown"]["segments"][0]["ticket_price_per_seat"] == Decimal("800.00")
     assert response["tickets"][0]["actual_price"] == Decimal("850.00")

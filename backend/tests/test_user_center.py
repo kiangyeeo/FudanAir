@@ -10,8 +10,9 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from app.core.exceptions import OldPasswordMismatchError, PhoneAlreadyExistsError
+from app.core.exceptions import OldPasswordMismatchError, PhoneAlreadyExistsError, ResourceNotFoundError
 from app.core.security import hash_password, verify_password
+from app.domains.passenger.schemas import PassengerCreate, PassengerUpdate
 from app.domains.passenger.service import PassengerService
 from app.domains.user.schemas import PasswordUpdate, UserProfileUpdate
 from app.domains.user.service import UserService
@@ -87,6 +88,39 @@ class FakeUserRepository:
         return user
 
 
+class FakePassengerRepository:
+    def __init__(self) -> None:
+        self.passengers: dict[str, SimpleNamespace] = {}
+        self.bindings: set[tuple[int, str]] = set()
+
+    def get(self, id_no: str) -> SimpleNamespace | None:
+        return self.passengers.get(id_no)
+
+    def create(self, id_no: str, real_name: str, birth_date: date) -> SimpleNamespace:
+        passenger = SimpleNamespace(id_no=id_no, real_name=real_name, birth_date=birth_date)
+        self.passengers[id_no] = passenger
+        return passenger
+
+    def update(self, passenger: SimpleNamespace, real_name: str, birth_date: date) -> SimpleNamespace:
+        passenger.real_name = real_name
+        passenger.birth_date = birth_date
+        return passenger
+
+    def bind_to_user(self, user_id: int, id_no: str) -> SimpleNamespace:
+        self.bindings.add((user_id, id_no))
+        return SimpleNamespace(user_id=user_id, id_no=id_no)
+
+    def unbind_from_user(self, user_id: int, id_no: str) -> bool:
+        binding = (user_id, id_no)
+        if binding not in self.bindings:
+            return False
+        self.bindings.remove(binding)
+        return True
+
+    def belongs_to_user(self, user_id: int, id_no: str) -> bool:
+        return (user_id, id_no) in self.bindings
+
+
 def make_user_service(
     user: SimpleNamespace,
     existing_phone: SimpleNamespace | None = None,
@@ -94,6 +128,13 @@ def make_user_service(
     service = UserService.__new__(UserService)
     service.db = FakeSession()
     service.repo = FakeUserRepository(user, existing_phone)
+    return service
+
+
+def make_passenger_service(repo: FakePassengerRepository) -> PassengerService:
+    service = PassengerService.__new__(PassengerService)
+    service.db = FakeSession()
+    service.repo = repo
     return service
 
 
@@ -161,10 +202,9 @@ def test_passenger_list_by_user_joins_ticket_and_order() -> None:
     passengers = PassengerService(db).list_by_user(7)
 
     sql, params = db.calls[0]
-    assert "SELECT DISTINCT" in sql
-    assert "JOIN ticket t ON t.passenger_id = p.id_no" in sql
-    assert "JOIN aptorder o ON o.order_no = t.order_no" in sql
-    assert "WHERE o.user_id = :user_id" in sql
+    assert "FROM user_passenger up" in sql
+    assert "JOIN passenger p ON p.id_no = up.id_no" in sql
+    assert "WHERE up.user_id = :user_id" in sql
     assert params == {"user_id": 7}
     assert passengers == [
         {
@@ -173,3 +213,56 @@ def test_passenger_list_by_user_joins_ticket_and_order() -> None:
             "birth_date": date(1990, 1, 1),
         }
     ]
+
+
+def test_passenger_create_binds_to_current_user() -> None:
+    repo = FakePassengerRepository()
+    service = make_passenger_service(repo)
+    payload = PassengerCreate(
+        id_no="110101199001011234",
+        real_name="张三",
+        birth_date=date(1990, 1, 1),
+    )
+
+    passenger = service.create(7, payload)
+
+    assert passenger.id_no == "110101199001011234"
+    assert repo.bindings == {(7, "110101199001011234")}
+
+
+def test_passenger_update_can_change_bound_id_without_touching_old_passenger() -> None:
+    repo = FakePassengerRepository()
+    repo.create("OLD", "张三", date(1990, 1, 1))
+    repo.bind_to_user(7, "OLD")
+    service = make_passenger_service(repo)
+    payload = PassengerUpdate(
+        id_no="NEW",
+        real_name="李四",
+        birth_date=date(1992, 2, 2),
+    )
+
+    passenger = service.update(7, "OLD", payload)
+
+    assert passenger.id_no == "NEW"
+    assert repo.bindings == {(7, "NEW")}
+    assert repo.passengers["OLD"].real_name == "张三"
+
+
+def test_passenger_delete_unbinds_only() -> None:
+    repo = FakePassengerRepository()
+    repo.create("P1", "张三", date(1990, 1, 1))
+    repo.bind_to_user(7, "P1")
+    service = make_passenger_service(repo)
+
+    service.delete(7, "P1")
+
+    assert repo.bindings == set()
+    assert "P1" in repo.passengers
+
+
+def test_passenger_delete_rejects_unbound_passenger() -> None:
+    repo = FakePassengerRepository()
+    service = make_passenger_service(repo)
+
+    with pytest.raises(ResourceNotFoundError):
+        service.delete(7, "P1")
