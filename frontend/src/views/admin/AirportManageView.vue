@@ -20,6 +20,7 @@ const cityFilter = ref('')
 
 const dialogVisible = ref(false)
 const mode = ref<'create' | 'edit'>('create')
+const editingIata = ref('')
 const formRef = ref<FormInstance>()
 const form = reactive<AirportForm>({
   iata_code: '',
@@ -58,6 +59,7 @@ async function loadAirports() {
 
 function openCreate() {
   mode.value = 'create'
+  editingIata.value = ''
   Object.assign(form, {
     iata_code: '',
     airport_name: '',
@@ -69,6 +71,7 @@ function openCreate() {
 
 function openEdit(row: Airport) {
   mode.value = 'edit'
+  editingIata.value = row.iata_code
   Object.assign(form, row)
   dialogVisible.value = true
   formRef.value?.clearValidate()
@@ -85,10 +88,7 @@ async function submit() {
     await adminApi.createAirport(payload)
     ElMessage.success('机场已新增')
   } else {
-    await adminApi.updateAirport(payload.iata_code, {
-      airport_name: payload.airport_name,
-      city_name: payload.city_name,
-    })
+    await adminApi.updateAirport(editingIata.value, payload)
     ElMessage.success('机场已更新')
   }
   dialogVisible.value = false
@@ -148,7 +148,7 @@ async function deleteAirport(row: Airport) {
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="IATA 三字码" prop="iata_code">
-          <el-input v-model="form.iata_code" maxlength="3" :disabled="mode === 'edit'" />
+          <el-input v-model="form.iata_code" maxlength="3" />
         </el-form-item>
         <el-form-item label="机场名称" prop="airport_name">
           <el-input v-model="form.airport_name" maxlength="128" show-word-limit />

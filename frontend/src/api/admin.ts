@@ -27,7 +27,7 @@ export const adminApi = {
   deleteNearAirport: (cityName: string, iata: string) =>
     http.delete<void>(`/cities/${encodeURIComponent(cityName)}/near-airports/${encodeURIComponent(iata)}`),
   createAirport: (payload: Airport) => http.post<Airport>('/airports', payload),
-  updateAirport: (iata: string, payload: Omit<Airport, 'iata_code'>) => http.put<Airport>(`/airports/${iata}`, payload),
+  updateAirport: (iata: string, payload: Airport) => http.put<Airport>(`/airports/${iata}`, payload),
   deleteAirport: (iata: string) => http.delete<void>(`/airports/${iata}`),
   createAirline: (payload: Airline) => http.post<Airline>('/airlines', payload),
   updateAirline: (iata: string, payload: Pick<Airline, 'airline_name'>) => http.put<Airline>(`/airlines/${iata}`, payload),

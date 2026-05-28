@@ -35,6 +35,7 @@ class AirportCreate(BaseModel):
 
 
 class AirportUpdate(BaseModel):
+    iata_code: str | None = Field(default=None, min_length=3, max_length=3)
     airport_name: str = Field(..., min_length=1, max_length=128)
     city_name: str = Field(..., min_length=1, max_length=32)
 
