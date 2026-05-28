@@ -115,6 +115,7 @@ export interface CabinPriceReplacePayload {
 }
 
 export interface FlightListParams extends PageParams {
+  flight_no?: string
   airline_code?: string
   dep_airport_code?: string
   arr_airport_code?: string

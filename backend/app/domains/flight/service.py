@@ -51,6 +51,7 @@ class FlightService:
         self,
         page: int,
         page_size: int,
+        flight_no: str | None = None,
         airline_code: str | None = None,
         dep_airport_code: str | None = None,
         arr_airport_code: str | None = None,
@@ -58,6 +59,7 @@ class FlightService:
         items, total = self.flight_repo.list_page(
             page,
             page_size,
+            _optional_flight_no(flight_no),
             _optional_airline_code(airline_code),
             _optional_airport_code(dep_airport_code),
             _optional_airport_code(arr_airport_code),
