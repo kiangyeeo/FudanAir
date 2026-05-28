@@ -26,8 +26,16 @@ const cities = ref<string[]>([])
 const airports = ref<Airport[]>([])
 const nearAirports = ref<NearAirport[]>([])
 const selectedCity = ref('')
+const cityKeyword = ref('')
 
 const cityRows = computed<CityRow[]>(() => cities.value.map((cityName) => ({ city_name: cityName })))
+const filteredCityRows = computed<CityRow[]>(() => {
+  const keyword = cityKeyword.value.trim()
+  if (!keyword) {
+    return cityRows.value
+  }
+  return cityRows.value.filter((row) => row.city_name.includes(keyword))
+})
 
 const cityDialogVisible = ref(false)
 const cityMode = ref<'create' | 'edit'>('create')
@@ -176,15 +184,23 @@ async function deleteNearAirport(row: NearAirport) {
       <div class="toolbar">
         <h1 class="page-title">城市管理</h1>
         <div class="toolbar-actions">
+          <el-input
+            v-model="cityKeyword"
+            clearable
+            :prefix-icon="Search"
+            placeholder="搜索城市名称"
+            class="city-search"
+          />
           <el-button type="primary" :icon="Plus" @click="openCreateCity">新增</el-button>
           <el-button :icon="Refresh" @click="loadCities">刷新</el-button>
         </div>
       </div>
 
       <el-table
-        v-if="cityRows.length || loading"
+        v-if="cities.length || loading"
         v-loading="loading"
-        :data="cityRows"
+        :data="filteredCityRows"
+        empty-text="未找到匹配城市"
         border
         row-key="city_name"
         highlight-current-row
@@ -296,6 +312,10 @@ async function deleteNearAirport(row: NearAirport) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.city-search {
+  width: 220px;
 }
 
 .section-title {

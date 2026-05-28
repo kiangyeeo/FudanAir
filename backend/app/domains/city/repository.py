@@ -83,6 +83,29 @@ class AirportRepository:
         self.db.flush()
         return airport
 
+    def rename_code(
+        self,
+        airport: Airport,
+        new_iata_code: str,
+        airport_name: str,
+        city_name: str,
+    ) -> Airport:
+        old_iata_code = str(airport.iata_code)
+        new_airport = Airport(
+            iata_code=new_iata_code,
+            airport_name=airport_name,
+            city_name=city_name,
+        )
+        self.db.add(new_airport)
+        self.db.flush()
+        self.db.query(CityNearApt).filter(CityNearApt.iata_code == old_iata_code).update(
+            {CityNearApt.iata_code: new_iata_code},
+            synchronize_session=False,
+        )
+        self.db.delete(airport)
+        self.db.flush()
+        return new_airport
+
     def delete(self, airport: Airport) -> None:
         self.db.delete(airport)
         self.db.flush()
