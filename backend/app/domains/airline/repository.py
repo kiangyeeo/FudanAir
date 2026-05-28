@@ -93,6 +93,19 @@ class AircraftTypeRepository:
         self.db.flush()
         return aircraft_type
 
+    def rename_model(
+        self,
+        aircraft_type: AircraftType,
+        new_model: str,
+        economy_seats: int,
+        first_seats: int,
+    ) -> AircraftType:
+        aircraft_type.model = new_model
+        aircraft_type.economy_seats = economy_seats
+        aircraft_type.first_seats = first_seats
+        self.db.flush()
+        return aircraft_type
+
     def delete(self, aircraft_type: AircraftType) -> None:
         self.db.delete(aircraft_type)
         self.db.flush()

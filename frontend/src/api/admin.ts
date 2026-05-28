@@ -33,7 +33,7 @@ export const adminApi = {
   updateAirline: (iata: string, payload: Airline) => http.put<Airline>(`/airlines/${iata}`, payload),
   deleteAirline: (iata: string) => http.delete<void>(`/airlines/${iata}`),
   createAircraftType: (payload: AircraftType) => http.post<AircraftType>('/aircraft-types', payload),
-  updateAircraftType: (model: string, payload: Omit<AircraftType, 'model'>) =>
+  updateAircraftType: (model: string, payload: AircraftType) =>
     http.put<AircraftType>(`/aircraft-types/${encodeURIComponent(model)}`, payload),
   deleteAircraftType: (model: string) => http.delete<void>(`/aircraft-types/${encodeURIComponent(model)}`),
   createFlight: (payload: FlightCreatePayload) => http.post<Flight>('/flights', payload),

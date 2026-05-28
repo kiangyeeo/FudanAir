@@ -39,8 +39,11 @@ class AircraftTypeCreate(BaseModel):
 
 
 class AircraftTypeUpdate(BaseModel):
+    model: str | None = Field(default=None, min_length=1, max_length=32)
     economy_seats: int = Field(..., ge=0)
     first_seats: int = Field(..., ge=0)
+
+    model_config = {"str_strip_whitespace": True}
 
     @model_validator(mode="after")
     def validate_total_seats(self) -> AircraftTypeUpdate:

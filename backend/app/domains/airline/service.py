@@ -123,17 +123,14 @@ class AircraftTypeService:
 
     def update(self, model: str, payload: AircraftTypeUpdate) -> AircraftType:
         aircraft_model = _aircraft_model(model)
+        new_model = _aircraft_model(payload.model) if payload.model else aircraft_model
         _ensure_positive_seats(payload.economy_seats, payload.first_seats)
         try:
             with transaction(self.db):
                 aircraft_type = self.repo.get(aircraft_model)
                 if not aircraft_type:
                     raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")
-                return self.repo.update(
-                    aircraft_type,
-                    payload.economy_seats,
-                    payload.first_seats,
-                )
+                return self._save_update(aircraft_type, aircraft_model, new_model, payload)
         except IntegrityError as exc:
             raise AppException(f"机型 {aircraft_model} 更新失败") from exc
 
@@ -149,6 +146,30 @@ class AircraftTypeService:
                 self.repo.delete(aircraft_type)
         except IntegrityError as exc:
             raise ResourceInUseError(f"机型 {aircraft_model} 被引用,无法删除") from exc
+
+    def _save_update(
+        self,
+        aircraft_type: AircraftType,
+        old_model: str,
+        new_model: str,
+        payload: AircraftTypeUpdate,
+    ) -> AircraftType:
+        if new_model == old_model:
+            return self.repo.update(
+                aircraft_type,
+                payload.economy_seats,
+                payload.first_seats,
+            )
+        if self.repo.is_referenced(old_model):
+            raise ResourceInUseError(f"机型 {old_model} 被航班引用,无法修改名称")
+        if self.repo.get(new_model):
+            raise AppException(f"机型 {new_model} 已存在")
+        return self.repo.rename_model(
+            aircraft_type,
+            new_model,
+            payload.economy_seats,
+            payload.first_seats,
+        )
 
 
 def _airline_code(iata_code: str) -> str:
