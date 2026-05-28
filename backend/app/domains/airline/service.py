@@ -42,12 +42,13 @@ class AirlineService:
 
     def update(self, iata_code: str, payload: AirlineUpdate) -> Airline:
         code = _airline_code(iata_code)
+        new_code = _airline_code(payload.iata_code) if payload.iata_code else code
         try:
             with transaction(self.db):
                 airline = self.repo.get(code)
                 if not airline:
                     raise ResourceNotFoundError(f"航司 {code} 不存在")
-                return self.repo.update(airline, payload.airline_name)
+                return self._save_update(airline, code, new_code, payload)
         except IntegrityError as exc:
             raise AppException(f"航司 {code} 更新失败") from exc
 
@@ -63,6 +64,31 @@ class AirlineService:
                 self.repo.delete(airline)
         except IntegrityError as exc:
             raise ResourceInUseError(f"航司 {code} 被引用,无法删除") from exc
+
+    def _save_update(
+        self,
+        airline: Airline,
+        old_code: str,
+        new_code: str,
+        payload: AirlineUpdate,
+    ) -> Airline:
+        self._ensure_identity_editable(airline, old_code, new_code, payload)
+        if new_code == old_code:
+            return self.repo.update(airline, payload.airline_name)
+        if self.repo.get(new_code):
+            raise AppException(f"航司代码 {new_code} 已存在")
+        return self.repo.rename_code(airline, new_code, payload.airline_name)
+
+    def _ensure_identity_editable(
+        self,
+        airline: Airline,
+        old_code: str,
+        new_code: str,
+        payload: AirlineUpdate,
+    ) -> None:
+        identity_changed = new_code != old_code or airline.airline_name != payload.airline_name
+        if identity_changed and self.repo.is_referenced(old_code):
+            raise ResourceInUseError(f"航司 {old_code} 被航班引用,无法修改代码或名称")
 
 
 class AircraftTypeService:

@@ -11,6 +11,7 @@ class AirlineCreate(BaseModel):
 
 
 class AirlineUpdate(BaseModel):
+    iata_code: str | None = Field(default=None, min_length=2, max_length=2)
     airline_name: str = Field(..., min_length=1, max_length=128)
 
     model_config = {"str_strip_whitespace": True}

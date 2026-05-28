@@ -27,6 +27,17 @@ class AirlineRepository:
         self.db.flush()
         return airline
 
+    def rename_code(
+        self,
+        airline: Airline,
+        new_iata_code: str,
+        airline_name: str,
+    ) -> Airline:
+        airline.iata_code = new_iata_code
+        airline.airline_name = airline_name
+        self.db.flush()
+        return airline
+
     def delete(self, airline: Airline) -> None:
         self.db.delete(airline)
         self.db.flush()
