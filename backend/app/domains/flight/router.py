@@ -36,6 +36,7 @@ def list_flights(
     airline: str | None = Query(default=None),
     dep_airport: str | None = Query(default=None),
     arr_airport: str | None = Query(default=None),
+    flight_no: str | None = Query(default=None),
     airline_code: str | None = Query(default=None),
     dep_airport_code: str | None = Query(default=None),
     arr_airport_code: str | None = Query(default=None),
@@ -44,6 +45,7 @@ def list_flights(
     return FlightService(db).list_flights(
         page,
         page_size,
+        flight_no,
         airline_code or airline,
         dep_airport_code or dep_airport,
         arr_airport_code or arr_airport,

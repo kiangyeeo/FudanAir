@@ -40,6 +40,7 @@ const airlines = ref<Airline[]>([])
 const airports = ref<Airport[]>([])
 const aircraftTypes = ref<AircraftType[]>([])
 const filters = reactive({
+  flight_no: '',
   airline_code: '',
   dep_airport_code: '',
   arr_airport_code: '',
@@ -111,6 +112,9 @@ async function loadFlights() {
       page: pagination.page,
       page_size: pagination.pageSize,
     }
+    if (filters.flight_no) {
+      params.flight_no = filters.flight_no.trim().toUpperCase()
+    }
     if (filters.airline_code) {
       params.airline_code = filters.airline_code
     }
@@ -130,6 +134,7 @@ async function loadFlights() {
 
 function resetFilters() {
   Object.assign(filters, {
+    flight_no: '',
     airline_code: '',
     dep_airport_code: '',
     arr_airport_code: '',
@@ -258,6 +263,15 @@ async function deleteFlight(row: Flight) {
     <div class="toolbar">
       <h1 class="page-title">航班管理</h1>
       <div class="toolbar-actions">
+        <el-input
+          v-model="filters.flight_no"
+          clearable
+          :prefix-icon="Search"
+          maxlength="8"
+          placeholder="航班号"
+          class="flight-no-filter"
+          @keyup.enter="applyFilters"
+        />
         <el-select v-model="filters.airline_code" clearable filterable placeholder="航司" class="filter-select">
           <el-option
             v-for="airline in airlines"
@@ -457,6 +471,10 @@ async function deleteFlight(row: Flight) {
 
 .filter-select {
   width: 170px;
+}
+
+.flight-no-filter {
+  width: 150px;
 }
 
 .pager {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { Delete, Edit, Plus, Refresh } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
@@ -15,14 +15,24 @@ interface AircraftForm {
 
 const loading = ref(false)
 const aircraftTypes = ref<AircraftType[]>([])
+const aircraftKeyword = ref('')
 
 const dialogVisible = ref(false)
 const mode = ref<'create' | 'edit'>('create')
+const editingModel = ref('')
 const formRef = ref<FormInstance>()
 const form = reactive<AircraftForm>({
   model: '',
   economy_seats: 0,
   first_seats: 0,
+})
+
+const filteredAircraftTypes = computed<AircraftType[]>(() => {
+  const keyword = aircraftKeyword.value.trim().toUpperCase()
+  if (!keyword) {
+    return aircraftTypes.value
+  }
+  return aircraftTypes.value.filter((aircraftType) => aircraftType.model.toUpperCase().includes(keyword))
 })
 
 const validateSeatTotal = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
@@ -61,6 +71,7 @@ async function loadAircraftTypes() {
 
 function openCreate() {
   mode.value = 'create'
+  editingModel.value = ''
   Object.assign(form, {
     model: '',
     economy_seats: 0,
@@ -72,6 +83,7 @@ function openCreate() {
 
 function openEdit(row: AircraftType) {
   mode.value = 'edit'
+  editingModel.value = row.model
   Object.assign(form, row)
   dialogVisible.value = true
   formRef.value?.clearValidate()
@@ -88,10 +100,7 @@ async function submit() {
     await adminApi.createAircraftType(payload)
     ElMessage.success('机型已新增')
   } else {
-    await adminApi.updateAircraftType(payload.model, {
-      economy_seats: payload.economy_seats,
-      first_seats: payload.first_seats,
-    })
+    await adminApi.updateAircraftType(editingModel.value, payload)
     ElMessage.success('机型已更新')
   }
   dialogVisible.value = false
@@ -115,6 +124,13 @@ async function deleteAircraftType(row: AircraftType) {
     <div class="toolbar">
       <h1 class="page-title">机型管理</h1>
       <div class="toolbar-actions">
+        <el-input
+          v-model="aircraftKeyword"
+          clearable
+          :prefix-icon="Search"
+          placeholder="搜索机型"
+          class="aircraft-search"
+        />
         <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
         <el-button :icon="Refresh" @click="loadAircraftTypes">刷新</el-button>
       </div>
@@ -123,7 +139,8 @@ async function deleteAircraftType(row: AircraftType) {
     <el-table
       v-if="aircraftTypes.length || loading"
       v-loading="loading"
-      :data="aircraftTypes"
+      :data="filteredAircraftTypes"
+      empty-text="未找到匹配机型"
       border
       row-key="model"
     >
@@ -150,7 +167,7 @@ async function deleteAircraftType(row: AircraftType) {
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="机型" prop="model">
-          <el-input v-model="form.model" maxlength="32" :disabled="mode === 'edit'" />
+          <el-input v-model="form.model" maxlength="32" />
         </el-form-item>
         <el-form-item label="经济舱座位" prop="economy_seats">
           <el-input-number v-model="form.economy_seats" :min="0" :max="999" :step="1" :precision="0" class="full-width" />
@@ -181,6 +198,10 @@ async function deleteAircraftType(row: AircraftType) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.aircraft-search {
+  width: 220px;
 }
 
 .full-width {

@@ -28,11 +28,14 @@ class FlightRepository:
         self,
         page: int,
         page_size: int,
+        flight_no: str | None = None,
         airline_code: str | None = None,
         dep_airport_code: str | None = None,
         arr_airport_code: str | None = None,
     ) -> tuple[list[Flight], int]:
         query = self.db.query(Flight)
+        if flight_no:
+            query = query.filter(Flight.flight_no == flight_no)
         if airline_code:
             query = query.filter(Flight.airline_code == airline_code)
         if dep_airport_code:
