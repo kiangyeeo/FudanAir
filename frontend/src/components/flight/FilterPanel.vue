@@ -4,6 +4,8 @@ import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import type { Airline } from '@/types/flight'
 import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
 import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
+import { Switch as SwitchIcon } from '@element-plus/icons-vue'
+
 
 const props = withDefaults(defineProps<{
   loading?: boolean
@@ -134,6 +136,12 @@ function reset() {
 function normalizePriceValue(value: number | null | undefined): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
+
+function swapCities() {
+  const dep = form.dep_city
+  form.dep_city = form.arr_city
+  form.arr_city = dep
+}
 </script>
 
 <template>
@@ -141,6 +149,12 @@ function normalizePriceValue(value: number | null | undefined): number | null {
     <el-form-item label="出发城市">
       <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
     </el-form-item>
+    <el-button class="swap-button" circle @click="swapCities">
+      <el-icon>
+        <SwitchIcon />
+      </el-icon>
+    </el-button>
+
     <el-form-item label="到达城市">
       <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
     </el-form-item>
@@ -217,6 +231,17 @@ function normalizePriceValue(value: number | null | undefined): number | null {
   gap: 8px;
   width: 100%;
   min-width: 0;
+}
+
+.swap-row {
+  display: flex;
+  justify-content: center;
+  margin: -4px 0;
+}
+
+.swap-button {
+  width: 36px;
+  height: 36px;
 }
 
 .filter-panel :deep(.el-form-item),
