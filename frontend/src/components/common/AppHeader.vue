@@ -51,12 +51,12 @@ async function logout() {
 <style scoped lang="scss">
 .app-header {
   display: grid;
-  grid-template-columns: 180px 1fr auto;
+  grid-template-columns: 220px 1fr auto;
   align-items: center;
   height: var(--fa-header-height);
-  padding: 0 24px;
+  padding: 0 40px;
   background: var(--fa-white);
-  border-bottom: 1px solid var(--fa-border);
+  border-bottom: none;
 }
 
 .brand {
@@ -64,29 +64,46 @@ async function logout() {
   gap: 8px;
   align-items: center;
   color: var(--fa-text);
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
+  line-height: 1;
 }
 
 .brand-mark {
-  display: inline-grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
   color: #fff;
   background: var(--fa-brand);
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 15px;
+  line-height: 1;
 }
 
 .nav-menu {
+  height: var(--fa-header-height);
   border-bottom: none;
+}
+
+.nav-menu :deep(.el-menu-item) {
+  height: var(--fa-header-height);
+  padding: 0 28px;
+  font-size: 17px;
+  line-height: var(--fa-header-height);
 }
 
 .header-actions {
   display: inline-flex;
   gap: 8px;
   align-items: center;
+  height: var(--fa-header-height);
+  font-size: 16px;
+}
+
+.header-actions :deep(.el-button) {
+  font-size: 15px;
 }
 
 .user-name {
