@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Tickets } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import AirlineLogo from './AirlineLogo.vue'
 import { formatCurrency, formatDuration, formatTime } from '@/utils/format'
 import type { TransitCandidate } from '@/types/search'
 
@@ -18,6 +19,10 @@ const emit = defineEmits<{
     <h2>中转方案</h2>
     <template v-if="items.length">
       <article v-for="item in items" :key="`${item.leg1.instance_id}-${item.leg2.instance_id}`" class="transit-card">
+        <div class="transit-logos">
+          <AirlineLogo :code="item.leg1.airline_code" :name="item.leg1.airline_name" :size="30" />
+          <AirlineLogo :code="item.leg2.airline_code" :name="item.leg2.airline_name" :size="30" />
+        </div>
         <div class="flight-summary">
           <strong>{{ item.leg1.flight_no }} → {{ item.leg2.flight_no }}</strong>
           <p>{{ item.leg1.dep_airport_code }} {{ formatTime(item.leg1.scheduled_departure) }} / {{ item.leg2.arr_airport_code }} {{ formatTime(item.leg2.scheduled_arrival) }}</p>
@@ -49,7 +54,7 @@ h2 {
 
 .transit-card {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(150px, max-content) minmax(190px, max-content);
+  grid-template-columns: 50px minmax(180px, 1fr) minmax(150px, max-content) minmax(190px, max-content);
   gap: 14px;
   align-items: center;
   min-width: 0;
@@ -58,6 +63,13 @@ h2 {
   background: var(--fa-white);
   border: 1px solid var(--fa-border);
   border-radius: var(--fa-radius);
+}
+
+.transit-logos {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
 }
 
 .flight-summary,
@@ -99,8 +111,13 @@ p {
 
 @media (max-width: 720px) {
   .transit-card {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 50px minmax(0, 1fr);
     align-items: start;
+  }
+
+  .transit-info,
+  .price-block {
+    grid-column: 1 / -1;
   }
 
   .transit-info,
