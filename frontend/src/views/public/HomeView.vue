@@ -7,6 +7,8 @@ import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useSearchStore } from '@/stores/search'
 import type { FlightSearchRequest } from '@/types/search'
+import { Switch as SwitchIcon } from '@element-plus/icons-vue'
+
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -31,6 +33,13 @@ async function loadCities() {
     cities.value = []
   }
 }
+
+function swapCities() {
+  const oldDepCity = form.dep_city
+  form.dep_city = form.arr_city
+  form.arr_city = oldDepCity
+}
+
 
 function submit() {
   const depCity = form.dep_city.trim()
@@ -78,6 +87,18 @@ onMounted(() => {
       <el-form class="search-form" :model="form" label-position="top">
         <el-form-item label="出发城市">
           <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
+        </el-form-item>
+        <el-form-item label=" " class="swap-form-item">
+          <el-button
+            class="swap-button"
+            circle
+            title="交换出发城市和到达城市"
+            @click="swapCities"
+          >
+            <el-icon>
+              <SwitchIcon />
+            </el-icon>
+          </el-button>
         </el-form-item>
         <el-form-item label="到达城市">
           <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
@@ -136,7 +157,13 @@ h1 {
 
 .search-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr)) 120px;
+  grid-template-columns:
+    minmax(150px, 1fr)
+    44px
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    minmax(150px, 1fr)
+    120px;
   gap: 12px;
   align-items: end;
 }
@@ -151,5 +178,15 @@ h1 {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+@media (max-width: 900px) {
+  .search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .swap-button {
+    margin-bottom: 0;
+  }
 }
 </style>
