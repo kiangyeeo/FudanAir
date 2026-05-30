@@ -243,6 +243,36 @@ function normalizePriceValue(value: number | null | undefined): number | null {
   max-width: 100%;
 }
 
+.filter-panel :deep(.el-input__wrapper),
+.filter-panel :deep(.el-select__wrapper),
+.filter-panel :deep(.el-date-editor.el-input__wrapper),
+.filter-panel :deep(.el-date-editor--timerange.el-input__wrapper),
+.filter-panel :deep(.el-segmented) {
+  min-height: 40px;
+  border: 1px solid #d0d7de;
+  border-radius: 3px;
+  background: var(--fa-white);
+  box-shadow: none !important;
+  transition: border-color 0.15s ease;
+}
+
+.filter-panel :deep(.el-input__wrapper:hover),
+.filter-panel :deep(.el-select__wrapper:hover),
+.filter-panel :deep(.el-date-editor.el-input__wrapper:hover),
+.filter-panel :deep(.el-date-editor--timerange.el-input__wrapper:hover),
+.filter-panel :deep(.el-segmented:hover) {
+  border-color: #9aa4b2;
+  box-shadow: none !important;
+}
+
+.filter-panel :deep(.el-input__wrapper.is-focus),
+.filter-panel :deep(.el-select__wrapper.is-focused),
+.filter-panel :deep(.el-date-editor.el-input__wrapper.is-focus),
+.filter-panel :deep(.el-date-editor--timerange.el-input__wrapper.is-active) {
+  border-color: var(--fa-brand);
+  box-shadow: none !important;
+}
+
 .price-range {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
