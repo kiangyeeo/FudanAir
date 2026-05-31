@@ -189,7 +189,7 @@ class FlightInstanceRepository:
     ) -> tuple[list[FlightInstance], int]:
         query = self.db.query(FlightInstance)
         if flight_no:
-            query = query.filter(FlightInstance.flight_no == flight_no)
+            query = query.filter(FlightInstance.flight_no.like(f"{flight_no}%"))
         if flight_date:
             query = query.filter(FlightInstance.flight_date == flight_date)
         if status:
