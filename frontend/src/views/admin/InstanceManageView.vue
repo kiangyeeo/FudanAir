@@ -8,7 +8,6 @@ import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
 import { formatDate } from '@/utils/format'
 import type {
-  Flight,
   FlightInstance,
   FlightInstanceBatchPayload,
   FlightInstanceListParams,
@@ -36,7 +35,6 @@ const router = useRouter()
 
 const loading = ref(false)
 const instances = ref<FlightInstance[]>([])
-const flights = ref<Flight[]>([])
 const total = ref(0)
 const filters = reactive({
   flight_no: '',
@@ -71,12 +69,12 @@ const statusForm = reactive<StatusForm>({
 })
 
 const createRules: FormRules<CreateForm> = {
-  flight_no: [{ required: true, message: '请选择航班', trigger: 'change' }],
+  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
   flight_date: [{ required: true, message: '请选择日期', trigger: 'change' }],
 }
 
 const batchRules: FormRules<BatchForm> = {
-  flight_no: [{ required: true, message: '请选择航班', trigger: 'change' }],
+  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
   start_date: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
   end_date: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
 }
@@ -85,13 +83,10 @@ const statusRules: FormRules<StatusForm> = {
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
 
-onMounted(async () => {
-  await Promise.all([loadFlights(), loadInstances()])
-})
+onMounted(loadInstances)
 
-async function loadFlights() {
-  const page = await flightApi.listFlights({ page: 1, page_size: 100 })
-  flights.value = page.items
+function normalizeFlightNo(value: string) {
+  return value.trim().toUpperCase()
 }
 
 async function loadInstances() {
@@ -101,8 +96,9 @@ async function loadInstances() {
       page: pagination.page,
       page_size: pagination.pageSize,
     }
-    if (filters.flight_no) {
-      params.flight_no = filters.flight_no
+    const flightNo = normalizeFlightNo(filters.flight_no)
+    if (flightNo) {
+      params.flight_no = flightNo
     }
     if (filters.flight_date) {
       params.flight_date = filters.flight_date
@@ -141,7 +137,7 @@ function handlePageSizeChange(size: number) {
 
 function openCreate() {
   Object.assign(createForm, {
-    flight_no: filters.flight_no || '',
+    flight_no: normalizeFlightNo(filters.flight_no),
     flight_date: filters.flight_date || '',
   })
   createDialogVisible.value = true
@@ -150,7 +146,7 @@ function openCreate() {
 
 function openBatchGenerate() {
   Object.assign(batchForm, {
-    flight_no: filters.flight_no || '',
+    flight_no: normalizeFlightNo(filters.flight_no),
     start_date: '',
     end_date: '',
   })
@@ -176,7 +172,7 @@ function ensureDateRange(payload: FlightInstanceBatchPayload) {
 async function submitCreate() {
   await createFormRef.value?.validate()
   await adminApi.createInstance({
-    flight_no: createForm.flight_no,
+    flight_no: normalizeFlightNo(createForm.flight_no),
     flight_date: createForm.flight_date,
   })
   createDialogVisible.value = false
@@ -187,7 +183,7 @@ async function submitCreate() {
 async function submitBatch() {
   await batchFormRef.value?.validate()
   const payload: FlightInstanceBatchPayload = {
-    flight_no: batchForm.flight_no,
+    flight_no: normalizeFlightNo(batchForm.flight_no),
     start_date: batchForm.start_date,
     end_date: batchForm.end_date,
   }
@@ -232,9 +228,15 @@ function openPrices(row: FlightInstance) {
     <div class="toolbar">
       <h1 class="page-title">实例管理</h1>
       <div class="toolbar-actions">
-        <el-select v-model="filters.flight_no" clearable filterable placeholder="航班号" class="filter-select">
-          <el-option v-for="flight in flights" :key="flight.flight_no" :label="flight.flight_no" :value="flight.flight_no" />
-        </el-select>
+        <el-input
+          v-model="filters.flight_no"
+          clearable
+          :prefix-icon="Search"
+          maxlength="8"
+          placeholder="航班号"
+          class="filter-select"
+          @keyup.enter="applyFilters"
+        />
         <el-date-picker
           v-model="filters.flight_date"
           type="date"
@@ -287,9 +289,7 @@ function openPrices(row: FlightInstance) {
     <el-dialog v-model="createDialogVisible" title="新增航班实例" width="460px" :close-on-click-modal="false">
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top">
         <el-form-item label="航班号" prop="flight_no">
-          <el-select v-model="createForm.flight_no" filterable class="full-width">
-            <el-option v-for="flight in flights" :key="flight.flight_no" :label="flight.flight_no" :value="flight.flight_no" />
-          </el-select>
+          <el-input v-model="createForm.flight_no" maxlength="8" class="full-width" />
         </el-form-item>
         <el-form-item label="执行日期" prop="flight_date">
           <el-date-picker
@@ -310,9 +310,7 @@ function openPrices(row: FlightInstance) {
     <el-dialog v-model="batchDialogVisible" title="按航班批量生成" width="520px" :close-on-click-modal="false">
       <el-form ref="batchFormRef" :model="batchForm" :rules="batchRules" label-position="top">
         <el-form-item label="航班号" prop="flight_no">
-          <el-select v-model="batchForm.flight_no" filterable class="full-width">
-            <el-option v-for="flight in flights" :key="flight.flight_no" :label="flight.flight_no" :value="flight.flight_no" />
-          </el-select>
+          <el-input v-model="batchForm.flight_no" maxlength="8" class="full-width" />
         </el-form-item>
         <div class="form-grid">
           <el-form-item label="开始日期" prop="start_date">
