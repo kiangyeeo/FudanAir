@@ -16,6 +16,7 @@ class Ticket(Base):
     cabin_class = Column(Enum("经济舱", "头等舱"), nullable=False)
     fare_type = Column(Enum("标准", "特价"), nullable=False, default="标准")
     actual_price = Column(Numeric(10, 2), nullable=False)
+    fuel_infra_fee = Column(Numeric(10, 2), nullable=False, default=0)
     status = Column(
         Enum("有效", "已退", "已改签作废", "已使用"),
         nullable=False,

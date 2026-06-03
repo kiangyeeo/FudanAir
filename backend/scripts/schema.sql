@@ -193,9 +193,10 @@ CREATE TABLE ticket (
     instance_id   VARCHAR(32)  NOT NULL,
     cabin_class   ENUM('经济舱','头等舱') NOT NULL,
     fare_type     ENUM('标准','特价')     NOT NULL DEFAULT '标准',
-    actual_price  DECIMAL(10,2) NOT NULL,
-    status        ENUM('有效','已退','已改签作废','已使用')
-                  NOT NULL DEFAULT '有效',
+    actual_price    DECIMAL(10,2) NOT NULL,
+    fuel_infra_fee  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    status          ENUM('有效','已退','已改签作废','已使用')
+                    NOT NULL DEFAULT '有效',
     PRIMARY KEY (ticket_no),
     KEY idx_ticket_order (order_no),
     KEY idx_ticket_passenger (passenger_id),
@@ -206,7 +207,8 @@ CREATE TABLE ticket (
         REFERENCES passenger(id_no),
     CONSTRAINT fk_ticket_cabinprice FOREIGN KEY (instance_id, cabin_class, fare_type)
         REFERENCES cabin_price(instance_id, cabin_class, fare_type),
-    CONSTRAINT chk_ticket_price CHECK (actual_price >= 0)
+    CONSTRAINT chk_ticket_price CHECK (actual_price >= 0),
+    CONSTRAINT chk_ticket_fuel_fee CHECK (fuel_infra_fee >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE refund_change (

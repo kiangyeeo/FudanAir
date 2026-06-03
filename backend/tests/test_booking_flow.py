@@ -116,6 +116,7 @@ class FakeTicketService:
         cabin_class: str,
         fare_type: str,
         actual_price: Decimal,
+        fuel_infra_fee: Decimal,
     ) -> SimpleNamespace:
         ticket = SimpleNamespace(
             ticket_no=f"T{len(self.tickets) + 1}",
@@ -125,6 +126,7 @@ class FakeTicketService:
             cabin_class=cabin_class,
             fare_type=fare_type,
             actual_price=actual_price,
+            fuel_infra_fee=fuel_infra_fee,
             status="有效",
         )
         self.tickets.append(ticket)
