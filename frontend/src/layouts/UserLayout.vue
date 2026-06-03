@@ -19,6 +19,6 @@ import AppHeader from '@/components/common/AppHeader.vue'
 }
 
 .user-main {
-  padding: 20px 0 0;
+  padding: 0;
 }
 </style>

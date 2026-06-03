@@ -49,6 +49,21 @@ h1 {
   font-size: 22px;
 }
 
+:deep(.el-input__wrapper) {
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid #d5d8df;
+  border-radius: 2px;
+  background: var(--fa-white);
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: var(--fa-brand);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+}
+
 .full-button {
   width: 100%;
 }

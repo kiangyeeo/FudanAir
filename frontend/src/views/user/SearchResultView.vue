@@ -272,6 +272,7 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .result-page {
+  width: min(1540px, calc(100% - 24px));
   display: grid;
   grid-template-columns: minmax(300px, 320px) minmax(0, 1fr);
   gap: 16px;

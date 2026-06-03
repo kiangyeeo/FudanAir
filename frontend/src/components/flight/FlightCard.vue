@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Tickets } from '@element-plus/icons-vue'
+import AirlineLogo from './AirlineLogo.vue'
 import { formatCurrency, formatTime } from '@/utils/format'
 import type { DirectFlightCandidate, NearbyFlightCandidate } from '@/types/search'
 
@@ -17,6 +18,7 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
 
 <template>
   <article class="flight-card">
+    <AirlineLogo :code="candidate.airline_code" :name="candidate.airline_name" :size="38" />
     <div class="time-block mono-num">
       <strong>{{ formatTime(candidate.scheduled_departure) }}</strong>
       <span>{{ candidate.dep_airport_code }}</span>
@@ -43,7 +45,7 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
 <style scoped lang="scss">
 .flight-card {
   display: grid;
-  grid-template-columns: 92px 1fr 92px minmax(170px, max-content);
+  grid-template-columns: 44px 92px 1fr 92px minmax(170px, max-content);
   gap: 14px;
   align-items: center;
   min-height: 86px;
@@ -101,8 +103,13 @@ const seatSummary = computed(() => `经济舱 ${props.candidate.economy_left} / 
 
 @media (max-width: 760px) {
   .flight-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: 44px minmax(0, 1fr);
     align-items: start;
+  }
+
+  .route-line,
+  .price-block {
+    grid-column: 1 / -1;
   }
 
   .price-block {
