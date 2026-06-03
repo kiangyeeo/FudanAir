@@ -35,7 +35,7 @@ class FlightRepository:
     ) -> tuple[list[Flight], int]:
         query = self.db.query(Flight)
         if flight_no:
-            query = query.filter(Flight.flight_no == flight_no)
+            query = query.filter(Flight.flight_no.like(f"{flight_no}%"))
         if airline_code:
             query = query.filter(Flight.airline_code == airline_code)
         if dep_airport_code:

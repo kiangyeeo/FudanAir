@@ -17,21 +17,23 @@ from app.domains.flight.models import Flight, FlightInstance
 from app.domains.flight.service import FlightService
 
 
-def test_list_flights_filters_by_flight_no() -> None:
+def test_list_flights_filters_by_flight_no_prefix() -> None:
     db = _make_db()
     try:
-        _seed_flight(db, "CA1001")
+        _seed_flight(db, "MU1001")
         _seed_flight(db, "MU2002")
+        _seed_flight(db, "CA1001")
+        _seed_flight(db, "AMU3000")
         db.commit()
 
         page = FlightService(db).list_flights(
             page=1,
             page_size=20,
-            flight_no=" ca1001 ",
+            flight_no=" mu ",
         )
 
-        assert page["total"] == 1
-        assert [flight.flight_no for flight in page["items"]] == ["CA1001"]
+        assert page["total"] == 2
+        assert [flight.flight_no for flight in page["items"]] == ["MU1001", "MU2002"]
     finally:
         db.close()
 
