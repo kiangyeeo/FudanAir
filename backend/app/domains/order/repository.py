@@ -105,7 +105,7 @@ class OrderRepository:
                     f.scheduled_arrival,
                     f.dep_airport_code,
                     f.arr_airport_code,
-                    f.fuel_infra_fee,
+                    t.fuel_infra_fee,
                     t.cabin_class,
                     t.fare_type,
                     t.actual_price,

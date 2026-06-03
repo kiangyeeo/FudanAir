@@ -98,6 +98,7 @@ class BookingService:
                             segment_price["cabin_class"],
                             segment_price["fare_type"],
                             segment_price["actual_price"],
+                            segment_price["fuel_fee"],
                         )
                     )
 

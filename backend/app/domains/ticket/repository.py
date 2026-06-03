@@ -30,6 +30,7 @@ class TicketRepository:
         cabin_class: str,
         fare_type: str,
         actual_price: Decimal,
+        fuel_infra_fee: Decimal,
         status: str,
     ) -> Ticket:
         ticket = Ticket(
@@ -40,6 +41,7 @@ class TicketRepository:
             cabin_class=cabin_class,
             fare_type=fare_type,
             actual_price=actual_price,
+            fuel_infra_fee=fuel_infra_fee,
             status=status,
         )
         self.db.add(ticket)

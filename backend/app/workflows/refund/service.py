@@ -192,7 +192,9 @@ class RefundService:
             target["fare_type"],
             1,
         )
-        actual_price = self._actual_price_with_fuel(target["instance_id"], cabin_price.price)
+        detail = self.flight_svc.get_instance_detail(target["instance_id"])
+        fuel_fee = _money(detail["fuel_infra_fee"])
+        actual_price = _money(_decimal(cabin_price.price) + fuel_fee)
         return self.ticket_svc.create(
             old_ticket.order_no,
             old_ticket.passenger_id,
@@ -200,6 +202,7 @@ class RefundService:
             target["cabin_class"],
             target["fare_type"],
             actual_price,
+            fuel_fee,
             status=TICKET_STATUS_ACTIVE,
         )
 
