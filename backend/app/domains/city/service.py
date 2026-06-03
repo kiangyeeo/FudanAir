@@ -115,6 +115,7 @@ class AirportService:
 
     def update(self, iata_code: str, payload: AirportUpdate) -> Airport:
         code = _airport_code(iata_code)
+        new_code = _airport_code(payload.iata_code) if payload.iata_code else code
         try:
             with transaction(self.db):
                 airport = self.airport_repo.get(code)
@@ -122,14 +123,8 @@ class AirportService:
                     raise ResourceNotFoundError(f"机场 {code} 不存在")
                 self._ensure_city(payload.city_name)
                 old_city = str(airport.city_name)
-                airport = self.airport_repo.update(
-                    airport,
-                    payload.airport_name,
-                    payload.city_name,
-                )
-                if old_city != payload.city_name:
-                    self.near_repo.delete_own_relation(old_city, code)
-                    self.near_repo.upsert(payload.city_name, code, ZERO_DISTANCE)
+                airport = self._save_update(airport, code, new_code, payload)
+                self._sync_own_near_relation(old_city, payload.city_name, code, new_code)
                 return airport
         except IntegrityError as exc:
             raise AppException(f"机场 {code} 更新失败") from exc
@@ -152,6 +147,54 @@ class AirportService:
         if not city:
             raise ResourceNotFoundError(f"城市 {city_name} 不存在")
         return city
+
+    def _save_update(
+        self,
+        airport: Airport,
+        old_code: str,
+        new_code: str,
+        payload: AirportUpdate,
+    ) -> Airport:
+        if new_code == old_code:
+            self._ensure_identity_editable(airport, old_code, new_code, payload)
+            return self.airport_repo.update(
+                airport,
+                payload.airport_name,
+                payload.city_name,
+            )
+        self._ensure_identity_editable(airport, old_code, new_code, payload)
+        if self.airport_repo.get(new_code):
+            raise AppException(f"机场 {new_code} 已存在")
+        return self.airport_repo.rename_code(
+            airport,
+            new_code,
+            payload.airport_name,
+            payload.city_name,
+        )
+
+    def _ensure_identity_editable(
+        self,
+        airport: Airport,
+        old_code: str,
+        new_code: str,
+        payload: AirportUpdate,
+    ) -> None:
+        identity_changed = new_code != old_code or airport.airport_name != payload.airport_name
+        if identity_changed and self.airport_repo.is_referenced(old_code):
+            raise ResourceInUseError(f"机场 {old_code} 被引用,无法修改 IATA 或机场名称")
+
+    def _sync_own_near_relation(
+        self,
+        old_city: str,
+        new_city: str,
+        old_code: str,
+        new_code: str,
+    ) -> None:
+        if old_city != new_city:
+            self.near_repo.delete_own_relation(old_city, new_code)
+            self.near_repo.upsert(new_city, new_code, ZERO_DISTANCE)
+        elif old_code != new_code:
+            self.near_repo.upsert(new_city, new_code, ZERO_DISTANCE)
 
 
 class CityNearAirportService:

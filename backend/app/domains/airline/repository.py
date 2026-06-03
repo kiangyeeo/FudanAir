@@ -27,6 +27,17 @@ class AirlineRepository:
         self.db.flush()
         return airline
 
+    def rename_code(
+        self,
+        airline: Airline,
+        new_iata_code: str,
+        airline_name: str,
+    ) -> Airline:
+        airline.iata_code = new_iata_code
+        airline.airline_name = airline_name
+        self.db.flush()
+        return airline
+
     def delete(self, airline: Airline) -> None:
         self.db.delete(airline)
         self.db.flush()
@@ -77,6 +88,19 @@ class AircraftTypeRepository:
         economy_seats: int,
         first_seats: int,
     ) -> AircraftType:
+        aircraft_type.economy_seats = economy_seats
+        aircraft_type.first_seats = first_seats
+        self.db.flush()
+        return aircraft_type
+
+    def rename_model(
+        self,
+        aircraft_type: AircraftType,
+        new_model: str,
+        economy_seats: int,
+        first_seats: int,
+    ) -> AircraftType:
+        aircraft_type.model = new_model
         aircraft_type.economy_seats = economy_seats
         aircraft_type.first_seats = first_seats
         self.db.flush()

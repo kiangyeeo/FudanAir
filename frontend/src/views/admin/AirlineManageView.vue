@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
-import { Delete, Edit, Plus, Refresh } from '@element-plus/icons-vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { Delete, Edit, Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
@@ -14,13 +14,25 @@ interface AirlineForm {
 
 const loading = ref(false)
 const airlines = ref<Airline[]>([])
+const airlineKeyword = ref('')
 
 const dialogVisible = ref(false)
 const mode = ref<'create' | 'edit'>('create')
+const editingIata = ref('')
 const formRef = ref<FormInstance>()
 const form = reactive<AirlineForm>({
   iata_code: '',
   airline_name: '',
+})
+
+const filteredAirlines = computed<Airline[]>(() => {
+  const keyword = airlineKeyword.value.trim().toUpperCase()
+  if (!keyword) {
+    return airlines.value
+  }
+  return airlines.value.filter(
+    (airline) => airline.iata_code.includes(keyword) || airline.airline_name.toUpperCase().includes(keyword),
+  )
 })
 
 const rules: FormRules<AirlineForm> = {
@@ -47,6 +59,7 @@ async function loadAirlines() {
 
 function openCreate() {
   mode.value = 'create'
+  editingIata.value = ''
   Object.assign(form, { iata_code: '', airline_name: '' })
   dialogVisible.value = true
   formRef.value?.clearValidate()
@@ -54,6 +67,7 @@ function openCreate() {
 
 function openEdit(row: Airline) {
   mode.value = 'edit'
+  editingIata.value = row.iata_code
   Object.assign(form, row)
   dialogVisible.value = true
   formRef.value?.clearValidate()
@@ -69,7 +83,7 @@ async function submit() {
     await adminApi.createAirline(payload)
     ElMessage.success('航司已新增')
   } else {
-    await adminApi.updateAirline(payload.iata_code, { airline_name: payload.airline_name })
+    await adminApi.updateAirline(editingIata.value, payload)
     ElMessage.success('航司已更新')
   }
   dialogVisible.value = false
@@ -93,6 +107,13 @@ async function deleteAirline(row: Airline) {
     <div class="toolbar">
       <h1 class="page-title">航司管理</h1>
       <div class="toolbar-actions">
+        <el-input
+          v-model="airlineKeyword"
+          clearable
+          :prefix-icon="Search"
+          placeholder="搜索代码或名称"
+          class="airline-search"
+        />
         <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
         <el-button :icon="Refresh" @click="loadAirlines">刷新</el-button>
       </div>
@@ -101,7 +122,8 @@ async function deleteAirline(row: Airline) {
     <el-table
       v-if="airlines.length || loading"
       v-loading="loading"
-      :data="airlines"
+      :data="filteredAirlines"
+      empty-text="未找到匹配航司"
       border
       row-key="iata_code"
     >
@@ -124,7 +146,7 @@ async function deleteAirline(row: Airline) {
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
         <el-form-item label="航司二字码" prop="iata_code">
-          <el-input v-model="form.iata_code" maxlength="2" :disabled="mode === 'edit'" />
+          <el-input v-model="form.iata_code" maxlength="2" />
         </el-form-item>
         <el-form-item label="航司名称" prop="airline_name">
           <el-input v-model="form.airline_name" maxlength="128" show-word-limit />
@@ -152,5 +174,9 @@ async function deleteAirline(row: Airline) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.airline-search {
+  width: 220px;
 }
 </style>

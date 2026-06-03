@@ -8,7 +8,7 @@ import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
 import { formatCurrency, formatDate, formatTime } from '@/utils/format'
 import type { CabinClass, FareType } from '@/types/common'
-import type { CabinPricePayload, Flight, FlightInstance, FlightInstanceListParams } from '@/types/flight'
+import type { CabinPricePayload, FlightInstance, FlightInstanceListParams } from '@/types/flight'
 
 const cabinClassOptions: CabinClass[] = ['经济舱', '头等舱']
 const fareTypeOptions: FareType[] = ['标准', '特价']
@@ -17,7 +17,6 @@ const route = useRoute()
 const instanceLoading = ref(false)
 const priceLoading = ref(false)
 const saving = ref(false)
-const flights = ref<Flight[]>([])
 const instances = ref<FlightInstance[]>([])
 const instanceTotal = ref(0)
 const selectedInstanceId = ref('')
@@ -40,7 +39,7 @@ onMounted(async () => {
     selectedInstanceId.value = queryInstanceId
     applyInstanceIdToFilters(queryInstanceId)
   }
-  await Promise.all([loadFlights(), loadInstances()])
+  await loadInstances()
   if (queryInstanceId) {
     await loadPrices()
   }
@@ -76,9 +75,8 @@ function applyInstanceIdToFilters(instanceId: string) {
   filters.flight_date = `${rawDate.slice(0, 4)}-${rawDate.slice(4, 6)}-${rawDate.slice(6, 8)}`
 }
 
-async function loadFlights() {
-  const page = await flightApi.listFlights({ page: 1, page_size: 100 })
-  flights.value = page.items
+function normalizeFlightNo(value: string) {
+  return value.trim().toUpperCase()
 }
 
 async function loadInstances() {
@@ -88,8 +86,9 @@ async function loadInstances() {
       page: pagination.page,
       page_size: pagination.pageSize,
     }
-    if (filters.flight_no) {
-      params.flight_no = filters.flight_no
+    const flightNo = normalizeFlightNo(filters.flight_no)
+    if (flightNo) {
+      params.flight_no = flightNo
     }
     if (filters.flight_date) {
       params.flight_date = filters.flight_date
@@ -234,17 +233,15 @@ async function savePrices() {
       <div class="toolbar">
         <h1 class="page-title">票价管理</h1>
         <div class="toolbar-actions">
-          <el-select
+          <el-input
             v-model="filters.flight_no"
             clearable
-            filterable
-            allow-create
-            default-first-option
+            :prefix-icon="Search"
+            maxlength="8"
             placeholder="航班号"
             class="flight-filter"
-          >
-            <el-option v-for="flight in flights" :key="flight.flight_no" :label="flight.flight_no" :value="flight.flight_no" />
-          </el-select>
+            @keyup.enter="applyFilters"
+          />
           <el-date-picker
             v-model="filters.flight_date"
             type="date"

@@ -34,6 +34,7 @@ class TicketService:
         cabin_class: str,
         fare_type: str,
         actual_price: Decimal,
+        fuel_infra_fee: Decimal,
         status: str = "有效",
     ) -> Ticket:
         try:
@@ -46,6 +47,7 @@ class TicketService:
                     cabin_class=cabin_class,
                     fare_type=fare_type,
                     actual_price=actual_price,
+                    fuel_infra_fee=fuel_infra_fee,
                     status=_ticket_status(status),
                 )
         except IntegrityError as exc:
