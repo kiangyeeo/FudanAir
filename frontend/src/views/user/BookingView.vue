@@ -6,8 +6,9 @@ import { bookingApi } from '@/api/booking'
 import { flightApi } from '@/api/flight'
 import { passengerApi } from '@/api/passenger'
 import PassengerForm from '@/components/order/PassengerForm.vue'
+import FlightPath from '@/components/flight/FlightPath.vue'
 import { useBookingStore } from '@/stores/booking'
-import { formatCurrency, formatTime } from '@/utils/format'
+import { formatCurrency, formatTime, minutesBetween } from '@/utils/format'
 import type { BookingRequest, BookingSegmentSelection } from '@/types/booking'
 import type { CabinClass, FareType } from '@/types/common'
 import type { FlightInstance } from '@/types/flight'
@@ -262,94 +263,133 @@ function currentDraft(): BookingRequest | null {
 
 <template>
   <div class="page-shell booking-page">
-    <section class="page-section">
-      <h1 class="page-title">填写订单</h1>
-      <el-form :model="form" label-position="top" class="booking-form">
-        <el-form-item v-if="!isTransitBooking" label="航班实例 ID">
-          <el-input v-model="form.instance_id" placeholder="如 CA1234_20260510" />
-        </el-form-item>
-        <el-form-item v-else label="中转航段">
-          <div class="segment-tags">
-            <el-tag v-for="row in priceRows" :key="row.key" type="info">
-              {{ row.label }} · {{ row.segment.instance_id }}
-            </el-tag>
-          </div>
-        </el-form-item>
-        <el-form-item label="舱位">
-          <el-select v-model="form.cabin_class">
-            <el-option label="经济舱" value="经济舱" />
-            <el-option label="头等舱" value="头等舱" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="票价类型">
-          <el-select v-model="form.fare_type">
-            <el-option label="标准" value="标准" />
-            <el-option label="特价" value="特价" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <div v-if="selectedSegments.length" v-loading="detailLoading" class="price-summary">
-        <h2>价格明细</h2>
-        <el-table :data="priceRows" border row-key="key">
-          <el-table-column prop="label" label="航段" width="90" />
-          <el-table-column label="航班实例" min-width="190">
-            <template #default="{ row }">
-              <div>{{ row.detail?.flight_no ?? '--' }} · {{ row.segment.instance_id }}</div>
-              <span class="subtle">
-                {{ row.detail?.dep_airport_code ?? '--' }} → {{ row.detail?.arr_airport_code ?? '--' }}
-                {{ formatTime(row.detail?.scheduled_departure) }} - {{ formatTime(row.detail?.scheduled_arrival) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="舱位票价" min-width="240">
-            <template #default="{ row }">
-              <div>{{ row.segment.cabin_class }} · {{ row.segment.fare_type }}</div>
-              <span class="subtle mono-num">
-                机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
-              </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="单人合计" width="130">
-            <template #default="{ row }">
-              <span class="price mono-num">{{ formatCurrency(row.actualPrice) }}</span>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div class="price-total mono-num">单人行程合计 {{ formatCurrency(totalPerPassenger) }}</div>
-      </div>
-    </section>
+    <div class="booking-main">
+      <section class="page-section">
+        <h1 class="page-title">填写订单</h1>
+        <el-form :model="form" label-position="top" class="booking-form">
+          <el-form-item v-if="!isTransitBooking" label="航班实例 ID">
+            <el-input v-model="form.instance_id" placeholder="如 CA1234_20260510" />
+          </el-form-item>
+          <el-form-item v-else label="中转航段">
+            <div class="segment-tags">
+              <el-tag v-for="row in priceRows" :key="row.key" type="info">
+                {{ row.label }} · {{ row.segment.instance_id }}
+              </el-tag>
+            </div>
+          </el-form-item>
+          <el-form-item label="舱位">
+            <el-select v-model="form.cabin_class">
+              <el-option label="经济舱" value="经济舱" />
+              <el-option label="头等舱" value="头等舱" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="票价类型">
+            <el-select v-model="form.fare_type">
+              <el-option label="标准" value="标准" />
+              <el-option label="特价" value="特价" />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </section>
 
-    <section class="page-section">
-      <div class="section-header">
-        <h2>乘机人</h2>
-        <div class="passenger-picker">
-          <el-select
-            v-model="selectedSavedIds"
-            multiple
-            filterable
-            collapse-tags
-            collapse-tags-tooltip
-            :loading="passengerLoading"
-            :disabled="!savedPassengerOptions.length"
-            placeholder="选择常用乘机人"
-          >
-            <el-option v-for="item in savedPassengerOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
-          <el-button :disabled="!savedPassengerOptions.length" @click="appendSavedPassengers">带入</el-button>
+      <section class="page-section">
+        <div class="section-header">
+          <h2>乘机人</h2>
+          <div class="passenger-picker">
+            <el-select
+              v-model="selectedSavedIds"
+              multiple
+              filterable
+              collapse-tags
+              collapse-tags-tooltip
+              :loading="passengerLoading"
+              :disabled="!savedPassengerOptions.length"
+              placeholder="选择常用乘机人"
+            >
+              <el-option v-for="item in savedPassengerOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+            <el-button :disabled="!savedPassengerOptions.length" @click="appendSavedPassengers">带入</el-button>
+          </div>
         </div>
-      </div>
-      <PassengerForm v-model="passengers" />
-      <div class="actions">
-        <el-button type="primary" :loading="loading" @click="submit">提交订单</el-button>
-      </div>
-    </section>
+        <PassengerForm v-model="passengers" />
+      </section>
+    </div>
+
+    <aside class="booking-aside">
+      <section v-loading="detailLoading" class="page-section summary-card">
+        <h2 class="summary-title">订单摘要</h2>
+        <div v-if="selectedSegments.length" class="seg-list">
+          <div v-for="row in priceRows" :key="row.key" class="seg-item">
+            <div class="seg-head">
+              <span class="seg-label">{{ row.label }}</span>
+              <span class="seg-flight mono-num">{{ row.detail?.flight_no ?? '--' }}</span>
+            </div>
+            <div class="seg-route mono-num">
+              <div class="endpoint">
+                <strong>{{ formatTime(row.detail?.scheduled_departure) }}</strong>
+                <span>{{ row.detail?.dep_airport_code ?? '--' }}</span>
+              </div>
+              <FlightPath
+                :duration="minutesBetween(row.detail?.scheduled_departure, row.detail?.scheduled_arrival)"
+                class="seg-path"
+                compact
+              />
+              <div class="endpoint">
+                <strong>{{ formatTime(row.detail?.scheduled_arrival) }}</strong>
+                <span>{{ row.detail?.arr_airport_code ?? '--' }}</span>
+              </div>
+            </div>
+            <div class="seg-fee">
+              <span class="subtle">{{ row.segment.cabin_class }} · {{ row.segment.fare_type }}</span>
+              <span class="price mono-num">{{ formatCurrency(row.actualPrice) }}</span>
+            </div>
+            <div class="subtle mono-num seg-breakdown">
+              机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
+            </div>
+          </div>
+        </div>
+        <p v-else class="subtle">请选择航班后查看价格明细。</p>
+
+        <div class="summary-foot">
+          <div class="foot-row">
+            <span>单人合计</span>
+            <span class="mono-num">{{ formatCurrency(totalPerPassenger) }}</span>
+          </div>
+          <div class="foot-row">
+            <span>乘机人数</span>
+            <span class="mono-num">× {{ passengers.length }}</span>
+          </div>
+          <div class="foot-row total">
+            <span>预计总额</span>
+            <span class="price mono-num">
+              {{ totalPerPassenger != null ? formatCurrency(totalPerPassenger * passengers.length) : '¥--' }}
+            </span>
+          </div>
+          <el-button type="primary" size="large" class="submit-btn" :loading="loading" @click="submit">提交订单</el-button>
+        </div>
+      </section>
+    </aside>
   </div>
 </template>
 
 <style scoped lang="scss">
 .booking-page {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 16px;
+  align-items: start;
+  padding: 20px 0 8px;
+}
+
+.booking-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.booking-aside {
+  position: sticky;
+  top: calc(var(--fa-header-height) + 16px);
 }
 
 .booking-form {
@@ -361,6 +401,7 @@ function currentDraft(): BookingRequest | null {
 h2 {
   margin: 0;
   font-size: 16px;
+  font-weight: 700;
 }
 
 .section-header {
@@ -378,38 +419,133 @@ h2 {
   gap: 8px;
 }
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
-}
-
 .segment-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.price-summary {
+/* ---------- 摘要卡 ---------- */
+.summary-card {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 16px;
 }
 
-.price-total {
-  justify-self: end;
-  color: var(--fa-text-primary);
+.summary-title {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--fa-border);
+}
+
+.seg-list {
+  display: grid;
+  gap: 16px;
+}
+
+.seg-item {
+  display: grid;
+  gap: 8px;
+}
+
+.seg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.seg-label {
+  padding: 1px 8px;
+  border-radius: var(--fa-radius-pill);
+  background: var(--fa-brand-soft);
+  color: var(--fa-brand);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.seg-flight {
+  color: var(--fa-text-tertiary);
+  font-size: 12px;
+}
+
+.seg-route {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.endpoint {
+  display: grid;
+  text-align: center;
+}
+
+.endpoint strong {
+  font-size: 17px;
   font-weight: 700;
+}
+
+.endpoint span {
+  color: var(--fa-text-secondary);
+  font-size: 12px;
+}
+
+.seg-fee {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.seg-breakdown {
+  margin-top: -2px;
+}
+
+.summary-foot {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--fa-border);
+}
+
+.foot-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--fa-text-secondary);
+  font-size: 14px;
+}
+
+.foot-row.total {
+  margin-top: 2px;
+  color: var(--fa-text);
+  font-weight: 700;
+}
+
+.foot-row.total .price {
+  font-size: 24px;
+}
+
+.submit-btn {
+  width: 100%;
+  margin-top: 8px;
 }
 
 .price {
-  color: var(--fa-danger);
-  font-weight: 700;
+  color: var(--fa-promo);
+  font-weight: 800;
 }
 
 .subtle {
   color: var(--fa-text-secondary);
   font-size: 12px;
+}
+
+@media (max-width: 960px) {
+  .booking-page {
+    grid-template-columns: 1fr;
+  }
+
+  .booking-aside {
+    position: static;
+  }
 }
 
 @media (max-width: 760px) {

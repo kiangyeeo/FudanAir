@@ -82,7 +82,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page-shell">
+  <div class="page-shell order-list">
     <section class="page-section">
       <div class="toolbar">
         <h1 class="page-title">我的订单</h1>
@@ -141,6 +141,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.order-list {
+  padding: 20px 0 8px;
+}
+
 .status-select {
   width: 150px;
 }

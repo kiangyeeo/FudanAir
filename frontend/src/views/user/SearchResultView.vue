@@ -2,11 +2,13 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Right } from '@element-plus/icons-vue'
 import { flightApi } from '@/api/flight'
 import { searchApi } from '@/api/search'
 import DirectFlightList from '@/components/flight/DirectFlightList.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterPanel from '@/components/flight/FilterPanel.vue'
+import FlightCardSkeleton from '@/components/flight/FlightCardSkeleton.vue'
 import NearbyFlightList from '@/components/flight/NearbyFlightList.vue'
 import TransitFlightList from '@/components/flight/TransitFlightList.vue'
 import { useSearchStore } from '@/stores/search'
@@ -245,25 +247,33 @@ onMounted(() => {
 
     <main class="result-main">
       <div class="page-section summary-bar">
-        <div>
+        <div class="route-info">
           <h1 class="page-title">搜索结果</h1>
-          <span v-if="searchStore.criteria">{{ searchStore.criteria.dep_city }} → {{ searchStore.criteria.arr_city }} · {{ searchStore.criteria.flight_date }}</span>
-          <span v-else>请先输入搜索条件</span>
+          <div v-if="searchStore.criteria" class="route">
+            <span class="city">{{ searchStore.criteria.dep_city }}</span>
+            <el-icon class="arrow"><Right /></el-icon>
+            <span class="city">{{ searchStore.criteria.arr_city }}</span>
+            <span class="fa-chip date-chip">{{ searchStore.criteria.flight_date }}</span>
+          </div>
+          <span v-else class="hint">请先输入搜索条件</span>
         </div>
-        <div class="count-summary mono-num">
-          <span>直飞 {{ result?.direct.length ?? 0 }}</span>
-          <span>中转 {{ result?.transit.length ?? 0 }}</span>
-          <span>临近 {{ result?.nearby.length ?? 0 }}</span>
+        <div class="count-summary">
+          <span class="count-pill direct"><b class="mono-num">{{ result?.direct.length ?? 0 }}</b> 直飞</span>
+          <span class="count-pill transit"><b class="mono-num">{{ result?.transit.length ?? 0 }}</b> 中转</span>
+          <span class="count-pill nearby"><b class="mono-num">{{ result?.nearby.length ?? 0 }}</b> 临近</span>
         </div>
       </div>
 
-      <div v-loading="loading" class="result-lists">
-        <EmptyState v-if="!searched && !result" title="等待搜索" description="填写条件后会展示直飞、中转和临近机场方案。" />
-        <EmptyState v-else-if="searched && result && totalCount === 0" title="暂无匹配航班" description="可以调整日期、城市或筛选条件后重新搜索。" />
+      <div class="result-lists">
+        <FlightCardSkeleton v-if="loading" :count="5" />
         <template v-else>
-          <DirectFlightList :items="result?.direct ?? []" @select="selectFlight" />
-          <TransitFlightList :items="result?.transit ?? []" @select="selectTransit" />
-          <NearbyFlightList :items="result?.nearby ?? []" @select="selectFlight" />
+          <EmptyState v-if="!searched && !result" title="等待搜索" description="填写条件后会展示直飞、中转和临近机场方案。" />
+          <EmptyState v-else-if="searched && result && totalCount === 0" title="暂无匹配航班" description="可以调整日期、城市或筛选条件后重新搜索。" />
+          <template v-else>
+            <DirectFlightList :items="result?.direct ?? []" @select="selectFlight" />
+            <TransitFlightList :items="result?.transit ?? []" @select="selectTransit" />
+            <NearbyFlightList :items="result?.nearby ?? []" @select="selectFlight" />
+          </template>
         </template>
       </div>
     </main>
@@ -277,6 +287,7 @@ onMounted(() => {
   grid-template-columns: minmax(300px, 320px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+  padding: 20px 0 8px;
 }
 
 .search-sidebar,
@@ -284,18 +295,50 @@ onMounted(() => {
   min-width: 0;
 }
 
+.search-sidebar {
+  position: sticky;
+  top: calc(var(--fa-header-height) + 16px);
+}
+
 .result-main {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .summary-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
 }
 
-.summary-bar span {
+.route-info .page-title {
+  margin-bottom: 8px;
+}
+
+.route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.route .city {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--fa-text);
+}
+
+.route .arrow {
+  color: var(--fa-brand);
+}
+
+.date-chip {
+  background: var(--fa-brand-soft);
+  color: var(--fa-brand);
+}
+
+.hint {
   color: var(--fa-text-secondary);
   font-size: 13px;
 }
@@ -303,13 +346,41 @@ onMounted(() => {
 .count-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: var(--fa-radius-pill);
+  background: var(--fa-surface-2);
+  color: var(--fa-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.count-pill b {
+  font-size: 16px;
+}
+
+.count-pill.direct b {
+  color: var(--fa-brand);
+}
+
+.count-pill.transit b {
+  color: #722ed1;
+}
+
+.count-pill.nearby b {
+  color: var(--fa-accent);
 }
 
 .result-lists {
   display: grid;
   min-height: 240px;
-  gap: 14px;
+  gap: 18px;
 }
 
 @media (max-width: 900px) {
@@ -317,9 +388,13 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
+  .search-sidebar {
+    position: static;
+  }
+
   .summary-bar {
     align-items: flex-start;
-    gap: 10px;
+    gap: 12px;
     flex-direction: column;
   }
 }

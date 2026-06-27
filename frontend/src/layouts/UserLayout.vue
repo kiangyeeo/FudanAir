@@ -7,7 +7,11 @@ import AppHeader from '@/components/common/AppHeader.vue'
   <div class="user-layout">
     <AppHeader />
     <main class="user-main">
-      <RouterView />
+      <RouterView v-slot="{ Component, route }">
+        <Transition name="fade-slide" mode="out-in">
+          <component :is="Component" :key="route.path" />
+        </Transition>
+      </RouterView>
     </main>
     <AppFooter />
   </div>
@@ -15,10 +19,13 @@ import AppHeader from '@/components/common/AppHeader.vue'
 
 <style scoped>
 .user-layout {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
 }
 
 .user-main {
+  flex: 1 0 auto;
   padding: 0;
 }
 </style>

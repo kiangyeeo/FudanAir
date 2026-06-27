@@ -182,6 +182,7 @@ onMounted(() => {
   display: grid;
   gap: 16px;
   max-width: 860px;
+  padding: 20px 0 8px;
 }
 
 .page-heading {

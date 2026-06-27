@@ -1,12 +1,87 @@
 :root {
+  /* ---------- 品牌色 ---------- */
   --fa-brand: #1677ff;
   --fa-brand-dark: #0958d9;
-  --fa-danger: #c7352f;
+  --fa-brand-2: #36b9ff;
+  --fa-brand-soft: #e8f1ff;
+  --fa-grad-brand: linear-gradient(120deg, #1c64f2 0%, #2f86ff 48%, #36c6ff 100%);
+  --fa-grad-brand-deep: linear-gradient(135deg, #0b3a82 0%, #1677ff 60%, #2bb3ff 100%);
+
+  /* ---------- 促销 / 强调色 ---------- */
+  --fa-accent: #ff7a45;
+  --fa-accent-soft: #fff1e8;
+  --fa-promo: #f5222d;
+  --fa-promo-soft: #fff1f0;
+  --fa-grad-promo: linear-gradient(120deg, #ff7a45 0%, #fa5151 100%);
+
+  /* ---------- 语义色 ---------- */
+  --fa-success: #18b56a;
+  --fa-success-soft: #e7f8ef;
+  --fa-warning: #faad14;
+  --fa-warning-soft: #fff7e6;
+  --fa-danger: #f5222d;
+  --fa-danger-soft: #fff1f0;
+  --fa-info: #6b7280;
+  --fa-info-soft: #f1f3f5;
+
+  /* ---------- 舱位色 ---------- */
+  --fa-cabin-economy: #1677ff;
+  --fa-cabin-economy-soft: #e8f1ff;
+  --fa-cabin-first: #b8860b;
+  --fa-cabin-first-soft: #fbf3df;
+
+  /* ---------- 文字 ---------- */
   --fa-text: #1f2329;
   --fa-text-secondary: #4e5969;
+  --fa-text-tertiary: #86909c;
+  --fa-text-inverse: #ffffff;
+
+  /* ---------- 边框 / 表面 / 背景 ---------- */
   --fa-border: #e5e6eb;
-  --fa-bg: #f5f7fa;
+  --fa-border-strong: #d0d5dd;
+  --fa-surface: #ffffff;
+  --fa-surface-2: #f7f9fc;
+  --fa-bg: #f2f5fa;
   --fa-white: #ffffff;
-  --fa-radius: 6px;
-  --fa-header-height: 72px;
+
+  /* ---------- 间距刻度 ---------- */
+  --fa-space-1: 4px;
+  --fa-space-2: 8px;
+  --fa-space-3: 12px;
+  --fa-space-4: 16px;
+  --fa-space-5: 20px;
+  --fa-space-6: 24px;
+  --fa-space-7: 32px;
+  --fa-space-8: 40px;
+
+  /* ---------- 圆角刻度 ---------- */
+  --fa-radius-sm: 6px;
+  --fa-radius: 10px;
+  --fa-radius-lg: 14px;
+  --fa-radius-xl: 20px;
+  --fa-radius-pill: 999px;
+
+  /* ---------- 阴影 / 高程 ---------- */
+  --fa-shadow-1: 0 1px 2px rgba(20, 45, 85, 0.05), 0 2px 8px rgba(20, 45, 85, 0.06);
+  --fa-shadow-2: 0 6px 16px rgba(20, 45, 85, 0.1), 0 2px 6px rgba(20, 45, 85, 0.06);
+  --fa-shadow-3: 0 18px 45px rgba(20, 45, 85, 0.16);
+  --fa-shadow-brand: 0 8px 20px rgba(22, 119, 255, 0.28);
+
+  /* ---------- 动效 ---------- */
+  --fa-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --fa-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --fa-dur-fast: 0.15s;
+  --fa-dur-base: 0.25s;
+  --fa-dur-slow: 0.4s;
+
+  /* ---------- 层级 ---------- */
+  --fa-z-header: 100;
+  --fa-z-sticky: 50;
+  --fa-z-dropdown: 1000;
+  --fa-z-modal: 2000;
+
+  /* ---------- 兼容旧别名 ---------- */
+  --fa-radius-base: var(--fa-radius);
+  --fa-text-primary: var(--fa-text);
+  --fa-header-height: 64px;
 }

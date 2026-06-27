@@ -139,6 +139,7 @@ onMounted(() => {
 .order-detail {
   display: grid;
   gap: 16px;
+  padding: 20px 0 8px;
 }
 
 .summary {

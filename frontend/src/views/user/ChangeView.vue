@@ -551,6 +551,7 @@ onMounted(() => {
 .change-page {
   display: grid;
   gap: 16px;
+  padding: 20px 0 8px;
 }
 
 .page-heading {

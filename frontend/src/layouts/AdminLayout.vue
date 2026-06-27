@@ -1,12 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import {
+  Odometer,
+  MapLocation,
+  Position,
+  Promotion,
+  Box,
+  Calendar,
+  Document,
+  Money,
+  Tickets,
+  Fold,
+  Expand,
+  SwitchButton,
+} from '@element-plus/icons-vue'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const collapsed = ref(false)
+
+const menus = [
+  { index: '/admin', label: '管理概览', icon: Odometer },
+  { index: '/admin/cities', label: '城市管理', icon: MapLocation },
+  { index: '/admin/airports', label: '机场管理', icon: Position },
+  { index: '/admin/airlines', label: '航司管理', icon: Promotion },
+  { index: '/admin/aircraft', label: '机型管理', icon: Box },
+  { index: '/admin/flights', label: '航班管理', icon: Calendar },
+  { index: '/admin/instances', label: '实例管理', icon: Document },
+  { index: '/admin/prices', label: '票价管理', icon: Money },
+  { index: '/admin/orders', label: '订单查询', icon: Tickets },
+]
 
 const activeMenu = computed(() => route.path)
 const title = computed(() => route.meta.title || '管理后台')
@@ -20,37 +48,41 @@ async function logout() {
 
 <template>
   <el-container class="admin-layout">
-    <el-aside width="220px" class="admin-aside">
+    <el-aside :width="collapsed ? '68px' : '224px'" class="admin-aside">
       <RouterLink to="/admin" class="admin-brand">
-        <span class="brand-mark">FA</span>
-        <span>FudanAir Admin</span>
+        <BrandLogo :size="30" :show-text="!collapsed" text="FudanAir" inverse />
       </RouterLink>
-      <el-menu :default-active="activeMenu" router>
-        <el-menu-item index="/admin">管理概览</el-menu-item>
-        <el-menu-item index="/admin/cities">城市管理</el-menu-item>
-        <el-menu-item index="/admin/airports">机场管理</el-menu-item>
-        <el-menu-item index="/admin/airlines">航司管理</el-menu-item>
-        <el-menu-item index="/admin/aircraft">机型管理</el-menu-item>
-        <el-menu-item index="/admin/flights">航班管理</el-menu-item>
-        <el-menu-item index="/admin/instances">实例管理</el-menu-item>
-        <el-menu-item index="/admin/prices">票价管理</el-menu-item>
-        <el-menu-item index="/admin/orders">订单查询</el-menu-item>
+      <el-menu :default-active="activeMenu" :collapse="collapsed" router class="admin-menu">
+        <el-menu-item v-for="menu in menus" :key="menu.index" :index="menu.index">
+          <el-icon><component :is="menu.icon" /></el-icon>
+          <template #title>{{ menu.label }}</template>
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
     <el-container>
       <el-header class="admin-header">
-        <el-breadcrumb separator="/">
-          <el-breadcrumb-item>管理端</el-breadcrumb-item>
-          <el-breadcrumb-item>{{ title }}</el-breadcrumb-item>
-        </el-breadcrumb>
+        <div class="header-left">
+          <el-button text class="collapse-btn" @click="collapsed = !collapsed">
+            <el-icon><component :is="collapsed ? Expand : Fold" /></el-icon>
+          </el-button>
+          <el-breadcrumb separator="/">
+            <el-breadcrumb-item>管理端</el-breadcrumb-item>
+            <el-breadcrumb-item>{{ title }}</el-breadcrumb-item>
+          </el-breadcrumb>
+        </div>
         <div class="admin-user">
-          <span>{{ auth.displayName || '管理员' }}</span>
-          <el-button size="small" @click="logout">退出</el-button>
+          <span class="avatar">{{ (auth.displayName || 'A').charAt(0).toUpperCase() }}</span>
+          <span class="name">{{ auth.displayName || '管理员' }}</span>
+          <el-button :icon="SwitchButton" text @click="logout">退出</el-button>
         </div>
       </el-header>
       <el-main class="admin-main">
-        <RouterView />
+        <RouterView v-slot="{ Component, route: r }">
+          <Transition name="fade-slide" mode="out-in">
+            <component :is="Component" :key="r.path" />
+          </Transition>
+        </RouterView>
       </el-main>
     </el-container>
   </el-container>
@@ -62,37 +94,68 @@ async function logout() {
 }
 
 .admin-aside {
-  background: var(--fa-white);
-  border-right: 1px solid var(--fa-border);
+  background: linear-gradient(180deg, #0b234f 0%, #0d2a5e 100%);
+  transition: width var(--fa-dur-base) var(--fa-ease);
+  overflow-x: hidden;
 }
 
 .admin-brand {
   display: flex;
-  gap: 8px;
   align-items: center;
-  height: 56px;
+  height: 60px;
   padding: 0 18px;
-  font-weight: 700;
-  border-bottom: 1px solid var(--fa-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.brand-mark {
-  display: inline-grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
+.admin-menu {
+  padding: 10px;
+  background: transparent;
+  border-right: none;
+}
+
+.admin-menu :deep(.el-menu-item) {
+  height: 46px;
+  margin: 4px 0;
+  border-radius: var(--fa-radius);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.admin-menu :deep(.el-menu-item .el-icon) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.admin-menu :deep(.el-menu-item:hover) {
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  background: var(--fa-brand);
-  border-radius: 4px;
-  font-size: 12px;
+}
+
+.admin-menu :deep(.el-menu-item.is-active) {
+  background: var(--fa-grad-brand);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(22, 119, 255, 0.35);
+}
+
+.admin-menu :deep(.el-menu-item.is-active .el-icon) {
+  color: #fff;
 }
 
 .admin-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--fa-white);
+  background: var(--fa-surface);
   border-bottom: 1px solid var(--fa-border);
+  box-shadow: var(--fa-shadow-1);
+}
+
+.header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.collapse-btn {
+  font-size: 18px;
 }
 
 .admin-user {
@@ -100,6 +163,24 @@ async function logout() {
   gap: 10px;
   align-items: center;
   color: var(--fa-text-secondary);
+}
+
+.admin-user .avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--fa-grad-brand);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-user .name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fa-text);
 }
 
 .admin-main {

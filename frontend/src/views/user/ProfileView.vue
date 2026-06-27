@@ -246,8 +246,15 @@ onMounted(() => {
 
 <template>
   <div class="page-shell profile-page">
+    <section class="profile-hero">
+      <span class="hero-avatar">{{ (profile?.name ?? 'U').charAt(0).toUpperCase() }}</span>
+      <div class="hero-info">
+        <h1>{{ profile?.name || '旅客' }}</h1>
+        <p class="mono-num">{{ profile?.phone || '--' }} · ID {{ profile?.user_id ?? '--' }}</p>
+      </div>
+    </section>
+
     <section class="page-section">
-      <h1 class="page-title">个人中心</h1>
       <el-tabs v-model="activeTab">
         <el-tab-pane label="个人信息" name="profile">
           <div v-loading="profileLoading" class="tab-panel">
@@ -398,6 +405,41 @@ onMounted(() => {
 .profile-page {
   display: grid;
   gap: 16px;
+  padding: 20px 0 8px;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 28px;
+  border-radius: var(--fa-radius-lg);
+  color: #fff;
+  background: var(--fa-grad-brand-deep);
+  box-shadow: var(--fa-shadow-2);
+}
+
+.hero-avatar {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.hero-info h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.hero-info p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  opacity: 0.9;
 }
 
 .tab-panel {

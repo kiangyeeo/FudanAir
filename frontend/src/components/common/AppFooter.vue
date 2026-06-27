@@ -1,19 +1,60 @@
+<script setup lang="ts">
+import BrandLogo from '@/components/common/BrandLogo.vue'
+
+const year = new Date().getFullYear()
+</script>
+
 <template>
   <footer class="app-footer">
-    <span>FudanAir 航空票务管理数据库系统</span>
-    <span>本地开发环境</span>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <BrandLogo :size="30" />
+        <p>航空票务管理数据库系统 · 让每一次出行更简单</p>
+      </div>
+      <div class="footer-meta">
+        <span class="fa-chip">本地开发环境</span>
+        <span>© {{ year }} FudanAir · 《数据库及实现》课程项目</span>
+      </div>
+    </div>
   </footer>
 </template>
 
 <style scoped lang="scss">
 .app-footer {
+  margin-top: 40px;
+  border-top: 1px solid var(--fa-border);
+  background: var(--fa-surface);
+}
+
+.footer-inner {
   display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
   justify-content: space-between;
   width: min(1180px, calc(100% - 32px));
-  margin: 24px auto 0;
-  padding: 16px 0 24px;
-  color: var(--fa-text-secondary);
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+.footer-brand p {
+  margin: 8px 0 0;
+  color: var(--fa-text-tertiary);
   font-size: 13px;
-  border-top: 1px solid var(--fa-border);
+}
+
+.footer-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  color: var(--fa-text-tertiary);
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .footer-meta {
+    align-items: flex-start;
+  }
 }
 </style>

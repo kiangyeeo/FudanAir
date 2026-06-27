@@ -2,9 +2,10 @@
 import { reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Lock, UserFilled } from '@element-plus/icons-vue'
+import AuthShell from '@/components/common/AuthShell.vue'
 import { useAuthStore } from '@/stores/auth'
 import type { AdminLoginRequest } from '@/types/auth'
-
 
 const route = useRoute()
 const router = useRouter()
@@ -19,58 +20,49 @@ async function submit() {
 </script>
 
 <template>
-  <section class="auth-panel">
-    <h1>管理员登录</h1>
-    <el-form :model="form" label-position="top">
+  <AuthShell title="管理员登录" subtitle="进入 FudanAir 运营管理后台" tagline="航班、票价、订单，一站式后台管理">
+    <el-form :model="form" label-position="top" class="auth-form" @submit.prevent>
       <el-form-item label="管理员编号">
-        <el-input v-model="form.admin_id" autocomplete="username" />
+        <el-input v-model="form.admin_id" size="large" :prefix-icon="UserFilled" autocomplete="username" placeholder="请输入管理员编号" />
       </el-form-item>
       <el-form-item label="密码">
-        <el-input v-model="form.password" type="password" autocomplete="current-password" show-password />
+        <el-input
+          v-model="form.password"
+          size="large"
+          type="password"
+          :prefix-icon="Lock"
+          autocomplete="current-password"
+          show-password
+          placeholder="请输入密码"
+          @keyup.enter="submit"
+        />
       </el-form-item>
-      <el-button type="primary" class="full-button" @click="submit">登录管理端</el-button>
+      <el-button type="primary" size="large" class="full-button" @click="submit">登录管理端</el-button>
     </el-form>
     <RouterLink class="back-link" to="/login">返回用户登录</RouterLink>
-  </section>
+  </AuthShell>
 </template>
 
 <style scoped lang="scss">
-.auth-panel {
-  width: min(380px, 100%);
-  padding: 22px;
-  background: var(--fa-white);
-  border: 1px solid var(--fa-border);
-  border-radius: var(--fa-radius);
-}
-
-h1 {
-  margin: 0 0 18px;
-  font-size: 22px;
-}
-
-:deep(.el-input__wrapper) {
-  min-height: 48px;
-  padding: 0 16px;
-  border: 1px solid #d5d8df;
-  border-radius: 2px;
-  background: var(--fa-white);
-  box-shadow: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-:deep(.el-input__wrapper.is-focus) {
-  border-color: var(--fa-brand);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.12);
+.auth-form {
+  display: grid;
+  gap: 6px;
 }
 
 .full-button {
   width: 100%;
+  margin-top: 8px;
 }
 
 .back-link {
   display: inline-block;
-  margin-top: 14px;
+  margin-top: 18px;
   color: var(--fa-brand);
   font-size: 14px;
+  transition: opacity var(--fa-dur-fast) var(--fa-ease);
+}
+
+.back-link:hover {
+  opacity: 0.7;
 }
 </style>

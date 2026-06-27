@@ -19,6 +19,13 @@ const cancelLoading = ref(false)
 const now = ref(Date.now())
 let timer: number | undefined
 
+const payMethods = [
+  { value: 'wechat', label: '微信支付', desc: '亿万用户的选择', tag: '微', color: '#07c160' },
+  { value: 'alipay', label: '支付宝', desc: '账户余额 / 花呗', tag: '支', color: '#1677ff' },
+  { value: 'bank', label: '银行卡', desc: '储蓄卡 / 信用卡', tag: '卡', color: '#6b7280' },
+]
+const payMethod = ref('wechat')
+
 const orderNo = computed(() => String(route.params.orderNo || bookingStore.currentOrder?.order_no || ''))
 const order = computed(() => {
   if (bookingStore.currentOrder?.order_no === orderNo.value) {
@@ -183,23 +190,26 @@ watch(orderNo, () => {
 </script>
 
 <template>
-  <div class="page-shell">
+  <div class="page-shell payment-page">
     <section v-loading="detailLoading" class="page-section payment-panel">
-      <div>
-        <h1 class="page-title">模拟支付</h1>
+      <div class="pay-head">
+        <div>
+          <h1 class="page-title">订单支付</h1>
+          <span class="order-no mono-num">订单号 {{ orderNo || '--' }} · {{ status }}</span>
+        </div>
         <PaymentCountdown v-if="isPending && expiresAt" :expires-at="expiresAt" />
-        <el-alert v-if="isExpired" type="warning" show-icon :closable="false" title="订单已超过 15 分钟支付窗口，请返回订单列表查看状态。" />
       </div>
+
+      <el-alert v-if="isExpired" type="warning" show-icon :closable="false" title="订单已超过 15 分钟支付窗口，请返回订单列表查看状态。" />
+
       <el-descriptions :column="2" border>
         <el-descriptions-item label="订单号">{{ orderNo || '--' }}</el-descriptions-item>
         <el-descriptions-item label="订单状态">{{ status }}</el-descriptions-item>
-        <el-descriptions-item label="应付金额">
-          <span class="price mono-num">{{ formatCurrency(totalAmount) }}</span>
-        </el-descriptions-item>
         <el-descriptions-item :label="quantityLabel">{{ ticketCount ?? '--' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatDate(order?.created_at ?? detail?.created_at) }}</el-descriptions-item>
-        <el-descriptions-item label="支付截止">{{ formatDate(expiresAt) }}</el-descriptions-item>
+        <el-descriptions-item label="支付截止" :span="2">{{ formatDate(expiresAt) }}</el-descriptions-item>
       </el-descriptions>
+
       <el-table v-if="priceRows.length" :data="priceRows" border row-key="key">
         <el-table-column prop="label" label="航段" width="90" />
         <el-table-column prop="instance_id" label="航班实例" min-width="180" />
@@ -220,23 +230,164 @@ watch(orderNo, () => {
           </template>
         </el-table-column>
       </el-table>
-      <div class="actions">
-        <el-button :disabled="!isPending" :loading="cancelLoading" @click="cancelOrder">取消订单</el-button>
-        <el-button type="primary" :disabled="!canPay" :loading="loading" @click="pay">确认支付</el-button>
+
+      <div v-if="isPending && !isExpired" class="pay-methods">
+        <h2 class="block-title">选择支付方式</h2>
+        <div class="method-grid">
+          <button
+            v-for="method in payMethods"
+            :key="method.value"
+            type="button"
+            class="method-card"
+            :class="{ active: payMethod === method.value }"
+            @click="payMethod = method.value"
+          >
+            <span class="method-tag" :style="{ background: method.color }">{{ method.tag }}</span>
+            <span class="method-info">
+              <strong>{{ method.label }}</strong>
+              <small>{{ method.desc }}</small>
+            </span>
+            <span class="method-radio" />
+          </button>
+        </div>
+      </div>
+
+      <div class="pay-bar">
+        <div class="pay-total">
+          应付金额 <span class="price mono-num">{{ formatCurrency(totalAmount) }}</span>
+        </div>
+        <div class="actions">
+          <el-button :disabled="!isPending" :loading="cancelLoading" @click="cancelOrder">取消订单</el-button>
+          <el-button type="primary" size="large" :disabled="!canPay" :loading="loading" @click="pay">确认支付</el-button>
+        </div>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped lang="scss">
+.payment-page {
+  padding: 20px 0 8px;
+}
+
 .payment-panel {
   display: grid;
+  gap: 18px;
+}
+
+.pay-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pay-head .page-title {
+  margin-bottom: 4px;
+}
+
+.order-no {
+  color: var(--fa-text-tertiary);
+  font-size: 13px;
+}
+
+.block-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.method-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--fa-border);
+  border-radius: var(--fa-radius);
+  background: var(--fa-surface);
+  cursor: pointer;
+  transition: border-color var(--fa-dur-fast) var(--fa-ease), box-shadow var(--fa-dur-base) var(--fa-ease);
+}
+
+.method-card:hover {
+  border-color: var(--fa-brand);
+}
+
+.method-card.active {
+  border-color: var(--fa-brand);
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
+}
+
+.method-tag {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.method-info {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  text-align: left;
+}
+
+.method-info strong {
+  font-size: 14px;
+}
+
+.method-info small {
+  color: var(--fa-text-tertiary);
+  font-size: 12px;
+}
+
+.method-radio {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--fa-border-strong);
+  border-radius: 50%;
+  transition: all var(--fa-dur-fast) var(--fa-ease);
+}
+
+.method-card.active .method-radio {
+  border-color: var(--fa-brand);
+  border-width: 5px;
+}
+
+.pay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--fa-border);
+}
+
+.pay-total {
+  color: var(--fa-text-secondary);
+  font-size: 14px;
+}
+
+.pay-total .price {
+  margin-left: 6px;
+  font-size: 26px;
 }
 
 .price {
-  color: var(--fa-danger);
-  font-weight: 700;
+  color: var(--fa-promo);
+  font-weight: 800;
 }
 
 .subtle {
@@ -246,6 +397,22 @@ watch(orderNo, () => {
 
 .actions {
   display: flex;
+  gap: 10px;
   justify-content: flex-end;
+}
+
+@media (max-width: 600px) {
+  .pay-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    justify-content: stretch;
+  }
+
+  .actions :deep(.el-button) {
+    flex: 1;
+  }
 }
 </style>
