@@ -8,7 +8,7 @@ const year = new Date().getFullYear()
   <footer class="app-footer">
     <div class="footer-inner">
       <div class="footer-brand">
-        <BrandLogo :size="30" />
+        <BrandLogo :size="46" />
         <p>航空票务管理数据库系统 · 让每一次出行更简单</p>
       </div>
       <div class="footer-meta">

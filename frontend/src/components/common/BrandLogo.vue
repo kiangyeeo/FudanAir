@@ -1,7 +1,7 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    /** 标志方块尺寸（px） */
+    /** 徽标圆形尺寸（px） */
     size?: number
     /** 是否显示 FudanAir 文字 */
     showText?: boolean
@@ -21,14 +21,12 @@ withDefaults(
 
 <template>
   <span class="brand-logo" :class="{ inverse }">
-    <span class="mark" :style="{ width: `${size}px`, height: `${size}px` }">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          fill="#ffffff"
-          d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1l3.5 1v-1.5L13 19v-5.5z"
-        />
-      </svg>
-    </span>
+    <img
+      class="mark"
+      :style="{ width: `${size}px`, height: `${size}px` }"
+      src="/images/brand-emblem.png"
+      alt="FudanAir"
+    />
     <span v-if="showText" class="text">{{ text }}</span>
   </span>
 </template>
@@ -41,18 +39,15 @@ withDefaults(
 }
 
 .mark {
-  display: inline-grid;
-  place-items: center;
   flex: 0 0 auto;
-  background: var(--fa-grad-brand);
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.32);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(20, 45, 85, 0.18);
 }
 
-.mark svg {
-  width: 62%;
-  height: 62%;
-  transform: rotate(18deg);
+.inverse .mark {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .text {

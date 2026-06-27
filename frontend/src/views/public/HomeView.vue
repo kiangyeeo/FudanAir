@@ -116,6 +116,7 @@ onMounted(() => {
 
     <div class="page-shell home-view">
       <div class="hero-copy" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
+        <img class="hero-emblem" src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
         <h1>发现更低机票，开启说走就走的旅程</h1>
         <p>直飞 · 中转 · 临近机场，一次搜索三种方案</p>
       </div>
@@ -266,6 +267,16 @@ onMounted(() => {
 .hero-copy {
   color: #fff;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.hero-emblem {
+  display: block;
+  width: 78px;
+  height: 78px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14), 0 12px 30px rgba(0, 0, 0, 0.3);
 }
 
 .hero-copy h1 {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Promotion, Search, Tickets } from '@element-plus/icons-vue'
-import BrandLogo from '@/components/common/BrandLogo.vue'
 
 withDefaults(
   defineProps<{
@@ -25,15 +24,9 @@ const features = [
 <template>
   <div class="auth-shell" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 450 } }">
     <aside class="brand-side">
-      <div class="brand-decor">
-        <svg class="brand-plane" viewBox="0 0 24 24" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1l3.5 1v-1.5L13 19v-5.5z"
-          />
-        </svg>
+      <div class="brand-medallion">
+        <img src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
       </div>
-      <BrandLogo :size="40" inverse />
       <p class="tagline">{{ tagline }}</p>
       <ul class="features">
         <li v-for="(item, index) in features" :key="index">
@@ -75,21 +68,22 @@ const features = [
   overflow: hidden;
 }
 
-.brand-decor {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+.brand-medallion {
+  display: grid;
+  place-items: center;
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12), 0 16px 36px rgba(0, 0, 0, 0.28);
+  animation: fa-float 6s ease-in-out infinite;
 }
 
-.brand-plane {
-  position: absolute;
-  top: -10px;
-  right: -20px;
-  width: 160px;
-  height: 160px;
-  color: rgba(255, 255, 255, 0.12);
-  transform: rotate(28deg);
-  animation: fa-float 7s ease-in-out infinite;
+.brand-medallion img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .tagline {
