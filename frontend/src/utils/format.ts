@@ -28,6 +28,14 @@ export function formatDuration(minutes?: number | null) {
   return `${hours}小时${rest}分`
 }
 
+/** 去除机场名末尾的"国际机场"/"机场"后缀，便于紧凑展示；新增机场自动适用 */
+export function formatAirportName(name?: string | null) {
+  if (!name) {
+    return ''
+  }
+  return name.replace(/(国际)?机场$/, '') || name
+}
+
 /** 计算两个 HH:MM[:SS] 时刻之间的分钟差，跨天则按次日计算 */
 export function minutesBetween(start?: string | null, end?: string | null): number | null {
   if (!start || !end) {

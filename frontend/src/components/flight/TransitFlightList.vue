@@ -5,7 +5,10 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
 import { formatCurrency, formatDuration, formatTime } from '@/utils/format'
+import { useAirportStore } from '@/stores/airport'
 import type { TransitCandidate } from '@/types/search'
+
+const airportStore = useAirportStore()
 
 const props = defineProps<{
   items: TransitCandidate[]
@@ -24,7 +27,7 @@ const lowestKey = computed(() => {
 })
 
 function transitLabel(item: TransitCandidate) {
-  return `中转 ${item.transit_airport} · ${formatDuration(item.transit_minutes)}`
+  return `中转 ${airportStore.display(item.transit_airport)} · ${formatDuration(item.transit_minutes)}`
 }
 </script>
 
@@ -58,9 +61,9 @@ function transitLabel(item: TransitCandidate) {
           <span class="flight-nos mono-num">{{ item.leg1.flight_no }} / {{ item.leg2.flight_no }}</span>
         </div>
 
-        <div class="time-block mono-num">
-          <strong>{{ formatTime(item.leg1.scheduled_departure) }}</strong>
-          <span>{{ item.leg1.dep_airport_code }}</span>
+        <div class="time-block">
+          <strong class="mono-num">{{ formatTime(item.leg1.scheduled_departure) }}</strong>
+          <span>{{ airportStore.display(item.leg1.dep_airport_code) }}</span>
         </div>
 
         <FlightPath
@@ -70,9 +73,9 @@ function transitLabel(item: TransitCandidate) {
           class="path"
         />
 
-        <div class="time-block mono-num">
-          <strong>{{ formatTime(item.leg2.scheduled_arrival) }}</strong>
-          <span>{{ item.leg2.arr_airport_code }}</span>
+        <div class="time-block">
+          <strong class="mono-num">{{ formatTime(item.leg2.scheduled_arrival) }}</strong>
+          <span>{{ airportStore.display(item.leg2.arr_airport_code) }}</span>
         </div>
 
         <div class="price-block">
@@ -121,7 +124,7 @@ function transitLabel(item: TransitCandidate) {
 .transit-card {
   position: relative;
   display: grid;
-  grid-template-columns: 150px 76px minmax(150px, 1fr) 76px minmax(150px, max-content);
+  grid-template-columns: 140px minmax(64px, auto) minmax(160px, 1fr) minmax(64px, auto) minmax(150px, max-content);
   gap: 18px;
   align-items: center;
   min-width: 0;
@@ -176,19 +179,21 @@ function transitLabel(item: TransitCandidate) {
 
 .time-block {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   text-align: center;
 }
 
 .time-block strong {
-  font-size: 22px;
+  font-size: 28px;
   font-weight: 700;
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 .time-block span {
   color: var(--fa-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .path {

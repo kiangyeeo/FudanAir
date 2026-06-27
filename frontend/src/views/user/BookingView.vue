@@ -8,6 +8,7 @@ import { passengerApi } from '@/api/passenger'
 import PassengerForm from '@/components/order/PassengerForm.vue'
 import FlightPath from '@/components/flight/FlightPath.vue'
 import { useBookingStore } from '@/stores/booking'
+import { useAirportStore } from '@/stores/airport'
 import { formatCurrency, formatTime, minutesBetween } from '@/utils/format'
 import type { BookingRequest, BookingSegmentSelection } from '@/types/booking'
 import type { CabinClass, FareType } from '@/types/common'
@@ -17,6 +18,7 @@ import type { Passenger } from '@/types/user'
 const router = useRouter()
 const route = useRoute()
 const bookingStore = useBookingStore()
+const airportStore = useAirportStore()
 const loading = ref(false)
 const passengerLoading = ref(false)
 const detailLoading = ref(false)
@@ -227,6 +229,7 @@ watch(segmentKey, () => {
 })
 
 onMounted(() => {
+  void airportStore.ensureLoaded()
   const instanceId = queryText('instance_id')
   const routeSegments = queryText('segments')
     ?.split(',')
@@ -327,7 +330,7 @@ function currentDraft(): BookingRequest | null {
             <div class="seg-route mono-num">
               <div class="endpoint">
                 <strong>{{ formatTime(row.detail?.scheduled_departure) }}</strong>
-                <span>{{ row.detail?.dep_airport_code ?? '--' }}</span>
+                <span>{{ airportStore.display(row.detail?.dep_airport_code) }}</span>
               </div>
               <FlightPath
                 :duration="minutesBetween(row.detail?.scheduled_departure, row.detail?.scheduled_arrival)"
@@ -336,7 +339,7 @@ function currentDraft(): BookingRequest | null {
               />
               <div class="endpoint">
                 <strong>{{ formatTime(row.detail?.scheduled_arrival) }}</strong>
-                <span>{{ row.detail?.arr_airport_code ?? '--' }}</span>
+                <span>{{ airportStore.display(row.detail?.arr_airport_code) }}</span>
               </div>
             </div>
             <div class="seg-fee">

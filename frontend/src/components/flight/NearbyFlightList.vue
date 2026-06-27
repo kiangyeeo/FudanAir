@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import EmptyState from '@/components/common/EmptyState.vue'
 import FlightCard from './FlightCard.vue'
+import { useAirportStore } from '@/stores/airport'
 import type { NearbyFlightCandidate } from '@/types/search'
+
+const airportStore = useAirportStore()
 
 defineProps<{
   items: NearbyFlightCandidate[]
@@ -13,7 +16,7 @@ const emit = defineEmits<{
 
 function nearbyTag(item: NearbyFlightCandidate) {
   const side = item.replacement === 'departure' ? '替换出发' : '替换到达'
-  return `临近 · ${side} ${item.replaced_airport}`
+  return `临近 · ${side} ${airportStore.display(item.replaced_airport)}`
 }
 </script>
 

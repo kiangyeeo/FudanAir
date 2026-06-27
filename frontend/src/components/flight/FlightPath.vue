@@ -54,13 +54,17 @@ const isDirect = computed(() => props.stops === 0 && !props.stopLabel)
 .flight-path {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
+}
+
+.compact {
+  gap: 4px;
 }
 
 .duration {
   color: var(--fa-text-secondary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -68,13 +72,13 @@ const isDirect = computed(() => props.stops === 0 && !props.stopLabel)
   display: flex;
   align-items: center;
   width: 100%;
-  min-width: 96px;
+  min-width: 120px;
 }
 
 .dot {
   flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   border: 1.5px solid var(--fa-brand);
   background: var(--fa-white);
@@ -103,15 +107,15 @@ const isDirect = computed(() => props.stops === 0 && !props.stopLabel)
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   color: var(--fa-brand);
   transform: translate(-50%, -50%) rotate(90deg);
 }
 
 .stop-text {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--fa-accent);
 }
 
@@ -119,7 +123,27 @@ const isDirect = computed(() => props.stops === 0 && !props.stopLabel)
   color: var(--fa-success);
 }
 
+/* 紧凑模式（预订摘要等）保持较小尺寸 */
 .compact .track {
   min-width: 72px;
+}
+
+.compact .duration {
+  font-size: 12px;
+}
+
+.compact .plane {
+  width: 16px;
+  height: 16px;
+}
+
+.compact .stop-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.compact .dot {
+  width: 7px;
+  height: 7px;
 }
 </style>

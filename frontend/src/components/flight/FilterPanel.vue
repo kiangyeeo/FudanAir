@@ -51,11 +51,11 @@ const form = reactive<SearchForm>({
 
 const selectPanelProps = {
   fitInputWidth: true,
-  teleported: false,
+  teleported: true,
 }
 
 const pickerPanelProps = {
-  teleported: false,
+  teleported: true,
 }
 
 watch(
@@ -146,17 +146,16 @@ function swapCities() {
 
 <template>
   <el-form class="filter-panel" :model="form" label-position="top">
-    <el-form-item label="出发城市">
-      <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
-    </el-form-item>
-    <el-button class="swap-button" circle @click="swapCities">
-      <el-icon>
-        <SwitchIcon />
-      </el-icon>
-    </el-button>
-
-    <el-form-item label="到达城市">
-      <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
+    <el-form-item label="航线">
+      <div class="route-fields">
+        <CityAutocomplete v-model="form.dep_city" :cities="cities" :teleported="true" placeholder="出发城市" />
+        <button type="button" class="swap-button" title="交换出发/到达" @click="swapCities">
+          <el-icon>
+            <SwitchIcon />
+          </el-icon>
+        </button>
+        <CityAutocomplete v-model="form.arr_city" :cities="cities" :teleported="true" placeholder="到达城市" />
+      </div>
     </el-form-item>
     <el-form-item label="出行日期">
       <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
@@ -233,15 +232,33 @@ function swapCities() {
   min-width: 0;
 }
 
-.swap-row {
-  display: flex;
-  justify-content: center;
-  margin: -4px 0;
+.route-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
 }
 
 .swap-button {
-  width: 36px;
-  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--fa-border);
+  border-radius: 50%;
+  background: var(--fa-surface);
+  color: var(--fa-brand);
+  cursor: pointer;
+  transition: transform var(--fa-dur-base) var(--fa-ease), border-color var(--fa-dur-fast) var(--fa-ease);
+}
+
+.swap-button:hover {
+  border-color: var(--fa-brand);
+  transform: rotate(180deg);
 }
 
 .filter-panel :deep(.el-form-item),

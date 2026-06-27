@@ -12,6 +12,7 @@ import FlightCardSkeleton from '@/components/flight/FlightCardSkeleton.vue'
 import NearbyFlightList from '@/components/flight/NearbyFlightList.vue'
 import TransitFlightList from '@/components/flight/TransitFlightList.vue'
 import { useSearchStore } from '@/stores/search'
+import { useAirportStore } from '@/stores/airport'
 import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
 import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
@@ -20,6 +21,7 @@ import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters
 const route = useRoute()
 const router = useRouter()
 const searchStore = useSearchStore()
+const airportStore = useAirportStore()
 const loading = ref(false)
 const searched = ref(false)
 const cities = ref<string[]>([])
@@ -88,6 +90,7 @@ function selectTransit(candidate: TransitCandidate) {
 }
 
 async function loadOptions() {
+  void airportStore.ensureLoaded()
   const [cityResult, airlineResult] = await Promise.allSettled([
     flightApi.listCities(),
     flightApi.listAirlines(),
@@ -298,6 +301,10 @@ onMounted(() => {
 .search-sidebar {
   position: sticky;
   top: calc(var(--fa-header-height) + 16px);
+  max-height: calc(100vh - var(--fa-header-height) - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .result-main {
@@ -313,27 +320,31 @@ onMounted(() => {
 }
 
 .route-info .page-title {
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 
 .route {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  line-height: 1.4;
 }
 
 .route .city {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   color: var(--fa-text);
 }
 
 .route .arrow {
   color: var(--fa-brand);
+  font-size: 17px;
 }
 
 .date-chip {
+  margin-left: 2px;
+  padding: 4px 12px;
   background: var(--fa-brand-soft);
   color: var(--fa-brand);
 }

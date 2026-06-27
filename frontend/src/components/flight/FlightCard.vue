@@ -4,7 +4,10 @@ import { Tickets } from '@element-plus/icons-vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
 import { formatCurrency, formatTime, minutesBetween } from '@/utils/format'
+import { useAirportStore } from '@/stores/airport'
 import type { DirectFlightCandidate, NearbyFlightCandidate } from '@/types/search'
+
+const airportStore = useAirportStore()
 
 const props = withDefaults(
   defineProps<{
@@ -47,16 +50,16 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
       </div>
     </div>
 
-    <div class="time-block mono-num">
-      <strong>{{ formatTime(candidate.scheduled_departure) }}</strong>
-      <span>{{ candidate.dep_airport_code }}</span>
+    <div class="time-block">
+      <strong class="mono-num">{{ formatTime(candidate.scheduled_departure) }}</strong>
+      <span>{{ airportStore.display(candidate.dep_airport_code) }}</span>
     </div>
 
     <FlightPath :duration="duration" :stops="0" class="path" />
 
-    <div class="time-block mono-num">
-      <strong>{{ formatTime(candidate.scheduled_arrival) }}</strong>
-      <span>{{ candidate.arr_airport_code }}</span>
+    <div class="time-block">
+      <strong class="mono-num">{{ formatTime(candidate.scheduled_arrival) }}</strong>
+      <span>{{ airportStore.display(candidate.arr_airport_code) }}</span>
     </div>
 
     <div class="seats">
@@ -79,7 +82,7 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
 .flight-card {
   position: relative;
   display: grid;
-  grid-template-columns: 168px 76px minmax(110px, 1fr) 76px auto minmax(150px, max-content);
+  grid-template-columns: 160px minmax(64px, auto) minmax(120px, 1fr) minmax(64px, auto) auto minmax(150px, max-content);
   gap: 18px;
   align-items: center;
   min-height: 92px;
@@ -154,19 +157,21 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
 
 .time-block {
   display: grid;
-  gap: 2px;
+  gap: 3px;
   text-align: center;
 }
 
 .time-block strong {
-  font-size: 24px;
+  font-size: 30px;
   font-weight: 700;
+  line-height: 1.1;
   letter-spacing: -0.02em;
 }
 
 .time-block span {
   color: var(--fa-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .path {
