@@ -116,7 +116,7 @@ onMounted(() => {
       </svg>
     </div>
 
-    <div class="page-shell home-view">
+    <div class="home-view">
       <div class="hero-copy" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
         <img class="hero-emblem" src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
         <div class="hero-titles">
@@ -131,17 +131,19 @@ onMounted(() => {
         :initial="{ opacity: 0, y: 28 }"
         :enter="{ opacity: 1, y: 0, transition: { duration: 500, delay: 120 } }"
       >
-        <div class="trip-tabs">
-          <button
-            v-for="tab in tripTabs"
-            :key="tab.value"
-            type="button"
-            class="trip-tab"
-            :class="{ active: tripType === tab.value, disabled: !tab.enabled }"
-            @click="setTripType(tab.value, tab.enabled)"
-          >
-            {{ tab.label }}
-          </button>
+        <div class="trip-tabs-wrap">
+          <div class="trip-tabs">
+            <button
+              v-for="tab in tripTabs"
+              :key="tab.value"
+              type="button"
+              class="trip-tab"
+              :class="{ active: tripType === tab.value, disabled: !tab.enabled }"
+              @click="setTripType(tab.value, tab.enabled)"
+            >
+              {{ tab.label }}
+            </button>
+          </div>
         </div>
 
         <div class="search-form">
@@ -184,27 +186,21 @@ onMounted(() => {
       </section>
 
       <section class="hot-routes">
-        <div class="hot-head">
-          <strong>热门航线</strong>
-          <span>点击直达查询</span>
-        </div>
-        <div class="route-grid">
+        <p class="hot-head">热门航线 · 点击直达查询</p>
+        <div class="route-pills">
           <button
             v-for="(route, index) in hotRoutes"
             :key="`${route.dep}-${route.arr}`"
             type="button"
-            class="route-card"
+            class="route-pill"
             v-motion
             :initial="{ opacity: 0, y: 16 }"
             :enter="{ opacity: 1, y: 0, transition: { duration: 360, delay: 200 + index * 60 } }"
             @click="applyHotRoute(route)"
           >
-            <span class="route-cities">
-              {{ route.dep }}
-              <el-icon class="route-arrow"><Right /></el-icon>
-              {{ route.arr }}
-            </span>
-            <span class="route-tag">查询</span>
+            {{ route.dep }}
+            <el-icon class="route-arrow"><Right /></el-icon>
+            {{ route.arr }}
           </button>
         </div>
       </section>
@@ -267,35 +263,40 @@ onMounted(() => {
 
 .home-view {
   position: relative;
+  width: min(1040px, calc(100% - 32px));
+  margin: 0 auto;
   display: grid;
-  gap: 22px;
+  gap: 28px;
 }
 
 .hero-copy {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
+  text-align: center;
   color: var(--fa-text);
 }
 
 .hero-emblem {
   flex: 0 0 auto;
-  width: 92px;
-  height: 92px;
+  width: 132px;
+  height: 132px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.7), var(--fa-shadow-2);
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.7), var(--fa-shadow-2);
 }
 
 .hero-titles {
   display: grid;
-  gap: 6px;
+  gap: 10px;
+  justify-items: center;
 }
 
 .hero-name {
   margin: 0;
   font-family: var(--fa-font-serif);
-  font-size: 34px;
+  font-size: 42px;
   font-weight: 700;
   letter-spacing: 0.01em;
   color: var(--fa-brand-dark);
@@ -316,10 +317,15 @@ onMounted(() => {
   backdrop-filter: blur(8px);
 }
 
+.trip-tabs-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
 .trip-tabs {
   display: inline-flex;
   gap: 4px;
-  margin-bottom: 18px;
   padding: 4px;
   background: var(--fa-surface-2);
   border-radius: var(--fa-radius-pill);
@@ -396,6 +402,12 @@ onMounted(() => {
   width: 100%;
 }
 
+/* el-date-picker 默认 220px 固定宽，需强制撑满栅格列，否则会溢出与下一列重叠 */
+.search-field :deep(.el-date-editor),
+.search-field :deep(.el-select) {
+  width: 100%;
+}
+
 .search-field :deep(.el-date-editor) {
   height: 44px;
 }
@@ -415,75 +427,52 @@ onMounted(() => {
 }
 
 .hot-routes {
-  padding: 18px 20px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--fa-border);
-  border-radius: var(--fa-radius);
-  box-shadow: var(--fa-shadow-1);
-  backdrop-filter: blur(4px);
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  text-align: center;
 }
 
 .hot-head {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 14px;
-}
-
-.hot-head strong {
-  font-size: 16px;
-}
-
-.hot-head span {
+  margin: 0;
   color: var(--fa-text-tertiary);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.route-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+.route-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 12px;
 }
 
-.route-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px;
-  border: 1px solid var(--fa-border);
-  border-radius: var(--fa-radius);
-  background: var(--fa-surface);
-  cursor: pointer;
-  transition: transform var(--fa-dur-base) var(--fa-ease), box-shadow var(--fa-dur-base) var(--fa-ease),
-    border-color var(--fa-dur-fast) var(--fa-ease);
-}
-
-.route-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--fa-brand);
-  box-shadow: var(--fa-shadow-2);
-}
-
-.route-cities {
+.route-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  padding: 9px 20px;
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-radius-pill);
+  background: var(--fa-surface);
+  font-size: 14px;
   font-weight: 600;
   color: var(--fa-text);
+  cursor: pointer;
+  box-shadow: var(--fa-shadow-1);
+  transition: transform var(--fa-dur-base) var(--fa-ease), box-shadow var(--fa-dur-base) var(--fa-ease),
+    border-color var(--fa-dur-fast) var(--fa-ease), color var(--fa-dur-fast) var(--fa-ease);
+}
+
+.route-pill:hover {
+  transform: translateY(-3px);
+  border-color: var(--fa-brand);
+  color: var(--fa-brand);
+  box-shadow: var(--fa-shadow-2);
 }
 
 .route-arrow {
   color: var(--fa-brand);
-}
-
-.route-tag {
-  padding: 2px 10px;
-  border-radius: var(--fa-radius-pill);
-  background: var(--fa-brand-soft);
-  color: var(--fa-brand);
-  font-size: 12px;
-  font-weight: 600;
 }
 
 @media (max-width: 900px) {
