@@ -40,15 +40,13 @@ const activeTab = ref<'upcoming' | 'completed'>('upcoming')
 const now = ref(Date.now())
 let timer: number | undefined
 
-const upcomingTrips = computed(() =>
-  trips.value.filter((trip) => !isCompletedTrip(trip) && trip.departAt.getTime() > now.value),
-)
+const upcomingTrips = computed(() => trips.value.filter((trip) => !isCompletedTrip(trip)))
 const completedTrips = computed(() => trips.value.filter(isCompletedTrip))
 const displayTrips = computed(() => (activeTab.value === 'upcoming' ? upcomingTrips.value : completedTrips.value))
-const emptyTitle = computed(() => (activeTab.value === 'upcoming' ? '暂无待出行机票' : '暂无已完成机票'))
+const emptyTitle = computed(() => (activeTab.value === 'upcoming' ? '暂无未完成机票' : '暂无已完成机票'))
 const emptyDescription = computed(() =>
   activeTab.value === 'upcoming'
-    ? '购票成功后，未出发的行程会显示在这里。'
+    ? '购票成功后，未完成的行程会显示在这里。'
     : '航班到达或取消后，机票会显示在这里。',
 )
 
@@ -78,14 +76,32 @@ function isCompletedTrip(trip: Trip) {
   return !!trip.instance_status && COMPLETED_INSTANCE_STATUSES.has(trip.instance_status)
 }
 
-function instanceStatusType(status?: string | null) {
-  if (status === '已取消') {
+function tripStatusLabel(trip: Trip) {
+  if (isCompletedTrip(trip)) {
+    return trip.instance_status ?? '已完成'
+  }
+  if (trip.instance_status === '已起飞' || trip.departAt.getTime() <= now.value) {
+    return '已起飞'
+  }
+  return '待出行'
+}
+
+function tripStatusType(trip: Trip) {
+  const label = tripStatusLabel(trip)
+  if (label === '已取消') {
     return 'danger'
   }
-  if (status === '已到达') {
+  if (label === '已到达') {
     return 'success'
   }
-  return 'info'
+  if (label === '已起飞') {
+    return 'warning'
+  }
+  return 'primary'
+}
+
+function showCountdown(trip: Trip) {
+  return activeTab.value === 'upcoming' && tripStatusLabel(trip) === '待出行'
 }
 
 async function load() {
@@ -153,7 +169,7 @@ onBeforeUnmount(() => {
   <div class="page-shell trips-page">
 
     <el-tabs v-model="activeTab" class="ticket-tabs">
-      <el-tab-pane :label="`待出行 (${upcomingTrips.length})`" name="upcoming" />
+      <el-tab-pane :label="`未完成 (${upcomingTrips.length})`" name="upcoming" />
       <el-tab-pane :label="`已完成 (${completedTrips.length})`" name="completed" />
     </el-tabs>
 
@@ -197,12 +213,14 @@ onBeforeUnmount(() => {
                 </div>
               </div>
             </div>
-            <span v-if="activeTab === 'upcoming'" class="countdown" :class="{ imminent: imminent(trip) }">
-              距出发 {{ countdown(trip) }}
-            </span>
-            <el-tag v-else :type="instanceStatusType(trip.instance_status)" effect="dark">
-              {{ trip.instance_status }}
-            </el-tag>
+            <div class="trip-status">
+              <el-tag :type="tripStatusType(trip)" effect="dark">
+                {{ tripStatusLabel(trip) }}
+              </el-tag>
+              <span v-if="showCountdown(trip)" class="countdown" :class="{ imminent: imminent(trip) }">
+                距出发 {{ countdown(trip) }}
+              </span>
+            </div>
           </header>
 
           <div class="trip-route">
@@ -222,9 +240,6 @@ onBeforeUnmount(() => {
               <span class="chip"><el-icon><Calendar /></el-icon>{{ dateLabel(trip.flight_date) }}</span>
               <span class="chip"><el-icon><User /></el-icon>{{ trip.passenger }}</span>
               <span class="chip mono-num"><el-icon><Tickets /></el-icon>{{ trip.ticket_no }}</span>
-              <el-tag v-if="activeTab === 'completed' && trip.instance_status" size="small" :type="instanceStatusType(trip.instance_status)">
-                {{ trip.instance_status }}
-              </el-tag>
             </div>
             <el-button text type="primary" @click="router.push(`/orders/${trip.order_no}`)">查看订单</el-button>
           </footer>
@@ -290,6 +305,14 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.trip-status {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .airline {
@@ -400,6 +423,15 @@ onBeforeUnmount(() => {
 
   .endpoint strong {
     font-size: 22px;
+  }
+
+  .trip-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .trip-status {
+    justify-content: flex-start;
   }
 
   .trip-foot {
