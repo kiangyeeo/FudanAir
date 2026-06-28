@@ -275,6 +275,12 @@ function swapCities() {
   max-width: 100%;
 }
 
+/* 修正：日期/时间选择器根高度（EP 默认 32px 会比其它字段矮） */
+.filter-panel :deep(.el-date-editor.el-input),
+.filter-panel :deep(.el-date-editor--timerange) {
+  height: 40px;
+}
+
 .filter-panel :deep(.el-input),
 .filter-panel :deep(.el-input__wrapper),
 .filter-panel :deep(.el-select__wrapper),

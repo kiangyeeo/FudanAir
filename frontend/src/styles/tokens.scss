@@ -81,7 +81,8 @@
   --fa-z-modal: 2000;
 
   /* ---------- 字体 ---------- */
-  --fa-font-serif: "FA Serif", "STSong", "SimSun", serif;
+  /* 默认回退宋体；系统若已装思源宋体则自动优先使用，无需下载 */
+  --fa-font-serif: "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
 
   /* ---------- 兼容旧别名 ---------- */
   --fa-radius-base: var(--fa-radius);

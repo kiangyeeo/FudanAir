@@ -106,12 +106,6 @@ onMounted(() => {
     <div class="hero-decor">
       <span class="cloud cloud-1" />
       <span class="cloud cloud-2" />
-      <svg class="hero-plane" viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          fill="currentColor"
-          d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2A1.5 1.5 0 0 0 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1l3.5 1v-1.5L13 19v-5.5z"
-        />
-      </svg>
     </div>
 
     <div class="page-shell home-view">
@@ -249,17 +243,6 @@ onMounted(() => {
   animation: fa-float 9s ease-in-out infinite reverse;
 }
 
-.hero-plane {
-  position: absolute;
-  top: 54px;
-  right: 18%;
-  width: 46px;
-  height: 46px;
-  color: rgba(255, 255, 255, 0.85);
-  transform: rotate(34deg);
-  animation: fa-float 6s ease-in-out infinite;
-}
-
 .home-view {
   position: relative;
   display: grid;
@@ -391,9 +374,14 @@ onMounted(() => {
   width: 100%;
 }
 
+.search-field :deep(.el-date-editor) {
+  height: 44px;
+}
+
 .search-field :deep(.el-input__wrapper),
 .search-field :deep(.el-select__wrapper) {
   min-height: 44px;
+  height: 44px;
 }
 
 .search-button {

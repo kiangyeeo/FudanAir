@@ -7,12 +7,8 @@ const year = new Date().getFullYear()
 <template>
   <footer class="app-footer">
     <div class="footer-inner">
-      <div class="footer-brand">
-        <BrandLogo :size="46" />
-        <p>航空票务管理数据库系统 · 让每一次出行更简单</p>
-      </div>
+      <BrandLogo :size="46" text="FudanAir 航空票务系统" />
       <div class="footer-meta">
-        <span class="fa-chip">本地开发环境</span>
         <span>© {{ year }} FudanAir · 《数据库及实现》课程项目</span>
       </div>
     </div>
@@ -35,12 +31,6 @@ const year = new Date().getFullYear()
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 24px 0;
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  color: var(--fa-text-tertiary);
-  font-size: 13px;
 }
 
 .footer-meta {

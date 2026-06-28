@@ -1,23 +1,6 @@
 @use './tokens';
 @use './element-overrides';
 
-/**
- * 思源宋体（Source Han Serif / Noto Serif SC）。
- * 优先用系统已安装的思源宋体；若未安装则用自托管 woff2（需放到
- * frontend/public/fonts/noto-serif-sc.woff2，详见 README）；都没有则回退到 SimSun。
- */
-@font-face {
-  font-family: "FA Serif";
-  src:
-    local("Source Han Serif SC"),
-    local("Source Han Serif CN"),
-    local("Noto Serif SC"),
-    local("SourceHanSerifSC-Bold"),
-    url("/fonts/noto-serif-sc.woff2") format("woff2");
-  font-weight: 400 900;
-  font-display: swap;
-}
-
 * {
   box-sizing: border-box;
 }
