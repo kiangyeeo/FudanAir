@@ -1,11 +1,11 @@
 :root {
   /* ---------- 品牌色 ---------- */
-  --fa-brand: #1677ff;
-  --fa-brand-dark: #0958d9;
-  --fa-brand-2: #36b9ff;
+  --fa-brand: #0e5fd9;
+  --fa-brand-dark: #0843a8;
+  --fa-brand-2: #2f86ff;
   --fa-brand-soft: #e8f1ff;
-  --fa-grad-brand: linear-gradient(120deg, #1c64f2 0%, #2f86ff 48%, #36c6ff 100%);
-  --fa-grad-brand-deep: linear-gradient(135deg, #0b3a82 0%, #1677ff 60%, #2bb3ff 100%);
+  --fa-grad-brand: linear-gradient(120deg, #0b4fc4 0%, #1c6ef2 48%, #2f93ff 100%);
+  --fa-grad-brand-deep: linear-gradient(135deg, #082f6e 0%, #0e5fd9 60%, #2f86ff 100%);
 
   /* ---------- 促销 / 强调色 ---------- */
   --fa-accent: #ff7a45;
@@ -25,7 +25,7 @@
   --fa-info-soft: #f1f3f5;
 
   /* ---------- 舱位色 ---------- */
-  --fa-cabin-economy: #1677ff;
+  --fa-cabin-economy: #0e5fd9;
   --fa-cabin-economy-soft: #e8f1ff;
   --fa-cabin-first: #b8860b;
   --fa-cabin-first-soft: #fbf3df;
@@ -65,7 +65,7 @@
   --fa-shadow-1: 0 1px 2px rgba(20, 45, 85, 0.05), 0 2px 8px rgba(20, 45, 85, 0.06);
   --fa-shadow-2: 0 6px 16px rgba(20, 45, 85, 0.1), 0 2px 6px rgba(20, 45, 85, 0.06);
   --fa-shadow-3: 0 18px 45px rgba(20, 45, 85, 0.16);
-  --fa-shadow-brand: 0 8px 20px rgba(22, 119, 255, 0.28);
+  --fa-shadow-brand: 0 8px 20px rgba(14, 95, 217, 0.28);
 
   /* ---------- 动效 ---------- */
   --fa-ease: cubic-bezier(0.22, 0.61, 0.36, 1);

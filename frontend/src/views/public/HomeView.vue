@@ -103,6 +103,7 @@ onMounted(() => {
 
 <template>
   <div class="home-hero">
+    <div class="hero-art" aria-hidden="true"></div>
     <div class="hero-sky" aria-hidden="true">
       <svg class="flight-svg" viewBox="0 0 1440 480" preserveAspectRatio="xMidYMin meet">
         <path class="route route-main" d="M -60 420 C 360 250, 980 300, 1520 70" />
@@ -220,6 +221,20 @@ onMounted(() => {
     radial-gradient(52% 46% at 90% -4%, rgba(22, 119, 255, 0.16) 0%, rgba(22, 119, 255, 0) 55%),
     radial-gradient(72% 62% at 72% 104%, rgba(168, 197, 235, 0.22) 0%, rgba(168, 197, 235, 0) 60%),
     linear-gradient(180deg, #eef4fc 0%, #f1f5fb 45%, var(--fa-bg) 100%);
+}
+
+/* 品牌水印层：飞机+双子楼线稿，贴底居中，multiply 让白底隐形只留蓝线
+   pointer-events:none + 处于内容之下，绝不遮挡操作；顶部 mask 渐隐保护标题/搜索区 */
+.hero-art {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url('/images/home-bg.jpg') no-repeat bottom center;
+  background-size: min(1500px, 116%) auto;
+  opacity: 0.14;
+  mix-blend-mode: multiply;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.55) 56%, #000 78%);
+  mask-image: linear-gradient(180deg, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.55) 56%, #000 78%);
 }
 
 /* 航线装饰层：虚线航线 + 小飞机，淡淡铺在背景上 */
