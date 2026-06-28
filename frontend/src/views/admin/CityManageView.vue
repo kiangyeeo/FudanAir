@@ -49,6 +49,7 @@ const cityRules: FormRules<CityForm> = {
   ],
 }
 
+const nearManageDialogVisible = ref(false)
 const nearDialogVisible = ref(false)
 const nearFormRef = ref<FormInstance>()
 const nearForm = reactive<NearForm>({ iata_code: '', distance: 0 })
@@ -65,12 +66,10 @@ async function loadCities() {
   loading.value = true
   try {
     cities.value = await flightApi.listCities()
-    if (!selectedCity.value && cities.value.length) {
-      selectedCity.value = cities.value[0]
-      await loadNearAirports()
-    } else if (selectedCity.value && !cities.value.includes(selectedCity.value)) {
+    if (selectedCity.value && !cities.value.includes(selectedCity.value)) {
       selectedCity.value = ''
       nearAirports.value = []
+      nearManageDialogVisible.value = false
     }
   } finally {
     loading.value = false
@@ -94,9 +93,10 @@ async function loadNearAirports() {
   }
 }
 
-function selectCity(row: CityRow) {
+async function openNearAirportManage(row: CityRow) {
   selectedCity.value = row.city_name
-  void loadNearAirports()
+  nearManageDialogVisible.value = true
+  await loadNearAirports()
 }
 
 function openCreateCity() {
@@ -137,6 +137,7 @@ async function deleteCity(row: CityRow) {
     if (selectedCity.value === row.city_name) {
       selectedCity.value = ''
       nearAirports.value = []
+      nearManageDialogVisible.value = false
     }
     ElMessage.success('城市已删除')
     await loadCities()
@@ -208,7 +209,7 @@ async function deleteNearAirport(row: NearAirport) {
         <el-table-column prop="city_name" label="城市名称" min-width="180" />
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Search" @click="selectCity(row)">临近机场</el-button>
+            <el-button link type="primary" :icon="Search" @click="openNearAirportManage(row)">临近机场</el-button>
             <el-button link type="primary" :icon="Edit" @click="openEditCity(row)">编辑</el-button>
             <el-button link type="danger" :icon="Delete" @click="deleteCity(row)">删除</el-button>
           </template>
@@ -217,10 +218,23 @@ async function deleteNearAirport(row: NearAirport) {
       <EmptyState v-else title="暂无城市" description="城市数据为空。" />
     </section>
 
-    <section class="page-section">
-      <div class="toolbar">
-        <h2 class="section-title">临近机场</h2>
-        <el-tag v-if="selectedCity" type="info">{{ selectedCity }}</el-tag>
+    <el-dialog
+      v-model="nearManageDialogVisible"
+      width="760px"
+      :close-on-click-modal="false"
+      destroy-on-close
+    >
+      <template #header>
+        <div class="near-dialog-title">
+          <span>临近机场</span>
+          <el-tag v-if="selectedCity" type="info">{{ selectedCity }}</el-tag>
+        </div>
+      </template>
+
+      <div class="near-dialog-toolbar">
+        <div class="near-dialog-desc">
+          维护当前城市与机场之间的临近关系。
+        </div>
         <div class="toolbar-actions">
           <el-button type="primary" :icon="Plus" :disabled="!selectedCity" @click="openCreateNearAirport">新增</el-button>
           <el-button :icon="Refresh" :disabled="!selectedCity" @click="loadNearAirports">刷新</el-button>
@@ -245,12 +259,13 @@ async function deleteNearAirport(row: NearAirport) {
           </template>
         </el-table-column>
       </el-table>
+
       <EmptyState
         v-else
         :title="selectedCity ? '暂无临近机场' : '未选择城市'"
         :description="selectedCity ? '当前城市没有临近机场关系。' : '从城市列表选择一行。'"
       />
-    </section>
+    </el-dialog>
 
     <el-dialog
       v-model="cityDialogVisible"
@@ -274,6 +289,7 @@ async function deleteNearAirport(row: NearAirport) {
       title="新增临近机场"
       width="480px"
       :close-on-click-modal="false"
+      append-to-body
     >
       <el-form ref="nearFormRef" :model="nearForm" :rules="nearRules" label-position="top">
         <el-form-item label="机场" prop="iata_code">
@@ -318,10 +334,25 @@ async function deleteNearAirport(row: NearAirport) {
   width: 220px;
 }
 
-.section-title {
-  margin: 0;
-  font-size: 16px;
+.near-dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
   font-weight: 600;
+}
+
+.near-dialog-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.near-dialog-desc {
+  color: var(--fa-text-secondary);
+  font-size: 14px;
 }
 
 .full-width {

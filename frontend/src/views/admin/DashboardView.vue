@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Tickets, Calendar, User, TrendCharts } from '@element-plus/icons-vue'
+import { Calendar, Tickets, TrendCharts, User } from '@element-plus/icons-vue'
 import CountUp from '@/components/common/CountUp.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
 import type { AdminDashboard } from '@/types/admin'
 
@@ -21,7 +20,15 @@ function statValue(key: (typeof statCards)[number]['key']) {
 }
 
 const topRoutes = computed(() => dashboard.value?.top_routes ?? [])
-const maxRouteCount = computed(() => Math.max(1, ...topRoutes.value.map((item) => item.order_count)))
+
+const maxRouteCount = computed(() => {
+  if (!topRoutes.value.length) return 1
+  return Math.max(...topRoutes.value.map((item) => item.order_count), 1)
+})
+
+function heatWidth(count: number) {
+  return `${Math.max(12, Math.round((count / maxRouteCount.value) * 100))}%`
+}
 
 async function loadDashboard() {
   loading.value = true
@@ -65,26 +72,42 @@ onMounted(loadDashboard)
         <span class="revenue-foot">实时统计当日已支付订单总额</span>
       </div>
 
-      <div class="route-card page-section">
-        <header class="route-head">
-          <h2>今日热门航线 Top 5</h2>
-          <span class="fa-chip">按订单数排序</span>
-        </header>
-        <div v-if="topRoutes.length" class="route-list">
-          <div v-for="(route, index) in topRoutes" :key="`${route.dep_airport_code}-${route.arr_airport_code}`" class="route-row">
-            <span class="rank" :class="{ top: index === 0 }">{{ index + 1 }}</span>
-            <span class="route-name mono-num">{{ route.dep_airport_code }} → {{ route.arr_airport_code }}</span>
-            <div class="route-bar">
-              <span
-                class="route-bar-fill"
-                :style="{ width: `${(route.order_count / maxRouteCount) * 100}%` }"
-              />
-            </div>
-            <span class="route-count mono-num">{{ route.order_count }}</span>
-          </div>
-        </div>
-        <EmptyState v-else title="暂无今日成交航线" description="今日还没有已支付的订单。" />
-      </div>
+      <el-card shadow="never" class="route-card">
+        <template #header>
+          <span>今日热门航线 Top 5</span>
+        </template>
+
+        <el-table :data="topRoutes" empty-text="暂无今日成交航线" border class="route-table">
+          <el-table-column label="排名" type="index" width="80">
+            <template #default="{ $index }">
+              <span class="rank-badge">{{ $index + 1 }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="出发机场" prop="dep_airport_code" min-width="120">
+            <template #default="{ row }">
+              <span class="airport-code">{{ row.dep_airport_code }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="到达机场" prop="arr_airport_code" min-width="120">
+            <template #default="{ row }">
+              <span class="airport-code">{{ row.arr_airport_code }}</span>
+            </template>
+          </el-table-column>
+
+          <el-table-column label="订单数" prop="order_count" min-width="140">
+            <template #default="{ row }">
+              <div class="order-cell">
+                <span class="order-count mono-num">{{ row.order_count }}</span>
+                <div class="heat-track">
+                  <div class="heat-bar" :style="{ width: heatWidth(row.order_count) }" />
+                </div>
+              </div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
     </section>
   </div>
 </template>
@@ -141,7 +164,7 @@ onMounted(loadDashboard)
 .stat-value {
   font-size: 28px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .content-grid {
@@ -171,12 +194,12 @@ onMounted(loadDashboard)
   align-items: baseline;
   font-size: 38px;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .revenue-value .cny {
-  font-size: 22px;
   margin-right: 2px;
+  font-size: 22px;
 }
 
 .revenue-foot {
@@ -184,71 +207,85 @@ onMounted(loadDashboard)
   opacity: 0.78;
 }
 
-.route-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
+.route-card {
+  border-radius: var(--fa-radius);
+  border: 1px solid rgba(22, 119, 255, 0.1);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
-.route-head h2 {
-  margin: 0;
+.route-card :deep(.el-card__header) {
+  color: var(--fa-text);
   font-size: 16px;
   font-weight: 700;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
-.route-list {
-  display: grid;
-  gap: 14px;
-}
-
-.route-row {
-  display: grid;
-  grid-template-columns: 28px 130px 1fr 40px;
-  gap: 12px;
-  align-items: center;
-}
-
-.rank {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: var(--fa-surface-2);
-  color: var(--fa-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.rank.top {
-  background: var(--fa-grad-promo);
-  color: #fff;
-}
-
-.route-name {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.route-bar {
-  height: 10px;
-  border-radius: var(--fa-radius-pill);
-  background: var(--fa-surface-2);
+.route-table {
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.route-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: var(--fa-radius-pill);
-  background: var(--fa-grad-brand);
-  transition: width var(--fa-dur-slow) var(--fa-ease-out);
+.route-table :deep(.el-table__header th) {
+  color: var(--fa-text);
+  font-weight: 700;
+  background: #f6faff;
 }
 
-.route-count {
-  text-align: right;
-  font-weight: 700;
+.route-table :deep(.el-table__row) {
+  height: 58px;
+}
+
+.route-table :deep(.el-table__row:hover > td) {
+  background: #f8fbff;
+}
+
+.rank-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  background: var(--fa-brand);
+  border-radius: 50%;
+}
+
+.airport-code {
+  display: inline-block;
+  min-width: 52px;
+  padding: 4px 10px;
+  color: var(--fa-brand);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-align: center;
+  background: rgba(22, 119, 255, 0.08);
+  border-radius: 999px;
+}
+
+.order-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.order-count {
+  color: var(--fa-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.heat-track {
+  height: 8px;
+  overflow: hidden;
+  background: #e8f1ff;
+  border-radius: 999px;
+}
+
+.heat-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fa-brand), #67c23a);
+  border-radius: inherit;
 }
 
 @media (max-width: 1080px) {
