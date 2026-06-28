@@ -116,14 +116,20 @@ onMounted(() => {
         <el-button v-if="orderNo" :icon="Back" @click="backToOrder">返回订单</el-button>
       </div>
 
-      <el-form :model="form" label-position="top" class="ticket-form">
-        <el-form-item label="客票号">
-          <el-input v-model="form.ticket_no" placeholder="输入需要退票的客票号" clearable />
-        </el-form-item>
-        <el-form-item label=" ">
-          <el-button type="primary" :icon="Search" :loading="quoteLoading" @click="loadQuote">试算费用</el-button>
-        </el-form-item>
-      </el-form>
+      <div v-if="form.ticket_no" class="ticket-readonly">
+        <div class="ticket-field">
+          <label>客票号</label>
+          <div class="ticket-value mono-num">{{ form.ticket_no }}</div>
+        </div>
+        <el-button type="primary" :icon="Search" :loading="quoteLoading" @click="loadQuote">重新试算</el-button>
+      </div>
+      <el-alert
+        v-else
+        type="info"
+        show-icon
+        :closable="false"
+        title="请从「订单详情」中的客票点击「退票」进入，客票号将自动带入。"
+      />
     </section>
 
     <section v-if="quote && quoteMatches" v-loading="quoteLoading" class="page-section">
@@ -199,11 +205,38 @@ onMounted(() => {
   font-size: 13px;
 }
 
-.ticket-form {
+.ticket-readonly {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  margin-top: 4px;
+}
+
+.ticket-field {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) auto;
-  gap: 12px;
-  align-items: end;
+  gap: 7px;
+}
+
+.ticket-field label {
+  color: var(--fa-brand-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ticket-value {
+  min-width: 260px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--fa-surface-2);
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-radius);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fa-text);
+  letter-spacing: 0.02em;
 }
 
 h2 {
@@ -238,8 +271,9 @@ h2 {
 }
 
 @media (max-width: 760px) {
-  .ticket-form {
-    grid-template-columns: 1fr;
+  .ticket-value {
+    min-width: 0;
+    width: 100%;
   }
 }
 </style>

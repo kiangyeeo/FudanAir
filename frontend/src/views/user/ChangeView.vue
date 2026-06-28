@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Back, Check, Search } from '@element-plus/icons-vue'
+import { Back, Calendar, Check, Right, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { flightApi } from '@/api/flight'
 import { orderApi } from '@/api/order'
 import { refundApi } from '@/api/refund'
 import { searchApi } from '@/api/search'
-import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
-import { formatCurrency, formatDate, formatTime } from '@/utils/format'
-import type { CabinClass, FareType } from '@/types/common'
+import AirlineLogo from '@/components/flight/AirlineLogo.vue'
+import FlightPath from '@/components/flight/FlightPath.vue'
+import EmptyState from '@/components/common/EmptyState.vue'
+import { formatCurrency, formatDate, formatTime, minutesBetween } from '@/utils/format'
 import type { CabinPrice, FlightInstance } from '@/types/flight'
 import type { OrderDetail, OrderTicket } from '@/types/order'
 import type { ChangeRequest, ChangeTicketResponse, RefundQuote } from '@/types/refund'
@@ -33,13 +34,13 @@ const searchLoading = ref(false)
 const detailLoading = ref(false)
 const quoteLoading = ref(false)
 const submitLoading = ref(false)
+const dialogVisible = ref(false)
 const candidates = ref<ChangeCandidate[]>([])
 const selectedCandidate = ref<ChangeCandidate | null>(null)
 const selectedInstance = ref<FlightInstance | null>(null)
 const selectedPriceKey = ref('')
 const quote = ref<RefundQuote | null>(null)
 const result = ref<ChangeTicketResponse | null>(null)
-const cities = ref<string[]>([])
 
 const form = reactive<ChangeRequest>({
   ticket_no: '',
@@ -48,6 +49,7 @@ const form = reactive<ChangeRequest>({
   new_fare_type: '标准',
 })
 
+// 出发/到达城市来自原客票，锁定不可更改；仅日期可改
 const searchForm = reactive({
   dep_city: '',
   arr_city: '',
@@ -108,12 +110,17 @@ async function fillSearchCities(ticket: OrderTicket) {
   searchForm.arr_city = arrAirport.city_name
 }
 
-async function loadCities() {
-  try {
-    cities.value = await flightApi.listCities()
-  } catch {
-    cities.value = []
+function openSearchDialog() {
+  if (!searchForm.dep_city || !searchForm.arr_city) {
+    ElMessage.warning('未获取到原航线城市，无法搜索')
+    return
   }
+  if (!searchForm.flight_date) {
+    ElMessage.warning('请选择目标日期')
+    return
+  }
+  dialogVisible.value = true
+  void runSearch()
 }
 
 async function runSearch() {
@@ -122,16 +129,22 @@ async function runSearch() {
     return
   }
 
-  resetTarget()
+  candidates.value = []
   searchLoading.value = true
   try {
     const data = await searchApi.searchFlights(payload)
-    candidates.value = [...data.direct, ...data.nearby]
-    if (!candidates.value.length) {
-      ElMessage.info('暂无可改签的直飞或临近机场航班')
-    }
+    // 约束：改签后必须仍从原出发城市出发、到达原到达城市，故只取同城直飞结果，
+    // 不纳入 nearby（临近机场，可能位于其他城市）。
+    candidates.value = data.direct
   } finally {
     searchLoading.value = false
+  }
+}
+
+async function onPickCandidate(candidate: ChangeCandidate) {
+  await selectCandidate(candidate)
+  if (selectedInstance.value) {
+    dialogVisible.value = false
   }
 }
 
@@ -217,7 +230,7 @@ function searchPayload(): FlightSearchRequest | null {
   const depCity = searchForm.dep_city.trim()
   const arrCity = searchForm.arr_city.trim()
   if (!depCity || !arrCity || !searchForm.flight_date) {
-    ElMessage.warning('请填写出发城市、到达城市和目标日期')
+    ElMessage.warning('请选择目标日期')
     return null
   }
   return {
@@ -231,7 +244,7 @@ function searchPayload(): FlightSearchRequest | null {
 
 function validateQuoteParams() {
   if (!normalizedTicketNo.value) {
-    ElMessage.warning('请填写原客票号')
+    ElMessage.warning('缺少原客票号')
     return false
   }
   if (!form.new_instance_id || !form.new_cabin_class || !form.new_fare_type) {
@@ -239,11 +252,6 @@ function validateQuoteParams() {
     return false
   }
   return true
-}
-
-function resetTarget() {
-  candidates.value = []
-  clearSelectedTarget()
 }
 
 function clearSelectedTarget() {
@@ -303,10 +311,6 @@ function formatSignedCurrency(value?: number | null) {
   return `${sign}${formatCurrency(Math.abs(value))}`
 }
 
-function candidateTypeText(candidate: ChangeCandidate) {
-  return candidate.type === 'nearby' ? '临近机场' : '直飞'
-}
-
 function queryText(key: string): string | null {
   const value = route.query[key]
   if (Array.isArray(value)) {
@@ -326,7 +330,6 @@ watch(
 onMounted(() => {
   form.ticket_no = queryText('ticket_no') ?? ''
   orderNo.value = queryText('order_no') ?? ''
-  void loadCities()
   void loadOriginalTicket()
 })
 </script>
@@ -337,7 +340,7 @@ onMounted(() => {
       <div class="page-heading">
         <div>
           <h1 class="page-title">改签</h1>
-          <span>选择新航班实例和舱位票价后试算手续费与差价。</span>
+          <span>出发与到达城市保持不变，可更改出行日期并重新选择航班。</span>
         </div>
         <el-button v-if="orderNo" :icon="Back" @click="backToOrder">返回订单</el-button>
       </div>
@@ -364,82 +367,42 @@ onMounted(() => {
           <span class="mono-num price">{{ formatCurrency(originalTicket.actual_price) }}</span>
         </el-descriptions-item>
       </el-descriptions>
-
-      <el-form :model="form" label-position="top" class="ticket-form">
-        <el-form-item label="原客票号">
-          <el-input v-model="form.ticket_no" placeholder="输入原客票号" clearable />
-        </el-form-item>
-      </el-form>
     </section>
 
     <section class="page-section">
-      <h2>搜索新航班</h2>
-      <el-form :model="searchForm" label-position="top" class="search-form">
-        <el-form-item label="出发城市">
-          <CityAutocomplete v-model="searchForm.dep_city" :cities="cities" placeholder="输入出发城市" />
-        </el-form-item>
-        <el-form-item label="到达城市">
-          <CityAutocomplete v-model="searchForm.arr_city" :cities="cities" placeholder="输入到达城市" />
-        </el-form-item>
-        <el-form-item label="目标日期">
-          <el-date-picker v-model="searchForm.flight_date" type="date" value-format="YYYY-MM-DD" placeholder="选择目标日期" />
-        </el-form-item>
-        <el-form-item label=" ">
-          <el-button type="primary" :icon="Search" :loading="searchLoading" @click="runSearch">搜索</el-button>
-        </el-form-item>
-      </el-form>
-
-      <el-table
-        v-if="candidates.length"
-        v-loading="searchLoading"
-        :data="candidates"
-        border
-        row-key="instance_id"
-        highlight-current-row
-        class="candidate-table"
-      >
-        <el-table-column label="类型" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.type === 'nearby' ? 'warning' : 'success'">{{ candidateTypeText(row) }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="航班" min-width="180">
-          <template #default="{ row }">
-            <div>{{ row.airline_name }} {{ row.flight_no }}</div>
-            <span class="subtle">{{ row.instance_id }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="航线" min-width="150">
-          <template #default="{ row }">{{ row.dep_airport_code }} → {{ row.arr_airport_code }}</template>
-        </el-table-column>
-        <el-table-column label="时间" min-width="150">
-          <template #default="{ row }">{{ formatTime(row.scheduled_departure) }} - {{ formatTime(row.scheduled_arrival) }}</template>
-        </el-table-column>
-        <el-table-column label="余票" min-width="140">
-          <template #default="{ row }">经济舱 {{ row.economy_left }} / 头等舱 {{ row.first_left }}</template>
-        </el-table-column>
-        <el-table-column label="起价" width="130">
-          <template #default="{ row }">
-            <span class="mono-num price">{{ formatCurrency(row.min_price) }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              :loading="detailLoading && selectedCandidate?.instance_id === row.instance_id"
-              @click="selectCandidate(row)"
-            >
-              选择
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+      <h2>改签条件</h2>
+      <div class="change-criteria">
+        <div class="criteria-field">
+          <label>航线（不可更改）</label>
+          <div class="route-lock">
+            <span class="city">{{ searchForm.dep_city || '--' }}</span>
+            <el-icon class="route-arrow"><Right /></el-icon>
+            <span class="city">{{ searchForm.arr_city || '--' }}</span>
+          </div>
+        </div>
+        <div class="criteria-field">
+          <label>目标日期</label>
+          <el-date-picker
+            v-model="searchForm.flight_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            :prefix-icon="Calendar"
+            placeholder="选择目标日期"
+            class="date-control"
+          />
+        </div>
+        <el-button type="primary" :icon="Search" :loading="searchLoading" @click="openSearchDialog">
+          搜索可改签航班
+        </el-button>
+      </div>
+      <p v-if="!selectedInstance" class="criteria-hint">点击「搜索可改签航班」，在弹窗中挑选新的航班后再选舱位试算费用。</p>
     </section>
 
     <section v-if="selectedInstance" v-loading="detailLoading || quoteLoading" class="page-section">
-      <h2>选择舱位票价</h2>
+      <div class="section-head">
+        <h2>新航班与舱位</h2>
+        <el-button text type="primary" :icon="Search" @click="openSearchDialog">重新选择航班</el-button>
+      </div>
       <el-descriptions :column="3" border class="instance-summary">
         <el-descriptions-item label="新实例">{{ selectedInstance.instance_id }}</el-descriptions-item>
         <el-descriptions-item label="航班号">{{ selectedInstance.flight_no }}</el-descriptions-item>
@@ -544,6 +507,63 @@ onMounted(() => {
         <el-button :icon="Back" @click="backToOrder">返回订单详情</el-button>
       </div>
     </section>
+
+    <el-dialog v-model="dialogVisible" title="选择改签航班" width="760px" top="8vh" class="change-dialog">
+      <div class="dialog-toolbar">
+        <div class="dialog-route">
+          <span class="city">{{ searchForm.dep_city }}</span>
+          <el-icon class="route-arrow"><Right /></el-icon>
+          <span class="city">{{ searchForm.arr_city }}</span>
+        </div>
+        <el-date-picker
+          v-model="searchForm.flight_date"
+          type="date"
+          value-format="YYYY-MM-DD"
+          :prefix-icon="Calendar"
+          placeholder="目标日期"
+          class="dialog-date"
+          @change="runSearch"
+        />
+        <el-button :icon="Search" :loading="searchLoading" @click="runSearch">搜索</el-button>
+      </div>
+
+      <div v-loading="searchLoading" class="dialog-body">
+        <div v-if="candidates.length" class="pick-list">
+          <button
+            v-for="c in candidates"
+            :key="`${c.type}-${c.instance_id}`"
+            type="button"
+            class="pick-card"
+            @click="onPickCandidate(c)"
+          >
+            <div class="pick-airline">
+              <AirlineLogo :code="c.airline_code" :name="c.airline_name" :size="34" />
+              <div class="pick-airline-meta">
+                <strong>{{ c.airline_name }}</strong>
+                <span class="subtle mono-num">{{ c.flight_no }} · {{ c.aircraft_model }}</span>
+              </div>
+            </div>
+            <div class="pick-mid">
+              <div class="pick-times">
+                <strong class="mono-num">{{ formatTime(c.scheduled_departure) }}</strong>
+                <FlightPath :duration="minutesBetween(c.scheduled_departure, c.scheduled_arrival)" :stops="0" compact />
+                <strong class="mono-num">{{ formatTime(c.scheduled_arrival) }}</strong>
+              </div>
+              <div class="pick-sub subtle">
+                <span>{{ c.dep_airport_code }} → {{ c.arr_airport_code }}</span>
+                <el-tag v-if="c.type === 'nearby'" size="small" type="warning" effect="plain">临近机场</el-tag>
+                <span class="seat mono-num">经济 {{ c.economy_left }} / 头等 {{ c.first_left }}</span>
+              </div>
+            </div>
+            <div class="pick-right">
+              <div class="pick-price mono-num"><span class="cny">¥</span>{{ c.min_price.toFixed(0) }}<small>起</small></div>
+              <span class="pick-select">选择 →</span>
+            </div>
+          </button>
+        </div>
+        <EmptyState v-else-if="!searchLoading" title="暂无可改签航班" description="换个出行日期再试试。" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -570,27 +590,72 @@ onMounted(() => {
 }
 
 .original-ticket,
-.ticket-form,
-.candidate-table,
 .instance-summary,
 .price-table {
   margin-top: 12px;
 }
 
-.ticket-form {
-  max-width: 360px;
-}
-
-.search-form {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) 180px auto;
-  gap: 12px;
-  align-items: end;
-}
-
 h2 {
   margin: 0 0 12px;
   font-size: 16px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-head h2 {
+  margin: 0;
+}
+
+/* ---------- 改签条件 ---------- */
+.change-criteria {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.criteria-field {
+  display: grid;
+  gap: 7px;
+}
+
+.criteria-field label {
+  color: var(--fa-brand-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.route-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  height: 40px;
+  padding: 0 18px;
+  background: var(--fa-surface-2);
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-radius);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fa-text);
+}
+
+.route-arrow {
+  color: var(--fa-brand);
+}
+
+.date-control {
+  width: 200px;
+}
+
+.criteria-hint {
+  margin: 12px 0 0;
+  color: var(--fa-text-tertiary);
+  font-size: 13px;
 }
 
 .price {
@@ -624,9 +689,164 @@ h2 {
   margin-top: 14px;
 }
 
+/* ---------- 悬浮小窗：选择改签航班 ---------- */
+.dialog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--fa-border);
+}
+
+.dialog-route {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.dialog-date {
+  width: 180px;
+}
+
+.dialog-body {
+  min-height: 180px;
+}
+
+.pick-list {
+  display: grid;
+  gap: 10px;
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.pick-card {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-radius);
+  background: var(--fa-surface);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--fa-dur-fast) var(--fa-ease), box-shadow var(--fa-dur-base) var(--fa-ease),
+    transform var(--fa-dur-base) var(--fa-ease);
+}
+
+.pick-card:hover {
+  border-color: var(--fa-brand);
+  box-shadow: var(--fa-shadow-2);
+  transform: translateY(-2px);
+}
+
+.pick-airline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pick-airline-meta {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pick-airline-meta strong {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pick-mid {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pick-times {
+  display: grid;
+  grid-template-columns: auto minmax(80px, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.pick-times strong {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.pick-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pick-sub .seat {
+  color: var(--fa-text-secondary);
+}
+
+.pick-right {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.pick-price {
+  color: var(--fa-promo);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pick-price .cny {
+  font-size: 14px;
+  margin-right: 1px;
+}
+
+.pick-price small {
+  margin-left: 2px;
+  color: var(--fa-text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pick-select {
+  color: var(--fa-brand);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 @media (max-width: 900px) {
-  .search-form {
+  .change-criteria {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .date-control {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .pick-card {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .pick-right {
+    justify-items: start;
   }
 }
 </style>
