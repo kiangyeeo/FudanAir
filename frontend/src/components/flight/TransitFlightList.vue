@@ -4,11 +4,13 @@ import { Tickets } from '@element-plus/icons-vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
-import { formatCurrency, formatDuration, formatTime } from '@/utils/format'
+import { formatCurrency, formatDuration, formatTime, withTerminal } from '@/utils/format'
 import { useAirportStore } from '@/stores/airport'
+import { useFlightMetaStore } from '@/stores/flightMeta'
 import type { TransitCandidate } from '@/types/search'
 
 const airportStore = useAirportStore()
+const flightMeta = useFlightMetaStore()
 
 const props = defineProps<{
   items: TransitCandidate[]
@@ -63,7 +65,7 @@ function transitLabel(item: TransitCandidate) {
 
         <div class="time-block">
           <strong class="mono-num">{{ formatTime(item.leg1.scheduled_departure) }}</strong>
-          <span>{{ airportStore.display(item.leg1.dep_airport_code) }}</span>
+          <span>{{ withTerminal(airportStore.display(item.leg1.dep_airport_code), flightMeta.depTerminal(item.leg1.flight_no)) }}</span>
         </div>
 
         <FlightPath
@@ -75,7 +77,7 @@ function transitLabel(item: TransitCandidate) {
 
         <div class="time-block">
           <strong class="mono-num">{{ formatTime(item.leg2.scheduled_arrival) }}</strong>
-          <span>{{ airportStore.display(item.leg2.arr_airport_code) }}</span>
+          <span>{{ withTerminal(airportStore.display(item.leg2.arr_airport_code), flightMeta.arrTerminal(item.leg2.flight_no)) }}</span>
         </div>
 
         <div class="price-block">

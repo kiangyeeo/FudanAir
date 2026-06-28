@@ -36,6 +36,43 @@ export function formatAirportName(name?: string | null) {
   return name.replace(/(国际)?机场$/, '') || name
 }
 
+/** 机场名 + 航站楼，如 "上海虹桥T1"；无航站楼则仅机场名 */
+export function withTerminal(name: string, terminal?: string | null) {
+  const t = (terminal ?? '').trim()
+  return t ? `${name}${t}` : name
+}
+
+/** 合并 YYYY-MM-DD 与 HH:MM[:SS] 为本地 Date；任一缺失返回 null */
+export function combineDateTime(dateStr?: string | null, timeStr?: string | null): Date | null {
+  if (!dateStr || !timeStr) {
+    return null
+  }
+  const dt = new Date(`${dateStr}T${timeStr.slice(0, 8)}`)
+  return Number.isNaN(dt.getTime()) ? null : dt
+}
+
+/** 距目标时刻的友好倒计时，如 "2天3小时" / "5小时20分" / "即将出发" */
+export function formatCountdown(target: Date | null): string {
+  if (!target) {
+    return '--'
+  }
+  const diff = target.getTime() - Date.now()
+  if (diff <= 0) {
+    return '即将出发'
+  }
+  const totalMinutes = Math.floor(diff / 60000)
+  const days = Math.floor(totalMinutes / (60 * 24))
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60)
+  const minutes = totalMinutes % 60
+  if (days > 0) {
+    return `${days}天${hours}小时`
+  }
+  if (hours > 0) {
+    return `${hours}小时${minutes}分`
+  }
+  return `${minutes}分钟`
+}
+
 /** 计算两个 HH:MM[:SS] 时刻之间的分钟差，跨天则按次日计算 */
 export function minutesBetween(start?: string | null, end?: string | null): number | null {
   if (!start || !end) {

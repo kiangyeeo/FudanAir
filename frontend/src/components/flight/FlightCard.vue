@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import { Tickets } from '@element-plus/icons-vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
-import { formatCurrency, formatTime, minutesBetween } from '@/utils/format'
+import { formatCurrency, formatTime, minutesBetween, withTerminal } from '@/utils/format'
 import { useAirportStore } from '@/stores/airport'
+import { useFlightMetaStore } from '@/stores/flightMeta'
 import type { DirectFlightCandidate, NearbyFlightCandidate } from '@/types/search'
 
 const airportStore = useAirportStore()
+const flightMeta = useFlightMetaStore()
 
 const props = withDefaults(
   defineProps<{
@@ -52,14 +54,14 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
 
     <div class="time-block">
       <strong class="mono-num">{{ formatTime(candidate.scheduled_departure) }}</strong>
-      <span>{{ airportStore.display(candidate.dep_airport_code) }}</span>
+      <span>{{ withTerminal(airportStore.display(candidate.dep_airport_code), flightMeta.depTerminal(candidate.flight_no)) }}</span>
     </div>
 
     <FlightPath :duration="duration" :stops="0" class="path" />
 
     <div class="time-block">
       <strong class="mono-num">{{ formatTime(candidate.scheduled_arrival) }}</strong>
-      <span>{{ airportStore.display(candidate.arr_airport_code) }}</span>
+      <span>{{ withTerminal(airportStore.display(candidate.arr_airport_code), flightMeta.arrTerminal(candidate.flight_no)) }}</span>
     </div>
 
     <div class="seats">

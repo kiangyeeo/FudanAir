@@ -13,6 +13,7 @@ import NearbyFlightList from '@/components/flight/NearbyFlightList.vue'
 import TransitFlightList from '@/components/flight/TransitFlightList.vue'
 import { useSearchStore } from '@/stores/search'
 import { useAirportStore } from '@/stores/airport'
+import { useFlightMetaStore } from '@/stores/flightMeta'
 import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
 import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
@@ -22,6 +23,7 @@ const route = useRoute()
 const router = useRouter()
 const searchStore = useSearchStore()
 const airportStore = useAirportStore()
+const flightMetaStore = useFlightMetaStore()
 const loading = ref(false)
 const searched = ref(false)
 const cities = ref<string[]>([])
@@ -54,6 +56,7 @@ async function runSearch(payload: FlightSearchRequest) {
   try {
     const data = await searchApi.searchFlights(criteria)
     searchStore.setResult(data)
+    void flightMetaStore.ensure(collectFlightNos(data))
   } finally {
     loading.value = false
   }
@@ -87,6 +90,16 @@ function selectTransit(candidate: TransitCandidate) {
       fare_type: '标准',
     },
   })
+}
+
+function collectFlightNos(data: import('@/types/search').FlightSearchResponse): string[] {
+  const nos: string[] = []
+  data.direct.forEach((item) => nos.push(item.flight_no))
+  data.nearby.forEach((item) => nos.push(item.flight_no))
+  data.transit.forEach((item) => {
+    nos.push(item.leg1.flight_no, item.leg2.flight_no)
+  })
+  return nos
 }
 
 async function loadOptions() {
