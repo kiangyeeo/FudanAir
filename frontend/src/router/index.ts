@@ -16,7 +16,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', name: 'home', component: () => import('@/views/public/HomeView.vue'), meta: { title: '航班搜索' } },
       { path: 'search', name: 'search', component: () => import('@/views/user/SearchResultView.vue'), meta: { title: '搜索结果' } },
-      { path: 'trips', name: 'trips', component: () => import('@/views/user/UpcomingView.vue'), meta: { title: '待出行', requiresAuth: true } },
+      { path: 'trips', name: 'trips', component: () => import('@/views/user/UpcomingView.vue'), meta: { title: '我的机票', requiresAuth: true } },
       { path: 'booking', name: 'booking', component: () => import('@/views/user/BookingView.vue'), meta: { title: '填写订单', requiresAuth: true } },
       { path: 'payment/:orderNo?', name: 'payment', component: () => import('@/views/user/PaymentView.vue'), meta: { title: '支付订单', requiresAuth: true } },
       { path: 'orders', name: 'orders', component: () => import('@/views/user/OrderListView.vue'), meta: { title: '我的订单', requiresAuth: true } },

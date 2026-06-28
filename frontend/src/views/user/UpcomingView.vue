@@ -25,19 +25,33 @@ interface Trip {
   fare_type: string
   departAt: Date
   adjustment_labels: string[]
+  instance_status?: string | null
 }
 
 const ISSUED_STATUS = ['已支付', '已完成', '部分退款']
+const COMPLETED_INSTANCE_STATUSES = new Set(['已到达', '已取消'])
 
 const router = useRouter()
 const airportStore = useAirportStore()
 const flightMeta = useFlightMetaStore()
 const loading = ref(false)
 const trips = ref<Trip[]>([])
+const activeTab = ref<'upcoming' | 'completed'>('upcoming')
 const now = ref(Date.now())
 let timer: number | undefined
 
-const count = computed(() => trips.value.length)
+const upcomingTrips = computed(() =>
+  trips.value.filter((trip) => !isCompletedTrip(trip) && trip.departAt.getTime() > now.value),
+)
+const completedTrips = computed(() => trips.value.filter(isCompletedTrip))
+const displayTrips = computed(() => (activeTab.value === 'upcoming' ? upcomingTrips.value : completedTrips.value))
+const count = computed(() => displayTrips.value.length)
+const emptyTitle = computed(() => (activeTab.value === 'upcoming' ? '暂无待出行机票' : '暂无已完成机票'))
+const emptyDescription = computed(() =>
+  activeTab.value === 'upcoming'
+    ? '购票成功后，未出发的行程会显示在这里。'
+    : '航班到达或取消后，机票会显示在这里。',
+)
 
 function dateLabel(date: string) {
   const today = new Date().toISOString().slice(0, 10)
@@ -61,6 +75,20 @@ function imminent(trip: Trip) {
   return trip.departAt.getTime() - Date.now() <= 24 * 3600 * 1000
 }
 
+function isCompletedTrip(trip: Trip) {
+  return !!trip.instance_status && COMPLETED_INSTANCE_STATUSES.has(trip.instance_status)
+}
+
+function instanceStatusType(status?: string | null) {
+  if (status === '已取消') {
+    return 'danger'
+  }
+  if (status === '已到达') {
+    return 'success'
+  }
+  return 'info'
+}
+
 async function load() {
   loading.value = true
   try {
@@ -78,7 +106,7 @@ async function load() {
           continue
         }
         const departAt = combineDateTime(ticket.flight_date, ticket.scheduled_departure)
-        if (!departAt || departAt.getTime() <= Date.now()) {
+        if (!departAt) {
           continue
         }
         list.push({
@@ -96,6 +124,7 @@ async function load() {
           fare_type: ticket.fare_type,
           departAt,
           adjustment_labels: ticket.adjustment_labels ?? [],
+          instance_status: ticket.flight_instance_status,
         })
       }
     }
@@ -125,25 +154,30 @@ onBeforeUnmount(() => {
   <div class="page-shell trips-page">
     <section class="page-section trips-head">
       <div>
-        <h1 class="page-title">待出行</h1>
-        <span class="sub">已购票、尚未出发的行程</span>
+        <h1 class="page-title">我的机票</h1>
+        <span class="sub">查看待出行和已完成的机票</span>
       </div>
-      <span class="count-pill"><b class="mono-num">{{ count }}</b> 个行程</span>
+      <span class="count-pill"><b class="mono-num">{{ count }}</b> 张机票</span>
     </section>
+
+    <el-tabs v-model="activeTab" class="ticket-tabs">
+      <el-tab-pane :label="`待出行 (${upcomingTrips.length})`" name="upcoming" />
+      <el-tab-pane :label="`已完成 (${completedTrips.length})`" name="completed" />
+    </el-tabs>
 
     <div v-if="loading" class="trip-list">
       <div v-for="i in 3" :key="i" class="fa-skeleton skeleton-card" />
     </div>
 
     <EmptyState
-      v-else-if="!trips.length"
-      title="暂无待出行行程"
-      description="购票成功后，未出发的行程会显示在这里。"
+      v-else-if="!displayTrips.length"
+      :title="emptyTitle"
+      :description="emptyDescription"
     />
 
     <div v-else class="trip-list">
       <article
-        v-for="(trip, index) in trips"
+        v-for="(trip, index) in displayTrips"
         :key="trip.ticket_no"
         class="trip-card"
         v-motion
@@ -157,7 +191,7 @@ onBeforeUnmount(() => {
               <AirlineLogo :code="trip.airline_code" :name="flightMeta.airlineName(trip.flight_no)" :size="34" />
               <div class="airline-meta">
                 <strong>{{ flightMeta.airlineName(trip.flight_no) || trip.airline_code }}</strong>
-                <span class="mono-num">{{ trip.flight_no }} · {{ trip.cabin_class }}</span>
+                <span class="mono-num">{{ trip.flight_no }} / {{ trip.cabin_class }}</span>
                 <div v-if="trip.adjustment_labels.length" class="adjust-tags">
                   <el-tag
                     v-for="label in trip.adjustment_labels"
@@ -171,7 +205,12 @@ onBeforeUnmount(() => {
                 </div>
               </div>
             </div>
-            <span class="countdown" :class="{ imminent: imminent(trip) }">距出发 {{ countdown(trip) }}</span>
+            <span v-if="activeTab === 'upcoming'" class="countdown" :class="{ imminent: imminent(trip) }">
+              距出发 {{ countdown(trip) }}
+            </span>
+            <el-tag v-else :type="instanceStatusType(trip.instance_status)" effect="dark">
+              {{ trip.instance_status }}
+            </el-tag>
           </header>
 
           <div class="trip-route">
@@ -191,6 +230,9 @@ onBeforeUnmount(() => {
               <span class="chip"><el-icon><Calendar /></el-icon>{{ dateLabel(trip.flight_date) }}</span>
               <span class="chip"><el-icon><User /></el-icon>{{ trip.passenger }}</span>
               <span class="chip mono-num"><el-icon><Tickets /></el-icon>{{ trip.ticket_no }}</span>
+              <el-tag v-if="activeTab === 'completed' && trip.instance_status" size="small" :type="instanceStatusType(trip.instance_status)">
+                {{ trip.instance_status }}
+              </el-tag>
             </div>
             <el-button text type="primary" @click="router.push(`/orders/${trip.order_no}`)">查看订单</el-button>
           </footer>
@@ -236,6 +278,10 @@ onBeforeUnmount(() => {
 
 .count-pill b {
   font-size: 16px;
+}
+
+.ticket-tabs {
+  margin-top: -6px;
 }
 
 .trip-list {

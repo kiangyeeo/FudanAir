@@ -52,7 +52,7 @@ onBeforeUnmount(() => {
 
     <el-menu :default-active="activeMenu" mode="horizontal" router class="nav-menu" :ellipsis="false">
       <el-menu-item index="/">航班搜索</el-menu-item>
-      <el-menu-item index="/trips">待出行</el-menu-item>
+      <el-menu-item index="/trips">我的机票</el-menu-item>
       <el-menu-item index="/orders">我的订单</el-menu-item>
       <el-menu-item index="/profile">个人中心</el-menu-item>
     </el-menu>
