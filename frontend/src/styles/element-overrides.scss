@@ -88,10 +88,43 @@
   --el-table-border-color: var(--fa-border);
   --el-table-row-hover-bg-color: var(--fa-brand-soft);
   border-radius: var(--fa-radius);
+  font-variant-numeric: tabular-nums;
 }
 
 .el-table th.el-table__cell {
   font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+/* 表头/单元格更舒展的留白，长表格阅读更轻松 */
+.el-table .el-table__cell {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* 行 hover 平滑过渡 */
+.el-table .el-table__body tr td.el-table__cell {
+  transition: background-color var(--fa-dur-fast) var(--fa-ease);
+}
+
+/* 表内操作链接按钮：hover 时浮现轻底色，强化可点击感 */
+.el-table .el-button.is-link {
+  padding: 3px 7px;
+  border-radius: var(--fa-radius-sm);
+  height: auto;
+}
+
+.el-table .el-button.is-link + .el-button.is-link {
+  margin-left: 2px;
+}
+
+.el-table .el-button.is-link:hover {
+  background: var(--fa-brand-soft);
+}
+
+.el-table .el-button.is-link.el-button--danger:hover {
+  background: var(--fa-danger-soft);
 }
 
 /* ---------- 弹窗 / 浮层 ---------- */

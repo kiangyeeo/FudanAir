@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import EmptyState from '@/components/common/EmptyState.vue'
 import { orderApi } from '@/api/order'
 import { formatCurrency, formatDate } from '@/utils/format'
 import type { OrderListItem, OrderQuery, OrderStatus } from '@/types/order'
@@ -93,7 +94,7 @@ onMounted(() => {
       </div>
       <el-table v-loading="loading" :data="rows" border row-key="order_no">
         <template #empty>
-          <span>暂无订单</span>
+          <EmptyState title="暂无订单" description="完成购票后，你的订单会显示在这里。" />
         </template>
         <el-table-column prop="order_no" label="订单号" min-width="210" />
         <el-table-column label="状态" width="120">

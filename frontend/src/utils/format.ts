@@ -5,11 +5,37 @@ export function formatCurrency(value?: number | null) {
   return `¥${value.toFixed(2)}`
 }
 
+function pad2(n: number) {
+  return n < 10 ? `0${n}` : `${n}`
+}
+
+function formatLocalDateTime(d: Date) {
+  return (
+    `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ` +
+    `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+  )
+}
+
+/**
+ * 友好展示日期/时间：
+ * - 纯日期（2026-05-25）原样返回
+ * - 含时区标识（Z / ±HH:MM）按本地时区格式化，避免直接展示 UTC
+ * - 朴素本地时间仅做展示清洗：去掉 T 分隔符与毫秒
+ */
 export function formatDate(value?: string | null) {
   if (!value) {
     return '--'
   }
-  return value
+  if (!value.includes('T') && !value.includes(' ')) {
+    return value
+  }
+  if (/[zZ]$/.test(value) || /[+-]\d{2}:\d{2}$/.test(value)) {
+    const d = new Date(value)
+    if (!Number.isNaN(d.getTime())) {
+      return formatLocalDateTime(d)
+    }
+  }
+  return value.replace('T', ' ').replace(/\.\d+.*$/, '').slice(0, 19)
 }
 
 export function formatTime(value?: string | null) {
