@@ -119,7 +119,6 @@ onMounted(() => {
 
     <div class="home-view">
       <div class="hero-copy" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
-        <img class="hero-emblem" src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
         <div class="hero-titles">
           <h1 class="hero-name">FudanAir 航空票务系统</h1>
           <p>直飞 · 中转 · 临近机场，一次搜索三种方案</p>
@@ -291,15 +290,6 @@ onMounted(() => {
   gap: 16px;
   text-align: center;
   color: var(--fa-text);
-}
-
-.hero-emblem {
-  flex: 0 0 auto;
-  width: 132px;
-  height: 132px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.7), var(--fa-shadow-2);
 }
 
 .hero-titles {
@@ -511,11 +501,6 @@ onMounted(() => {
 @media (max-width: 560px) {
   .hero-copy {
     gap: 14px;
-  }
-
-  .hero-emblem {
-    width: 72px;
-    height: 72px;
   }
 
   .hero-name {
