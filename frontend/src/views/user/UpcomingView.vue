@@ -45,7 +45,6 @@ const upcomingTrips = computed(() =>
 )
 const completedTrips = computed(() => trips.value.filter(isCompletedTrip))
 const displayTrips = computed(() => (activeTab.value === 'upcoming' ? upcomingTrips.value : completedTrips.value))
-const count = computed(() => displayTrips.value.length)
 const emptyTitle = computed(() => (activeTab.value === 'upcoming' ? '暂无待出行机票' : '暂无已完成机票'))
 const emptyDescription = computed(() =>
   activeTab.value === 'upcoming'
@@ -152,13 +151,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="page-shell trips-page">
-    <section class="page-section trips-head">
-      <div>
-        <h1 class="page-title">我的机票</h1>
-        <span class="sub">查看待出行和已完成的机票</span>
-      </div>
-      <span class="count-pill"><b class="mono-num">{{ count }}</b> 张机票</span>
-    </section>
 
     <el-tabs v-model="activeTab" class="ticket-tabs">
       <el-tab-pane :label="`待出行 (${upcomingTrips.length})`" name="upcoming" />
@@ -249,39 +241,9 @@ onBeforeUnmount(() => {
   padding: 20px 0 8px;
 }
 
-.trips-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.trips-head .page-title {
-  margin-bottom: 4px;
-}
-
-.sub {
-  color: var(--fa-text-tertiary);
-  font-size: 13px;
-}
-
-.count-pill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 6px 14px;
-  border-radius: var(--fa-radius-pill);
-  background: var(--fa-brand-soft);
-  color: var(--fa-brand);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.count-pill b {
-  font-size: 16px;
-}
 
 .ticket-tabs {
-  margin-top: -6px;
+  margin-top: 0;
 }
 
 .trip-list {
