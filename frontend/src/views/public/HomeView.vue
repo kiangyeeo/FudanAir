@@ -104,18 +104,6 @@ onMounted(() => {
 <template>
   <div class="home-hero">
     <div class="hero-art" aria-hidden="true"></div>
-    <div class="hero-sky" aria-hidden="true">
-      <svg class="flight-svg" viewBox="0 0 1440 480" preserveAspectRatio="xMidYMin meet">
-        <path class="route route-main" d="M -60 420 C 360 250, 980 300, 1520 70" />
-        <path class="route route-sub" d="M -60 470 C 420 350, 1060 380, 1520 190" />
-        <circle class="node" cx="118" cy="374" r="6" />
-        <g class="plane" transform="translate(1290 120) rotate(48) scale(1.7) translate(-12 -12)">
-          <path
-            d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
-          />
-        </g>
-      </svg>
-    </div>
 
     <div class="home-view">
       <div class="hero-copy" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
@@ -228,51 +216,13 @@ onMounted(() => {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: url('/images/home-bg.jpg') no-repeat bottom center;
-  background-size: min(1500px, 116%) auto;
-  opacity: 0.14;
+  background: url('/images/home-bg.jpg') no-repeat center center;
+  background-size: cover;
+  opacity: 0.12;
   mix-blend-mode: multiply;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.55) 56%, #000 78%);
-  mask-image: linear-gradient(180deg, transparent 0%, transparent 30%, rgba(0, 0, 0, 0.55) 56%, #000 78%);
-}
-
-/* 航线装饰层：虚线航线 + 小飞机，淡淡铺在背景上 */
-.hero-sky {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.flight-svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.route {
-  fill: none;
-  stroke: #7fa9e8;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-dasharray: 1 13;
-  opacity: 0.5;
-}
-
-.route-sub {
-  stroke-dasharray: 1 15;
-  opacity: 0.28;
-}
-
-.node {
-  fill: var(--fa-brand);
-  opacity: 0.5;
-}
-
-.plane {
-  fill: var(--fa-brand-2);
-  opacity: 0.7;
+  /* 仅在标题所在的中上区轻微压一档，保证文字清晰；楼顶/飞机所在的上缘与两侧保留 */
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 34%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.7) 32%, #000 60%);
+  mask-image: radial-gradient(120% 80% at 50% 34%, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.7) 32%, #000 60%);
 }
 
 .home-view {
