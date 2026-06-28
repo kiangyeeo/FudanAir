@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
 <template>
   <header class="app-header" :class="{ scrolled }">
     <RouterLink class="brand" to="/">
-      <BrandLogo :size="64" />
+      <BrandLogo :size="72" />
     </RouterLink>
 
     <el-menu :default-active="activeMenu" mode="horizontal" router class="nav-menu" :ellipsis="false">
