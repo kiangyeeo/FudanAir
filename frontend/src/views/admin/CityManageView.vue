@@ -205,7 +205,6 @@ async function deleteNearAirport(row: NearAirport) {
         border
         row-key="city_name"
         highlight-current-row
-        class="narrow-table"
       >
         <el-table-column prop="city_name" label="城市名称" min-width="180" />
         <el-table-column label="操作" width="250" fixed="right">
@@ -319,11 +318,6 @@ async function deleteNearAirport(row: NearAirport) {
 .admin-crud-page {
   display: grid;
   gap: 16px;
-}
-
-/* 字段较少的表格不铺满整行，避免短内容（如城市名）占据过宽单元格 */
-.narrow-table {
-  max-width: 480px;
 }
 
 .toolbar {

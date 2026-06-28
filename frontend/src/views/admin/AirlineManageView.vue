@@ -126,7 +126,6 @@ async function deleteAirline(row: Airline) {
       empty-text="未找到匹配航司"
       border
       row-key="iata_code"
-      class="narrow-table"
     >
       <el-table-column prop="iata_code" label="航司代码" width="120" />
       <el-table-column prop="airline_name" label="航司名称" min-width="240" />
@@ -165,11 +164,6 @@ async function deleteAirline(row: Airline) {
 .admin-crud-page {
   display: grid;
   gap: 12px;
-}
-
-/* 字段较少的表格不铺满整行，避免短内容占据过宽单元格 */
-.narrow-table {
-  max-width: 600px;
 }
 
 .toolbar {

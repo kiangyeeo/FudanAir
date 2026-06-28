@@ -127,7 +127,6 @@ async function deleteAirport(row: Airport) {
       :data="airports"
       border
       row-key="iata_code"
-      class="narrow-table"
     >
       <el-table-column prop="iata_code" label="IATA" width="100" />
       <el-table-column prop="airport_name" label="机场名称" min-width="240" />
@@ -172,11 +171,6 @@ async function deleteAirport(row: Airport) {
 .admin-crud-page {
   display: grid;
   gap: 12px;
-}
-
-/* 字段较少的表格不铺满整行，避免短内容占据过宽单元格 */
-.narrow-table {
-  max-width: 760px;
 }
 
 .toolbar {
