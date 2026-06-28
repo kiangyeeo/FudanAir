@@ -213,6 +213,14 @@ function removeStopover(index: number) {
   form.stopovers.splice(index, 1)
 }
 
+function validateTimeOrder() {
+  if (form.scheduled_departure && form.scheduled_arrival && form.scheduled_departure > form.scheduled_arrival) {
+    ElMessage.error('起飞时间不得晚于到达时间')
+    return false
+  }
+  return true
+}
+
 function buildPayload(): FlightPayload {
   return {
     scheduled_departure: form.scheduled_departure,
@@ -231,6 +239,9 @@ function buildPayload(): FlightPayload {
 
 async function submit() {
   await formRef.value?.validate()
+  if (!validateTimeOrder()) {
+    return
+  }
   const payload = buildPayload()
   if (mode.value === 'create') {
     await adminApi.createFlight({

@@ -40,6 +40,8 @@ class FlightBase(BaseModel):
     def validate_weekdays(self) -> FlightBase:
         if any(day < 1 or day > 7 for day in self.weekdays):
             raise ValueError("飞行日必须在1到7之间")
+        if self.scheduled_departure > self.scheduled_arrival:
+            raise ValueError("起飞时间不得晚于到达时间")
         return self
 
 
