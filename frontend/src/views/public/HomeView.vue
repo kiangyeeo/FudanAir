@@ -103,9 +103,17 @@ onMounted(() => {
 
 <template>
   <div class="home-hero">
-    <div class="hero-decor">
-      <span class="cloud cloud-1" />
-      <span class="cloud cloud-2" />
+    <div class="hero-sky" aria-hidden="true">
+      <svg class="flight-svg" viewBox="0 0 1440 480" preserveAspectRatio="xMidYMin meet">
+        <path class="route route-main" d="M -60 420 C 360 250, 980 300, 1520 70" />
+        <path class="route route-sub" d="M -60 470 C 420 350, 1060 380, 1520 190" />
+        <circle class="node" cx="118" cy="374" r="6" />
+        <g class="plane" transform="translate(1290 120) rotate(48) scale(1.7) translate(-12 -12)">
+          <path
+            d="M21 16v-2l-8-5V3.5C13 2.67 12.33 2 11.5 2S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
+          />
+        </g>
+      </svg>
     </div>
 
     <div class="page-shell home-view">
@@ -210,37 +218,51 @@ onMounted(() => {
   min-height: calc(100vh - var(--fa-header-height));
   padding: 96px 0 56px;
   overflow: hidden;
+  /* 白蓝灰冷色 mesh 渐变：左上青、右上蓝、底部柔灰，整体清透 */
   background:
-    linear-gradient(180deg, rgba(5, 24, 56, 0.62) 0%, rgba(8, 30, 66, 0.34) 240px, rgba(242, 245, 250, 0.96) 470px, var(--fa-bg) 600px),
-    url('/images/home-hero.jpg') center top / cover no-repeat;
+    radial-gradient(58% 50% at 12% 6%, rgba(54, 198, 255, 0.18) 0%, rgba(54, 198, 255, 0) 60%),
+    radial-gradient(52% 46% at 90% -4%, rgba(22, 119, 255, 0.16) 0%, rgba(22, 119, 255, 0) 55%),
+    radial-gradient(72% 62% at 72% 104%, rgba(168, 197, 235, 0.22) 0%, rgba(168, 197, 235, 0) 60%),
+    linear-gradient(180deg, #eef4fc 0%, #f1f5fb 45%, var(--fa-bg) 100%);
 }
 
-.hero-decor {
+/* 航线装饰层：虚线航线 + 小飞机，淡淡铺在背景上 */
+.hero-sky {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.cloud {
+.flight-svg {
   position: absolute;
-  height: 60px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 100px;
-  filter: blur(6px);
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.cloud-1 {
-  top: 70px;
-  left: 8%;
-  width: 180px;
-  animation: fa-float 7s ease-in-out infinite;
+.route {
+  fill: none;
+  stroke: #7fa9e8;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1 13;
+  opacity: 0.5;
 }
 
-.cloud-2 {
-  top: 130px;
-  right: 12%;
-  width: 130px;
-  animation: fa-float 9s ease-in-out infinite reverse;
+.route-sub {
+  stroke-dasharray: 1 15;
+  opacity: 0.28;
+}
+
+.node {
+  fill: var(--fa-brand);
+  opacity: 0.5;
+}
+
+.plane {
+  fill: var(--fa-brand-2);
+  opacity: 0.7;
 }
 
 .home-view {
@@ -253,8 +275,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 20px;
-  color: #fff;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  color: var(--fa-text);
 }
 
 .hero-emblem {
@@ -263,7 +284,7 @@ onMounted(() => {
   height: 92px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.14), 0 12px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.7), var(--fa-shadow-2);
 }
 
 .hero-titles {
@@ -277,12 +298,13 @@ onMounted(() => {
   font-size: 34px;
   font-weight: 700;
   letter-spacing: 0.01em;
+  color: var(--fa-brand-dark);
 }
 
 .hero-copy p {
   margin: 0;
   font-size: 16px;
-  opacity: 0.92;
+  color: var(--fa-text-secondary);
 }
 
 .search-band {
