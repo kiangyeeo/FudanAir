@@ -74,6 +74,10 @@ export interface FlightInstance {
   scheduled_arrival?: string
   fuel_infra_fee?: number
   adjusted_at?: string | null
+  scheduled_departure_adjusted_at?: string | null
+  scheduled_arrival_adjusted_at?: string | null
+  dep_airport_adjusted_at?: string | null
+  arr_airport_adjusted_at?: string | null
   dep_airport_code?: string
   arr_airport_code?: string
   airline_code?: string

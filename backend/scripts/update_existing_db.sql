@@ -118,6 +118,66 @@ PREPARE stmt FROM @add_fi_adjusted_at;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+SELECT COUNT(*) INTO @fi_has_departure_adjusted_at
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'flight_instance'
+  AND column_name = 'scheduled_departure_adjusted_at';
+
+SET @add_fi_departure_adjusted_at = IF(
+    @fi_has_departure_adjusted_at = 0,
+    'ALTER TABLE flight_instance ADD COLUMN scheduled_departure_adjusted_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @add_fi_departure_adjusted_at;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SELECT COUNT(*) INTO @fi_has_arrival_adjusted_at
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'flight_instance'
+  AND column_name = 'scheduled_arrival_adjusted_at';
+
+SET @add_fi_arrival_adjusted_at = IF(
+    @fi_has_arrival_adjusted_at = 0,
+    'ALTER TABLE flight_instance ADD COLUMN scheduled_arrival_adjusted_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @add_fi_arrival_adjusted_at;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SELECT COUNT(*) INTO @fi_has_dep_airport_adjusted_at
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'flight_instance'
+  AND column_name = 'dep_airport_adjusted_at';
+
+SET @add_fi_dep_airport_adjusted_at = IF(
+    @fi_has_dep_airport_adjusted_at = 0,
+    'ALTER TABLE flight_instance ADD COLUMN dep_airport_adjusted_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @add_fi_dep_airport_adjusted_at;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SELECT COUNT(*) INTO @fi_has_arr_airport_adjusted_at
+FROM information_schema.columns
+WHERE table_schema = DATABASE()
+  AND table_name = 'flight_instance'
+  AND column_name = 'arr_airport_adjusted_at';
+
+SET @add_fi_arr_airport_adjusted_at = IF(
+    @fi_has_arr_airport_adjusted_at = 0,
+    'ALTER TABLE flight_instance ADD COLUMN arr_airport_adjusted_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @add_fi_arr_airport_adjusted_at;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 UPDATE flight_instance fi
 JOIN flight f ON fi.flight_no = f.flight_no
 SET fi.scheduled_departure = COALESCE(fi.scheduled_departure, f.scheduled_departure),

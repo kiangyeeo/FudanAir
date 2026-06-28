@@ -99,6 +99,19 @@ class FlightRepository:
             return None
         return int(row.economy_seats), int(row.first_seats)
 
+    def route_snapshot(self, flight_no: str) -> dict[str, str] | None:
+        row = self.db.execute(
+            text(
+                """
+                SELECT dep_airport_code, arr_airport_code
+                FROM flight
+                WHERE flight_no = :flight_no
+                """
+            ),
+            {"flight_no": flight_no},
+        ).mappings().first()
+        return dict(row) if row else None
+
     def has_instances(self, flight_no: str) -> bool:
         row = (
             self.db.query(FlightInstance.instance_id)
@@ -230,18 +243,57 @@ class FlightInstanceRepository:
         self.db.add(instance)
         self.db.flush()
         return instance
+
     def update_instance(
         self,
         instance: FlightInstance,
         data: dict[str, Any],
-        mark_adjusted: bool,
+        adjustment_fields: set[str],
     ) -> FlightInstance:
         for key, value in data.items():
             setattr(instance, key, value)
-        if mark_adjusted:
-            instance.adjusted_at = datetime.now()
+        if adjustment_fields:
+            self._mark_adjustments(instance, adjustment_fields, datetime.now())
         self.db.flush()
         return instance
+
+    def mark_route_adjustments(self, flight_no: str, adjustment_fields: set[str]) -> None:
+        if not adjustment_fields:
+            return
+        now = datetime.now()
+        values = ["adjusted_at = :now"]
+        if "dep_airport" in adjustment_fields:
+            values.append("dep_airport_adjusted_at = :now")
+        if "arr_airport" in adjustment_fields:
+            values.append("arr_airport_adjusted_at = :now")
+        self.db.execute(
+            text(
+                f"""
+                UPDATE flight_instance
+                SET {', '.join(values)}
+                WHERE flight_no = :flight_no
+                """
+            ),
+            {"flight_no": flight_no, "now": now},
+        )
+        self.db.flush()
+
+    def _mark_adjustments(
+        self,
+        instance: FlightInstance,
+        adjustment_fields: set[str],
+        adjusted_at: datetime,
+    ) -> None:
+        instance.adjusted_at = adjusted_at
+        if "scheduled_departure" in adjustment_fields:
+            instance.scheduled_departure_adjusted_at = adjusted_at
+        if "scheduled_arrival" in adjustment_fields:
+            instance.scheduled_arrival_adjusted_at = adjusted_at
+        if "dep_airport" in adjustment_fields:
+            instance.dep_airport_adjusted_at = adjusted_at
+        if "arr_airport" in adjustment_fields:
+            instance.arr_airport_adjusted_at = adjusted_at
+
     def update_status(self, instance: FlightInstance, status: str) -> FlightInstance:
         instance.status = status
         self.db.flush()
@@ -329,6 +381,10 @@ class FlightInstanceRepository:
                     fi.scheduled_arrival,
                     fi.fuel_infra_fee,
                     fi.adjusted_at,
+                    fi.scheduled_departure_adjusted_at,
+                    fi.scheduled_arrival_adjusted_at,
+                    fi.dep_airport_adjusted_at,
+                    fi.arr_airport_adjusted_at,
                     f.dep_airport_code,
                     f.arr_airport_code,
                     f.airline_code,

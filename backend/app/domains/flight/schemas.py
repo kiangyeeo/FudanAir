@@ -139,6 +139,10 @@ class FlightInstanceListResponse(BaseModel):
     scheduled_arrival: time
     fuel_infra_fee: float
     adjusted_at: datetime | None = None
+    scheduled_departure_adjusted_at: datetime | None = None
+    scheduled_arrival_adjusted_at: datetime | None = None
+    dep_airport_adjusted_at: datetime | None = None
+    arr_airport_adjusted_at: datetime | None = None
     economy_left: int
     first_left: int
     status: str

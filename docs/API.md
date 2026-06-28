@@ -839,6 +839,7 @@
       "scheduled_departure": "08:00:00",
       "dep_airport_code": "PEK",
       "arr_airport_code": "SHA",
+      "adjustment_labels": ["起飞时间已调整"],
       "cabin_class": "经济舱",
       "fare_type": "标准",
       "actual_price": 850.00,
@@ -849,6 +850,7 @@
 ```
 
 > `actual_price` 为成交价，含燃油基建费。
+> `adjustment_labels` 仅在航班实例调整时间晚于订单创建时间时返回对应提示，可包含“起飞时间已调整”“降落时间已调整”“起飞机场已调整”“降落机场已调整”。
 
 ### 11.3 管理员查所有订单
 

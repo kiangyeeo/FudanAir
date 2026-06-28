@@ -264,7 +264,11 @@
 | scheduled_departure | TIME                                           | NOT NULL                            | 否   | —      | 该航班实例当天实际起飞时间                                   |
 | scheduled_arrival   | TIME                                           | NOT NULL                            | 否   | —      | 该航班实例当天实际到达时间                                   |
 | fuel_infra_fee      | DECIMAL(10,2)                                  | NOT NULL, CHECK (fuel_infra_fee >= 0) | 否 | 0.00   | 该航班实例当天实际燃油基建费                                 |
-| adjusted_at         | DATETIME                                       | —                                   | 是   | NULL   | 管理员修改实例航班号或起降时间时记录，用于用户端提示“有调整” |
+| adjusted_at         | DATETIME                                       | —                                   | 是   | NULL   | 管理员修改实例航班号、起降时间或起降机场时记录的汇总调整时间 |
+| scheduled_departure_adjusted_at | DATETIME                              | —                                   | 是   | NULL   | 管理员修改实例起飞时间时记录，用于用户端提示“起飞时间已调整” |
+| scheduled_arrival_adjusted_at   | DATETIME                              | —                                   | 是   | NULL   | 管理员修改实例降落时间时记录，用于用户端提示“降落时间已调整” |
+| dep_airport_adjusted_at         | DATETIME                              | —                                   | 是   | NULL   | 管理员修改起飞机场影响该实例时记录，用于用户端提示“起飞机场已调整” |
+| arr_airport_adjusted_at         | DATETIME                              | —                                   | 是   | NULL   | 管理员修改降落机场影响该实例时记录，用于用户端提示“降落机场已调整” |
 | economy_left | SMALLINT UNSIGNED                                     | NOT NULL, CHECK (economy_left >= 0) | 否   | —      | 经济舱剩余座位（汇总值，= 该实例下经济舱所有 fare_type 的 available_seats 之和） |
 | first_left   | SMALLINT UNSIGNED                                     | NOT NULL, CHECK (first_left >= 0)   | 否   | —      | 头等舱剩余座位（汇总值）                                     |
 | status       | ENUM('计划','可订','已起飞','已到达','已取消','延误') | NOT NULL                            | 否   | '计划' | 航班实例状态                                                 |
@@ -859,13 +863,22 @@ CREATE TABLE flight_instance (
     instance_id    VARCHAR(32)         NOT NULL,
     flight_no      VARCHAR(8)          NOT NULL,
     flight_date    DATE                NOT NULL,
+    scheduled_departure TIME           NOT NULL,
+    scheduled_arrival   TIME           NOT NULL,
+    fuel_infra_fee      DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    adjusted_at   DATETIME             DEFAULT NULL,
+    scheduled_departure_adjusted_at DATETIME DEFAULT NULL,
+    scheduled_arrival_adjusted_at   DATETIME DEFAULT NULL,
+    dep_airport_adjusted_at         DATETIME DEFAULT NULL,
+    arr_airport_adjusted_at         DATETIME DEFAULT NULL,
     economy_left   SMALLINT UNSIGNED   NOT NULL,
     first_left     SMALLINT UNSIGNED   NOT NULL,
     status         ENUM('计划','可订','已起飞','已到达','已取消') NOT NULL DEFAULT '计划',
     PRIMARY KEY (instance_id),
     UNIQUE KEY uk_instance_flight_date (flight_no, flight_date),
     KEY idx_instance_date_status (flight_date, status),
-    CONSTRAINT fk_fi_flight FOREIGN KEY (flight_no) REFERENCES flight(flight_no)
+    CONSTRAINT fk_fi_flight FOREIGN KEY (flight_no) REFERENCES flight(flight_no),
+    CONSTRAINT chk_instance_fuel_fee CHECK (fuel_infra_fee >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE cabin_price (

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 OrderStatus = Literal["待支付", "已支付", "已取消", "已完成", "部分退款", "已完成退款"]
@@ -58,6 +58,7 @@ class OrderTicketDetail(BaseModel):
     fuel_infra_fee: float | None = None
     actual_price: float
     has_adjustment: bool = False
+    adjustment_labels: list[str] = Field(default_factory=list)
     status: Literal["有效", "已退", "已改签作废", "已使用"]
 
     @field_validator("scheduled_departure", "scheduled_arrival", mode="before")

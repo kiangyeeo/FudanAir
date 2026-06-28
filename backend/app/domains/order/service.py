@@ -15,6 +15,12 @@ from app.domains.order.repository import OrderRepository
 
 
 ALLOWED_ORDER_STATUSES = {"待支付", "已支付", "已取消", "已完成", "部分退款", "已完成退款"}
+ADJUSTMENT_LABELS = (
+    ("scheduled_departure_adjusted_at", "起飞时间已调整"),
+    ("scheduled_arrival_adjusted_at", "降落时间已调整"),
+    ("dep_airport_adjusted_at", "起飞机场已调整"),
+    ("arr_airport_adjusted_at", "降落机场已调整"),
+)
 
 
 class OrderService:
@@ -105,6 +111,7 @@ def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
     actual_price = row["actual_price"]
     fuel_fee = row["fuel_infra_fee"]
     ticket_price = actual_price - fuel_fee if actual_price is not None and fuel_fee is not None else None
+    adjustment_labels = _adjustment_labels(row)
     return {
         "ticket_no": row["ticket_no"],
         "passenger": {
@@ -123,17 +130,28 @@ def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
         "ticket_price": ticket_price,
         "fuel_infra_fee": fuel_fee,
         "actual_price": actual_price,
-        "has_adjustment": _has_adjustment(row),
+        "has_adjustment": bool(adjustment_labels),
+        "adjustment_labels": adjustment_labels,
         "status": row["ticket_status"],
     }
 
 
-def _has_adjustment(row: dict[str, Any]) -> bool:
-    adjusted_at = row.get("adjusted_at")
+def _adjustment_labels(row: dict[str, Any]) -> list[str]:
     created_at = row.get("created_at")
-    if adjusted_at is None or created_at is None:
+    if created_at is None:
+        return []
+    return [
+        label
+        for field, label in ADJUSTMENT_LABELS
+        if _adjusted_after_order(row.get(field), created_at)
+    ]
+
+
+def _adjusted_after_order(adjusted_at: Any, created_at: Any) -> bool:
+    if adjusted_at is None:
         return False
     return created_at < adjusted_at
+
 
 def _order_status(value: str) -> str:
     normalized = value.strip()

@@ -117,11 +117,17 @@ class FlightService:
                 if not flight:
                     raise ResourceNotFoundError(f"航班 {number} 不存在")
                 self._ensure_reference_data(data, stopovers)
+                old_route = {
+                    "dep_airport_code": flight.dep_airport_code,
+                    "arr_airport_code": flight.arr_airport_code,
+                }
                 update_data = dict(data)
                 update_data.pop("flight_no", None)
                 flight = self.flight_repo.update(flight, **update_data)
                 self.flight_repo.replace_weekdays(number, weekdays)
                 self.flight_repo.replace_stopovers(number, stopovers)
+                route_adjustments = self._route_adjustment_fields(old_route, data)
+                self.instance_repo.mark_route_adjustments(number, route_adjustments)
                 return flight
         except IntegrityError as exc:
             raise AppException(f"航班 {number} 更新失败") from exc
@@ -273,15 +279,15 @@ class FlightService:
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
                     raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                old_route = self.flight_repo.route_snapshot(instance.flight_no)
                 data = self._instance_update_data(instance, payload)
                 if not data:
                     return instance
-                mark_adjusted = any(
-                    key in data for key in ("flight_no", "scheduled_departure", "scheduled_arrival")
-                )
-                return self.instance_repo.update_instance(instance, data, mark_adjusted)
+                adjustment_fields = self._instance_adjustment_fields(instance, data, old_route)
+                return self.instance_repo.update_instance(instance, data, adjustment_fields)
         except IntegrityError as exc:
             raise AppException(f"航班实例 {instance_id} 更新失败") from exc
+
     def update_instance_status(
         self,
         instance_id: str,
@@ -452,6 +458,37 @@ class FlightService:
             for key, value in data.items()
             if not self._instance_value_equal(getattr(instance, key), value)
         }
+
+    def _instance_adjustment_fields(
+        self,
+        instance: FlightInstance,
+        data: dict[str, Any],
+        old_route: dict[str, str] | None,
+    ) -> set[str]:
+        fields: set[str] = set()
+        if "scheduled_departure" in data:
+            fields.add("scheduled_departure")
+        if "scheduled_arrival" in data:
+            fields.add("scheduled_arrival")
+        if "flight_no" in data:
+            new_route = self.flight_repo.route_snapshot(data["flight_no"])
+            fields.update(self._route_adjustment_fields(old_route, new_route))
+        return fields
+
+    @staticmethod
+    def _route_adjustment_fields(
+        old_route: dict[str, str] | None,
+        new_route: dict[str, Any] | None,
+    ) -> set[str]:
+        if not old_route or not new_route:
+            return set()
+        fields: set[str] = set()
+        if old_route["dep_airport_code"] != new_route["dep_airport_code"]:
+            fields.add("dep_airport")
+        if old_route["arr_airport_code"] != new_route["arr_airport_code"]:
+            fields.add("arr_airport")
+        return fields
+
     def _flight_data(
         self,
         payload: FlightCreate | FlightUpdate,

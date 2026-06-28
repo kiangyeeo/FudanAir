@@ -78,6 +78,10 @@ class FlightInstance(Base):
     scheduled_arrival = Column(Time, nullable=False)
     fuel_infra_fee = Column(Numeric(10, 2), nullable=False, default=0)
     adjusted_at = Column(DateTime, nullable=True)
+    scheduled_departure_adjusted_at = Column(DateTime, nullable=True)
+    scheduled_arrival_adjusted_at = Column(DateTime, nullable=True)
+    dep_airport_adjusted_at = Column(DateTime, nullable=True)
+    arr_airport_adjusted_at = Column(DateTime, nullable=True)
     economy_left = Column(SMALLINT(unsigned=True), nullable=False)
     first_left = Column(SMALLINT(unsigned=True), nullable=False)
     status = Column(

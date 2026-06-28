@@ -116,6 +116,10 @@ CREATE TABLE flight_instance (
     scheduled_arrival   TIME        NOT NULL,
     fuel_infra_fee      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     adjusted_at   DATETIME          DEFAULT NULL,
+    scheduled_departure_adjusted_at DATETIME DEFAULT NULL,
+    scheduled_arrival_adjusted_at   DATETIME DEFAULT NULL,
+    dep_airport_adjusted_at         DATETIME DEFAULT NULL,
+    arr_airport_adjusted_at         DATETIME DEFAULT NULL,
     economy_left  SMALLINT UNSIGNED NOT NULL,
     first_left    SMALLINT UNSIGNED NOT NULL,
     status        ENUM('计划','可订','已起飞','已到达','已取消')

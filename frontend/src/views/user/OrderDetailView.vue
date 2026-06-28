@@ -101,7 +101,14 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="flight-line">
               <span>{{ row.flight_no }} · {{ row.instance_id }}</span>
-              <el-tag v-if="row.has_adjustment" size="small" type="warning">有调整</el-tag>
+              <el-tag
+                v-for="label in row.adjustment_labels ?? []"
+                :key="label"
+                size="small"
+                type="warning"
+              >
+                {{ label }}
+              </el-tag>
             </div>
             <span class="subtle">{{ row.dep_airport_code }} → {{ row.arr_airport_code }}</span>
           </template>
