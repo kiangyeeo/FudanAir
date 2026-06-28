@@ -105,6 +105,7 @@ class DirectFlightCandidate(BaseModel):
     scheduled_arrival: time
     airline_code: str
     airline_name: str
+    aircraft_model: str
     min_price: float
     min_ticket_price: float
     min_cabin_class: CabinClass
@@ -145,6 +146,7 @@ class NearbyFlightCandidate(BaseModel):
     scheduled_arrival: time
     airline_code: str
     airline_name: str
+    aircraft_model: str
     min_price: float
     min_ticket_price: float
     min_cabin_class: CabinClass

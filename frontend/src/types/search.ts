@@ -33,6 +33,7 @@ export interface DirectFlightCandidate {
   scheduled_arrival: string
   airline_code: string
   airline_name: string
+  aircraft_model: string
   min_price: number
   min_ticket_price: number
   min_cabin_class: CabinClass

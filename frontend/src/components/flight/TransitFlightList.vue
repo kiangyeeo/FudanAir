@@ -60,7 +60,10 @@ function transitLabel(item: TransitCandidate) {
             <AirlineLogo :code="item.leg1.airline_code" :name="item.leg1.airline_name" :size="28" />
             <AirlineLogo :code="item.leg2.airline_code" :name="item.leg2.airline_name" :size="28" />
           </div>
-          <span class="flight-nos mono-num">{{ item.leg1.flight_no }} / {{ item.leg2.flight_no }}</span>
+          <div class="flight-lines">
+            <span class="flight-nos mono-num">{{ item.leg1.flight_no }} / {{ item.leg2.flight_no }}</span>
+            <span class="aircraft-model mono-num">{{ item.leg1.aircraft_model }} / {{ item.leg2.aircraft_model }}</span>
+          </div>
         </div>
 
         <div class="time-block">
@@ -173,8 +176,20 @@ function transitLabel(item: TransitCandidate) {
   gap: 6px;
 }
 
+.flight-lines {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
 .flight-nos {
   color: var(--fa-text-tertiary);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.aircraft-model {
+  color: var(--fa-text-secondary);
   font-size: 12px;
   overflow-wrap: anywhere;
 }

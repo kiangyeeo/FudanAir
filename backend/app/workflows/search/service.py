@@ -50,6 +50,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.aircraft_model,
                 MIN(cp.price) AS min_ticket_price,
                 SUBSTRING_INDEX(
                     GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
@@ -103,6 +104,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.aircraft_model,
                 v.fuel_infra_fee,
                 v.economy_left,
                 v.first_left,
@@ -127,6 +129,7 @@ class SearchService:
                     v.scheduled_arrival,
                     v.airline_code,
                     v.airline_name,
+                    v.aircraft_model,
                     MIN(cp.price) AS min_ticket_price,
                     SUBSTRING_INDEX(
                         GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
@@ -173,6 +176,7 @@ class SearchService:
                     v.scheduled_arrival,
                     v.airline_code,
                     v.airline_name,
+                    v.aircraft_model,
                     v.fuel_infra_fee,
                     v.economy_left,
                     v.first_left
@@ -186,6 +190,7 @@ class SearchService:
                 leg1.scheduled_arrival AS leg1_scheduled_arrival,
                 leg1.airline_code AS leg1_airline_code,
                 leg1.airline_name AS leg1_airline_name,
+                leg1.aircraft_model AS leg1_aircraft_model,
                 leg1.min_ticket_price AS leg1_min_ticket_price,
                 leg1.min_cabin_class AS leg1_min_cabin_class,
                 leg1.min_fare_type AS leg1_min_fare_type,
@@ -201,6 +206,7 @@ class SearchService:
                 leg2.scheduled_arrival AS leg2_scheduled_arrival,
                 leg2.airline_code AS leg2_airline_code,
                 leg2.airline_name AS leg2_airline_name,
+                leg2.aircraft_model AS leg2_aircraft_model,
                 leg2.min_ticket_price AS leg2_min_ticket_price,
                 leg2.min_cabin_class AS leg2_min_cabin_class,
                 leg2.min_fare_type AS leg2_min_fare_type,
@@ -272,6 +278,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.aircraft_model,
                 v.fuel_infra_fee,
                 v.economy_left,
                 v.first_left,
@@ -290,6 +297,7 @@ class SearchService:
                 v.scheduled_arrival,
                 v.airline_code,
                 v.airline_name,
+                v.aircraft_model,
                 MIN(cp.price) AS min_ticket_price,
                 SUBSTRING_INDEX(
                     GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
@@ -329,6 +337,7 @@ class SearchService:
                     v.arr_city,
                     v.airline_code,
                     v.airline_name,
+                    v.aircraft_model,
                     v.economy_left,
                     v.first_left
                 FROM v_flight_search v
@@ -362,6 +371,7 @@ class SearchService:
                     v.arr_city,
                     v.airline_code,
                     v.airline_name,
+                    v.aircraft_model,
                     v.economy_left,
                     v.first_left
                 FROM v_flight_search v
@@ -459,6 +469,7 @@ def _direct_candidate(row: Any, prefix: str = "") -> dict[str, Any]:
         "scheduled_arrival": _normalize_time(data[f"{prefix}scheduled_arrival"]),
         "airline_code": data[f"{prefix}airline_code"],
         "airline_name": data[f"{prefix}airline_name"],
+        "aircraft_model": data[f"{prefix}aircraft_model"],
         "min_price": _number(data[f"{prefix}min_price"]),
         "min_ticket_price": _number(data[f"{prefix}min_ticket_price"]),
         "min_cabin_class": data[f"{prefix}min_cabin_class"],

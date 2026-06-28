@@ -48,7 +48,10 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
       <AirlineLogo :code="candidate.airline_code" :name="candidate.airline_name" :size="40" />
       <div class="airline-meta">
         <strong>{{ candidate.airline_name }}</strong>
-        <span class="mono-num">{{ candidate.flight_no }}</span>
+        <div class="flight-code">
+          <span class="mono-num">{{ candidate.flight_no }}</span>
+          <span class="aircraft-model mono-num">{{ candidate.aircraft_model }}</span>
+        </div>
       </div>
     </div>
 
@@ -152,9 +155,17 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
   text-overflow: ellipsis;
 }
 
-.airline-meta span {
+.flight-code {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
   color: var(--fa-text-tertiary);
   font-size: 12px;
+}
+
+.aircraft-model {
+  color: var(--fa-text-secondary);
+  white-space: nowrap;
 }
 
 .time-block {

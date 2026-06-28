@@ -52,7 +52,10 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
                     "scheduled_arrival": time(10, 20),
                     "airline_code": "MU",
                     "airline_name": "中国东方航空",
+                    "aircraft_model": "A320",
                     "min_ticket_price": Decimal("800.00"),
+                    "min_cabin_class": "经济舱",
+                    "min_fare_type": "标准",
                     "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("850.00"),
                     "economy_left": 12,
@@ -98,6 +101,7 @@ def test_direct_search_uses_zero_distance_airports_and_min_price_with_fee() -> N
     assert params["now"] is not None
     assert rows[0]["type"] == "direct"
     assert rows[0]["min_price"] == 850.0
+    assert rows[0]["aircraft_model"] == "A320"
 
 
 def test_transit_search_binds_transit_window_and_builds_response_shape() -> None:
@@ -113,7 +117,10 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
                     "leg1_scheduled_arrival": time(10, 0),
                     "leg1_airline_code": "CA",
                     "leg1_airline_name": "中国国际航空",
+                    "leg1_aircraft_model": "B738",
                     "leg1_min_ticket_price": Decimal("450.00"),
+                    "leg1_min_cabin_class": "经济舱",
+                    "leg1_min_fare_type": "标准",
                     "leg1_fuel_infra_fee": Decimal("50.00"),
                     "leg1_min_price": Decimal("500.00"),
                     "leg1_economy_left": 10,
@@ -126,7 +133,10 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
                     "leg2_scheduled_arrival": time(15, 0),
                     "leg2_airline_code": "MU",
                     "leg2_airline_name": "中国东方航空",
+                    "leg2_aircraft_model": "A320",
                     "leg2_min_ticket_price": Decimal("640.00"),
+                    "leg2_min_cabin_class": "经济舱",
+                    "leg2_min_fare_type": "标准",
                     "leg2_fuel_infra_fee": Decimal("60.00"),
                     "leg2_min_price": Decimal("700.00"),
                     "leg2_economy_left": 9,
@@ -168,6 +178,8 @@ def test_transit_search_binds_transit_window_and_builds_response_shape() -> None
     assert rows[0]["leg1"]["airline_code"] == "CA"
     assert rows[0]["leg2"]["airline_code"] == "MU"
     assert rows[0]["leg2"]["dep_airport_code"] == "XIY"
+    assert rows[0]["leg1"]["aircraft_model"] == "B738"
+    assert rows[0]["leg2"]["aircraft_model"] == "A320"
     assert rows[0]["transit_minutes"] == 180
     assert rows[0]["total_min_price"] == 1200.0
     assert rows[0]["total_ticket_price"] == 1090.0
@@ -217,7 +229,10 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
                     "scheduled_arrival": time(11, 10),
                     "airline_code": "HO",
                     "airline_name": "吉祥航空",
+                    "aircraft_model": "A320",
                     "min_ticket_price": Decimal("730.00"),
+                    "min_cabin_class": "经济舱",
+                    "min_fare_type": "标准",
                     "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("780.00"),
                     "economy_left": 8,
@@ -259,7 +274,10 @@ def test_search_flights_endpoint_returns_frontend_contract_shape() -> None:
                     "scheduled_arrival": time(10, 20),
                     "airline_code": "MU",
                     "airline_name": "中国东方航空",
+                    "aircraft_model": "A320",
                     "min_ticket_price": Decimal("800.00"),
+                    "min_cabin_class": "经济舱",
+                    "min_fare_type": "标准",
                     "fuel_infra_fee": Decimal("50.00"),
                     "min_price": Decimal("850.00"),
                     "economy_left": 12,
@@ -293,5 +311,6 @@ def test_search_flights_endpoint_returns_frontend_contract_shape() -> None:
     assert set(data.keys()) == {"direct", "transit", "nearby"}
     assert data["direct"][0]["type"] == "direct"
     assert data["direct"][0]["scheduled_departure"] == "08:00:00"
+    assert data["direct"][0]["aircraft_model"] == "A320"
     assert data["transit"] == []
     assert data["nearby"] == []
