@@ -18,6 +18,7 @@ from app.domains.flight.schemas import (
     FlightInstanceListResponse,
     FlightInstancePageResponse,
     FlightInstanceStatusUpdate,
+    FlightInstanceUpdate,
     FlightPageResponse,
     FlightUpdate,
 )
@@ -146,6 +147,20 @@ def batch_generate_instances(
 def get_instance(instance_id: str, db: Session = Depends(get_db)) -> dict[str, object]:
     return FlightService(db).get_instance_detail(instance_id)
 
+
+@flight_instance_router.patch(
+    "/{instance_id}",
+    response_model=FlightInstanceDetailResponse,
+    dependencies=[Depends(get_current_admin)],
+)
+def update_instance(
+    instance_id: str,
+    payload: FlightInstanceUpdate,
+    db: Session = Depends(get_db),
+) -> dict[str, object]:
+    service = FlightService(db)
+    instance = service.update_instance(instance_id, payload)
+    return service.get_instance_detail(instance.instance_id)
 
 @flight_instance_router.patch(
     "/{instance_id}/status",

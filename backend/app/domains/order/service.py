@@ -123,9 +123,17 @@ def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
         "ticket_price": ticket_price,
         "fuel_infra_fee": fuel_fee,
         "actual_price": actual_price,
+        "has_adjustment": _has_adjustment(row),
         "status": row["ticket_status"],
     }
 
+
+def _has_adjustment(row: dict[str, Any]) -> bool:
+    adjusted_at = row.get("adjusted_at")
+    created_at = row.get("created_at")
+    if adjusted_at is None or created_at is None:
+        return False
+    return created_at < adjusted_at
 
 def _order_status(value: str) -> str:
     normalized = value.strip()

@@ -261,9 +261,9 @@ def _insert_inventory_rows(
         text(
             """
             INSERT INTO flight_instance
-                (instance_id, flight_no, flight_date, economy_left, first_left, status)
+                (instance_id, flight_no, flight_date, scheduled_departure, scheduled_arrival, fuel_infra_fee, economy_left, first_left, status)
             VALUES
-                (:instance_id, :flight_no, :flight_date, :stock, 0, '可订')
+                (:instance_id, :flight_no, :flight_date, '08:00:00', '10:00:00', 50.00, :stock, 0, '可订')
             """
         ),
         {

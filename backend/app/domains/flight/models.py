@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Column, Date, Enum, ForeignKey, Numeric, String, Time
+from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Numeric, String, Time
 from sqlalchemy.dialects.mysql import SMALLINT, TINYINT
 
 from app.core.database import Base
@@ -74,6 +74,10 @@ class FlightInstance(Base):
         nullable=False,
     )
     flight_date = Column(Date, nullable=False)
+    scheduled_departure = Column(Time, nullable=False)
+    scheduled_arrival = Column(Time, nullable=False)
+    fuel_infra_fee = Column(Numeric(10, 2), nullable=False, default=0)
+    adjusted_at = Column(DateTime, nullable=True)
     economy_left = Column(SMALLINT(unsigned=True), nullable=False)
     first_left = Column(SMALLINT(unsigned=True), nullable=False)
     status = Column(

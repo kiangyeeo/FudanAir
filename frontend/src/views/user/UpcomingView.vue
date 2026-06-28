@@ -24,6 +24,7 @@ interface Trip {
   cabin_class: string
   fare_type: string
   departAt: Date
+  has_adjustment: boolean
 }
 
 const ISSUED_STATUS = ['已支付', '已完成', '部分退款']
@@ -94,6 +95,7 @@ async function load() {
           cabin_class: ticket.cabin_class,
           fare_type: ticket.fare_type,
           departAt,
+          has_adjustment: Boolean(ticket.has_adjustment),
         })
       }
     }
@@ -156,6 +158,7 @@ onBeforeUnmount(() => {
               <div class="airline-meta">
                 <strong>{{ flightMeta.airlineName(trip.flight_no) || trip.airline_code }}</strong>
                 <span class="mono-num">{{ trip.flight_no }} · {{ trip.cabin_class }}</span>
+                <el-tag v-if="trip.has_adjustment" size="small" type="warning" class="adjust-tag">有调整</el-tag>
               </div>
             </div>
             <span class="countdown" :class="{ imminent: imminent(trip) }">距出发 {{ countdown(trip) }}</span>
@@ -289,6 +292,9 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.adjust-tag {
+  justify-self: start;
+}
 .airline-meta span {
   color: var(--fa-text-tertiary);
   font-size: 12px;

@@ -6,7 +6,7 @@ import { useRouter } from 'vue-router'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
-import { formatDate } from '@/utils/format'
+import { formatCurrency, formatDate, formatTime } from '@/utils/format'
 import type {
   FlightInstance,
   FlightInstanceBatchPayload,
@@ -25,6 +25,13 @@ interface BatchForm {
   end_date: string
 }
 
+interface UpdateForm {
+  instance_id: string
+  flight_no: string
+  scheduled_departure: string
+  scheduled_arrival: string
+  fuel_infra_fee: number
+}
 interface StatusForm {
   instance_id: string
   status: InstanceStatus
@@ -61,6 +68,15 @@ const batchForm = reactive<BatchForm>({
   end_date: '',
 })
 
+const updateDialogVisible = ref(false)
+const updateFormRef = ref<FormInstance>()
+const updateForm = reactive<UpdateForm>({
+  instance_id: '',
+  flight_no: '',
+  scheduled_departure: '',
+  scheduled_arrival: '',
+  fuel_infra_fee: 0,
+})
 const statusDialogVisible = ref(false)
 const statusFormRef = ref<FormInstance>()
 const statusForm = reactive<StatusForm>({
@@ -79,6 +95,12 @@ const batchRules: FormRules<BatchForm> = {
   end_date: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
 }
 
+const updateRules: FormRules<UpdateForm> = {
+  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
+  scheduled_departure: [{ required: true, message: '请选择起飞时间', trigger: 'change' }],
+  scheduled_arrival: [{ required: true, message: '请选择到达时间', trigger: 'change' }],
+  fuel_infra_fee: [{ required: true, message: '请输入燃油基建费', trigger: 'change' }],
+}
 const statusRules: FormRules<StatusForm> = {
   status: [{ required: true, message: '请选择状态', trigger: 'change' }],
 }
@@ -154,6 +176,25 @@ function openBatchGenerate() {
   batchFormRef.value?.clearValidate()
 }
 
+function openUpdate(row: FlightInstance) {
+  Object.assign(updateForm, {
+    instance_id: row.instance_id,
+    flight_no: normalizeFlightNo(row.flight_no),
+    scheduled_departure: row.scheduled_departure || '',
+    scheduled_arrival: row.scheduled_arrival || '',
+    fuel_infra_fee: Number(row.fuel_infra_fee ?? 0),
+  })
+  updateDialogVisible.value = true
+  updateFormRef.value?.clearValidate()
+}
+
+function validateUpdateTimes() {
+  if (updateForm.scheduled_departure && updateForm.scheduled_arrival && updateForm.scheduled_departure > updateForm.scheduled_arrival) {
+    ElMessage.error('起飞时间不得晚于到达时间')
+    return false
+  }
+  return true
+}
 function openStatus(row: FlightInstance) {
   Object.assign(statusForm, {
     instance_id: row.instance_id,
@@ -199,6 +240,21 @@ async function submitBatch() {
   await loadInstances()
 }
 
+async function submitUpdate() {
+  await updateFormRef.value?.validate()
+  if (!validateUpdateTimes()) {
+    return
+  }
+  await adminApi.updateInstance(updateForm.instance_id, {
+    flight_no: normalizeFlightNo(updateForm.flight_no),
+    scheduled_departure: updateForm.scheduled_departure,
+    scheduled_arrival: updateForm.scheduled_arrival,
+    fuel_infra_fee: updateForm.fuel_infra_fee,
+  })
+  updateDialogVisible.value = false
+  ElMessage.success('实例信息已更新')
+  await loadInstances()
+}
 async function submitStatus() {
   await statusFormRef.value?.validate()
   await adminApi.updateInstanceStatus(statusForm.instance_id, { status: statusForm.status })
@@ -262,11 +318,21 @@ function openPrices(row: FlightInstance) {
         <template #default="{ row }">{{ formatDate(row.flight_date) }}</template>
       </el-table-column>
       <el-table-column prop="status" label="状态" width="100" />
+      <el-table-column label="起飞" width="100">
+        <template #default="{ row }">{{ formatTime(row.scheduled_departure) }}</template>
+      </el-table-column>
+      <el-table-column label="到达" width="100">
+        <template #default="{ row }">{{ formatTime(row.scheduled_arrival) }}</template>
+      </el-table-column>
+      <el-table-column label="燃油基建" width="120">
+        <template #default="{ row }">{{ formatCurrency(row.fuel_infra_fee ?? 0) }}</template>
+      </el-table-column>
       <el-table-column prop="economy_left" label="经济舱余票" width="120" />
       <el-table-column prop="first_left" label="头等舱余票" width="120" />
-      <el-table-column label="操作" width="230" fixed="right">
+      <el-table-column label="操作" width="300" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openStatus(row)">状态</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openUpdate(row)">编辑</el-button>
+          <el-button link type="primary" @click="openStatus(row)">状态</el-button>
           <el-button link type="primary" @click="openPrices(row)">票价</el-button>
           <el-button link type="danger" :icon="Delete" @click="deleteInstance(row)">删除</el-button>
         </template>
@@ -339,6 +405,31 @@ function openPrices(row: FlightInstance) {
       </template>
     </el-dialog>
 
+    <el-dialog v-model="updateDialogVisible" title="编辑航班实例" width="520px" :close-on-click-modal="false">
+      <el-form ref="updateFormRef" :model="updateForm" :rules="updateRules" label-position="top">
+        <el-form-item label="实例 ID">
+          <el-input v-model="updateForm.instance_id" disabled />
+        </el-form-item>
+        <el-form-item label="航班号" prop="flight_no">
+          <el-input v-model="updateForm.flight_no" maxlength="8" class="full-width" />
+        </el-form-item>
+        <div class="form-grid">
+          <el-form-item label="起飞时间" prop="scheduled_departure">
+            <el-time-picker v-model="updateForm.scheduled_departure" value-format="HH:mm:ss" format="HH:mm" class="full-width" />
+          </el-form-item>
+          <el-form-item label="到达时间" prop="scheduled_arrival">
+            <el-time-picker v-model="updateForm.scheduled_arrival" value-format="HH:mm:ss" format="HH:mm" class="full-width" />
+          </el-form-item>
+        </div>
+        <el-form-item label="燃油基建费" prop="fuel_infra_fee">
+          <el-input-number v-model="updateForm.fuel_infra_fee" :min="0" :precision="2" :step="10" class="full-width" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="updateDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitUpdate">保存</el-button>
+      </template>
+    </el-dialog>
     <el-dialog v-model="statusDialogVisible" title="修改实例状态" width="420px" :close-on-click-modal="false">
       <el-form ref="statusFormRef" :model="statusForm" :rules="statusRules" label-position="top">
         <el-form-item label="实例 ID">

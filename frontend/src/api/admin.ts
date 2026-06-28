@@ -13,6 +13,7 @@ import type {
   FlightInstanceBatchPayload,
   FlightInstanceCreatePayload,
   FlightInstanceStatusPayload,
+  FlightInstanceUpdatePayload,
   FlightPayload,
   NearAirport,
 } from '@/types/flight'
@@ -43,6 +44,8 @@ export const adminApi = {
   createInstance: (payload: FlightInstanceCreatePayload) => http.post<FlightInstance>('/flight-instances', payload),
   batchGenerateInstances: (payload: FlightInstanceBatchPayload) =>
     http.post<FlightInstance[]>('/flight-instances/batch-generate', payload),
+  updateInstance: (instanceId: string, payload: FlightInstanceUpdatePayload) =>
+    http.patch<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}`, payload),
   updateInstanceStatus: (instanceId: string, payload: FlightInstanceStatusPayload) =>
     http.patch<FlightInstance>(`/flight-instances/${encodeURIComponent(instanceId)}/status`, payload),
   deleteInstance: (instanceId: string) => http.delete<void>(`/flight-instances/${encodeURIComponent(instanceId)}`),

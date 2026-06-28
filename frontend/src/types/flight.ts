@@ -73,6 +73,7 @@ export interface FlightInstance {
   scheduled_departure?: string
   scheduled_arrival?: string
   fuel_infra_fee?: number
+  adjusted_at?: string | null
   dep_airport_code?: string
   arr_airport_code?: string
   airline_code?: string
@@ -85,6 +86,12 @@ export interface FlightInstanceCreatePayload {
   flight_date: string
 }
 
+export interface FlightInstanceUpdatePayload {
+  flight_no?: string
+  scheduled_departure?: string
+  scheduled_arrival?: string
+  fuel_infra_fee?: number
+}
 export interface FlightInstanceBatchPayload {
   flight_no: string
   start_date: string

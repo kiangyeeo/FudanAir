@@ -99,7 +99,10 @@ onMounted(() => {
         </el-table-column>
         <el-table-column label="航班" min-width="180">
           <template #default="{ row }">
-            <div>{{ row.flight_no }} · {{ row.instance_id }}</div>
+            <div class="flight-line">
+              <span>{{ row.flight_no }} · {{ row.instance_id }}</span>
+              <el-tag v-if="row.has_adjustment" size="small" type="warning">有调整</el-tag>
+            </div>
             <span class="subtle">{{ row.dep_airport_code }} → {{ row.arr_airport_code }}</span>
           </template>
         </el-table-column>
@@ -156,6 +159,12 @@ h2 {
   font-size: 12px;
 }
 
+.flight-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
 .price {
   color: var(--fa-danger);
   font-weight: 600;

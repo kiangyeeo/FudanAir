@@ -30,7 +30,7 @@ def generate_flight_instances(cur: Any) -> int:
     params: list[tuple[Any, ...]] = []
 
     with tqdm(total=total, desc="生成航班实例", unit="row") as progress:
-        for flight_no, weekday, economy_seats, first_seats, _, _ in seed_rows:
+        for flight_no, weekday, economy_seats, first_seats, departure, arrival, fuel_fee in seed_rows:
             flight_dates = dates_by_weekday[int(weekday)]
             for flight_date in flight_dates:
                 params.append(
@@ -38,6 +38,9 @@ def generate_flight_instances(cur: Any) -> int:
                         gen_instance_id(str(flight_no), flight_date),
                         flight_no,
                         flight_date,
+                        departure,
+                        arrival,
+                        fuel_fee,
                         int(economy_seats),
                         int(first_seats),
                         INITIAL_INSTANCE_STATUS,
@@ -66,6 +69,7 @@ def generate_cabin_prices(cur: Any) -> int:
             first_seats,
             departure,
             arrival,
+            _fuel_fee,
         ) in seed_rows:
             specs = default_cabin_price_specs(
                 int(economy_seats),
@@ -117,7 +121,8 @@ def _flight_seed_rows(cur: Any) -> tuple[tuple[Any, ...], ...]:
             at.economy_seats,
             at.first_seats,
             f.scheduled_departure,
-            f.scheduled_arrival
+            f.scheduled_arrival,
+            f.fuel_infra_fee
         FROM flight f
         JOIN flight_weekday fw ON f.flight_no = fw.flight_no
         JOIN aircraft_type at ON f.aircraft_model = at.model
@@ -140,7 +145,7 @@ def _total_cabin_prices(
 ) -> int:
     total = 0
     for row in rows:
-        _, weekday, economy_seats, first_seats, departure, arrival = row
+        _, weekday, economy_seats, first_seats, departure, arrival, fuel_fee = row
         specs = default_cabin_price_specs(
             int(economy_seats),
             int(first_seats),
@@ -171,9 +176,10 @@ def _insert_instance_sql() -> str:
     return """
         INSERT IGNORE INTO flight_instance (
             instance_id, flight_no, flight_date,
+            scheduled_departure, scheduled_arrival, fuel_infra_fee,
             economy_left, first_left, status
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
 

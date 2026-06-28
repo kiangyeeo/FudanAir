@@ -57,6 +57,7 @@ class OrderTicketDetail(BaseModel):
     ticket_price: float | None = None
     fuel_infra_fee: float | None = None
     actual_price: float
+    has_adjustment: bool = False
     status: Literal["有效", "已退", "已改签作废", "已使用"]
 
     @field_validator("scheduled_departure", "scheduled_arrival", mode="before")

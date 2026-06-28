@@ -28,6 +28,7 @@ from app.domains.flight.schemas import (
     FlightInstanceBatchCreate,
     FlightInstanceCreate,
     FlightInstanceStatusUpdate,
+    FlightInstanceUpdate,
     FlightUpdate,
 )
 
@@ -203,6 +204,9 @@ class FlightService:
                     gen_instance_id(number, instance_date),
                     number,
                     instance_date,
+                    flight.scheduled_departure,
+                    flight.scheduled_arrival,
+                    flight.fuel_infra_fee,
                     economy_seats,
                     first_seats,
                     INSTANCE_STATUS_PLANNED,
@@ -259,6 +263,25 @@ class FlightService:
             current += timedelta(days=1)
         return created_or_existing
 
+    def update_instance(
+        self,
+        instance_id: str,
+        payload: FlightInstanceUpdate,
+    ) -> FlightInstance:
+        try:
+            with transaction(self.db):
+                instance = self.instance_repo.get(instance_id)
+                if not instance:
+                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                data = self._instance_update_data(instance, payload)
+                if not data:
+                    return instance
+                mark_adjusted = any(
+                    key in data for key in ("flight_no", "scheduled_departure", "scheduled_arrival")
+                )
+                return self.instance_repo.update_instance(instance, data, mark_adjusted)
+        except IntegrityError as exc:
+            raise AppException(f"航班实例 {instance_id} 更新失败") from exc
     def update_instance_status(
         self,
         instance_id: str,
@@ -409,6 +432,26 @@ class FlightService:
         context["cabin_prices"] = self.cabin_repo.list_by_instance(instance_id)
         return context
 
+    def _instance_update_data(
+        self,
+        instance: FlightInstance,
+        payload: FlightInstanceUpdate,
+    ) -> dict[str, Any]:
+        raw_data = payload.model_dump(exclude_unset=True)
+        data = {key: value for key, value in raw_data.items() if value is not None}
+        if "flight_no" in data:
+            data["flight_no"] = _flight_no(data["flight_no"])
+            if not self.flight_repo.get(data["flight_no"]):
+                raise ResourceNotFoundError(f"航班 {data['flight_no']} 不存在")
+            self._ensure_date_in_weekday(data["flight_no"], instance.flight_date)
+        departure = data.get("scheduled_departure", instance.scheduled_departure)
+        arrival = data.get("scheduled_arrival", instance.scheduled_arrival)
+        self._validate_time_order(departure, arrival)
+        return {
+            key: value
+            for key, value in data.items()
+            if not self._instance_value_equal(getattr(instance, key), value)
+        }
     def _flight_data(
         self,
         payload: FlightCreate | FlightUpdate,
@@ -458,6 +501,16 @@ class FlightService:
             raise AppException("日期不在飞行日内")
 
     @staticmethod
+    def _validate_time_order(departure: Any, arrival: Any) -> None:
+        if _time_of_day(departure) > _time_of_day(arrival):
+            raise AppException("起飞时间不得晚于到达时间")
+
+    @staticmethod
+    def _instance_value_equal(left: Any, right: Any) -> bool:
+        if isinstance(left, (time, timedelta)) or isinstance(right, (time, timedelta)):
+            return _time_of_day(left) == _time_of_day(right)
+        return left == right
+    @staticmethod
     def _validate_route(dep_airport_code: str, arr_airport_code: str) -> None:
         if dep_airport_code == arr_airport_code:
             raise AppException("起降不能同机场")
@@ -484,7 +537,7 @@ class FlightService:
         flight = self.flight_repo.get(instance.flight_no)
         if not flight:
             raise ResourceNotFoundError(f"航班 {instance.flight_no} 不存在")
-        if _departure_at(instance.flight_date, flight.scheduled_departure) <= datetime.now():
+        if _departure_at(instance.flight_date, instance.scheduled_departure) <= datetime.now():
             raise InstanceNotBookableError(f"航班实例 {instance.instance_id} 已起飞,不可订")
 
     @staticmethod
@@ -551,6 +604,16 @@ def _status(value: str) -> str:
 def _optional_status(value: str | None) -> str | None:
     return _status(value) if value else None
 
+
+def _time_of_day(value: Any) -> time:
+    if isinstance(value, timedelta):
+        total_seconds = int(value.total_seconds()) % (24 * 60 * 60)
+        hour, remainder = divmod(total_seconds, 60 * 60)
+        minute, second = divmod(remainder, 60)
+        return time(hour=hour, minute=minute, second=second, microsecond=value.microseconds)
+    if isinstance(value, str):
+        return time.fromisoformat(value)
+    return value
 
 def _departure_at(flight_date: date, scheduled_departure: Any) -> datetime:
     if isinstance(scheduled_departure, timedelta):

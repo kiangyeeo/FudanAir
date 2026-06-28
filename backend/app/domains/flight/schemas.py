@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, time, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -107,6 +107,24 @@ class FlightInstanceBatchCreate(BaseModel):
         return self
 
 
+class FlightInstanceUpdate(BaseModel):
+    flight_no: str | None = Field(default=None, min_length=1, max_length=8)
+    scheduled_departure: time | None = None
+    scheduled_arrival: time | None = None
+    fuel_infra_fee: Decimal | None = Field(default=None, ge=Decimal("0"))
+
+    model_config = {"str_strip_whitespace": True}
+
+    @model_validator(mode="after")
+    def validate_time_order(self) -> FlightInstanceUpdate:
+        if (
+            self.scheduled_departure is not None
+            and self.scheduled_arrival is not None
+            and self.scheduled_departure > self.scheduled_arrival
+        ):
+            raise ValueError("起飞时间不得晚于到达时间")
+        return self
+
 class FlightInstanceStatusUpdate(BaseModel):
     status: str = Field(..., min_length=1, max_length=8)
 
@@ -117,12 +135,15 @@ class FlightInstanceListResponse(BaseModel):
     instance_id: str
     flight_no: str
     flight_date: date
+    scheduled_departure: time
+    scheduled_arrival: time
+    fuel_infra_fee: float
+    adjusted_at: datetime | None = None
     economy_left: int
     first_left: int
     status: str
 
     model_config = {"from_attributes": True}
-
 
 class CabinPriceResponse(BaseModel):
     instance_id: str
@@ -135,9 +156,6 @@ class CabinPriceResponse(BaseModel):
 
 
 class FlightInstanceDetailResponse(FlightInstanceListResponse):
-    scheduled_departure: time
-    scheduled_arrival: time
-    fuel_infra_fee: float
     dep_airport_code: str
     arr_airport_code: str
     airline_code: str
@@ -148,7 +166,6 @@ class FlightInstanceDetailResponse(FlightInstanceListResponse):
     @classmethod
     def normalize_time_fields(cls, value: Any) -> Any:
         return normalize_db_time(value)
-
 
 class FlightInstancePageResponse(BaseModel):
     items: list[FlightInstanceListResponse]

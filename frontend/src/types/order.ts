@@ -31,6 +31,7 @@ export interface OrderTicket {
   ticket_price?: number | null
   fuel_infra_fee?: number | null
   actual_price: number
+  has_adjustment?: boolean
   status: TicketStatus
 }
 

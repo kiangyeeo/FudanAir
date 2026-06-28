@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -209,6 +209,9 @@ class FlightInstanceRepository:
         instance_id: str,
         flight_no: str,
         flight_date: date,
+        scheduled_departure: Any,
+        scheduled_arrival: Any,
+        fuel_infra_fee: Decimal,
         economy_left: int,
         first_left: int,
         status: str,
@@ -217,6 +220,9 @@ class FlightInstanceRepository:
             instance_id=instance_id,
             flight_no=flight_no,
             flight_date=flight_date,
+            scheduled_departure=scheduled_departure,
+            scheduled_arrival=scheduled_arrival,
+            fuel_infra_fee=fuel_infra_fee,
             economy_left=economy_left,
             first_left=first_left,
             status=status,
@@ -224,7 +230,18 @@ class FlightInstanceRepository:
         self.db.add(instance)
         self.db.flush()
         return instance
-
+    def update_instance(
+        self,
+        instance: FlightInstance,
+        data: dict[str, Any],
+        mark_adjusted: bool,
+    ) -> FlightInstance:
+        for key, value in data.items():
+            setattr(instance, key, value)
+        if mark_adjusted:
+            instance.adjusted_at = datetime.now()
+        self.db.flush()
+        return instance
     def update_status(self, instance: FlightInstance, status: str) -> FlightInstance:
         instance.status = status
         self.db.flush()
@@ -308,9 +325,10 @@ class FlightInstanceRepository:
                     fi.economy_left,
                     fi.first_left,
                     fi.status,
-                    f.scheduled_departure,
-                    f.scheduled_arrival,
-                    f.fuel_infra_fee,
+                    fi.scheduled_departure,
+                    fi.scheduled_arrival,
+                    fi.fuel_infra_fee,
+                    fi.adjusted_at,
                     f.dep_airport_code,
                     f.arr_airport_code,
                     f.airline_code,

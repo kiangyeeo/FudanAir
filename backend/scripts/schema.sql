@@ -112,6 +112,10 @@ CREATE TABLE flight_instance (
     instance_id   VARCHAR(32)       NOT NULL,
     flight_no     VARCHAR(8)        NOT NULL,
     flight_date   DATE              NOT NULL,
+    scheduled_departure TIME        NOT NULL,
+    scheduled_arrival   TIME        NOT NULL,
+    fuel_infra_fee      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    adjusted_at   DATETIME          DEFAULT NULL,
     economy_left  SMALLINT UNSIGNED NOT NULL,
     first_left    SMALLINT UNSIGNED NOT NULL,
     status        ENUM('计划','可订','已起飞','已到达','已取消')
@@ -122,7 +126,8 @@ CREATE TABLE flight_instance (
     CONSTRAINT fk_fi_flight FOREIGN KEY (flight_no)
         REFERENCES flight(flight_no),
     CONSTRAINT chk_instance_economy_left CHECK (economy_left >= 0),
-    CONSTRAINT chk_instance_first_left CHECK (first_left >= 0)
+    CONSTRAINT chk_instance_first_left CHECK (first_left >= 0),
+    CONSTRAINT chk_instance_fuel_fee CHECK (fuel_infra_fee >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE cabin_price (
@@ -248,9 +253,9 @@ SELECT
     fi.flight_no,
     fi.flight_date,
     fi.status AS instance_status,
-    f.scheduled_departure,
-    f.scheduled_arrival,
-    f.fuel_infra_fee,
+    fi.scheduled_departure,
+    fi.scheduled_arrival,
+    fi.fuel_infra_fee,
     f.dep_airport_code,
     dep_apt.city_name AS dep_city,
     f.arr_airport_code,
