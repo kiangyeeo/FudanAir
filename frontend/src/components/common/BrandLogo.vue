@@ -53,7 +53,7 @@ withDefaults(
 .text {
   font-family: var(--fa-font-serif);
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 900;
   letter-spacing: 0;
   color: var(--fa-text);
 }

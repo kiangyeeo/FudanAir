@@ -61,6 +61,8 @@ export interface NearbyFlightCandidate extends Omit<DirectFlightCandidate, 'type
   replaced_airport: string
   actual_dep_city?: string
   actual_arr_city?: string
+  /** 该临近机场到所搜索城市的距离（公里） */
+  nearby_distance: number
 }
 
 export interface FlightSearchResponse {

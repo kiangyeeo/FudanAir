@@ -6,8 +6,12 @@ import type { NearbyFlightCandidate } from '@/types/search'
 
 const airportStore = useAirportStore()
 
-defineProps<{
+const props = defineProps<{
   items: NearbyFlightCandidate[]
+  /** 搜索的出发城市，用于提示替换出发机场的距离 */
+  depCity?: string
+  /** 搜索的到达城市，用于提示替换到达机场的距离 */
+  arrCity?: string
 }>()
 
 const emit = defineEmits<{
@@ -16,7 +20,10 @@ const emit = defineEmits<{
 
 function nearbyTag(item: NearbyFlightCandidate) {
   const side = item.replacement === 'departure' ? '替换出发' : '替换到达'
-  return `临近 · ${side} ${airportStore.display(item.replaced_airport)}`
+  const city = item.replacement === 'departure' ? props.depCity : props.arrCity
+  const fromCity = city ? `距${city}` : '距搜索城市'
+  const km = Math.round(item.nearby_distance)
+  return `临近 · ${side} ${airportStore.display(item.replaced_airport)} · ${fromCity}约 ${km} km`
 }
 </script>
 

@@ -270,6 +270,7 @@ class SearchService:
                 replaced_airport,
                 actual_dep_city,
                 actual_arr_city,
+                nearby_distance,
                 v.instance_id,
                 v.flight_no,
                 v.dep_airport_code,
@@ -289,6 +290,7 @@ class SearchService:
                 replaced_airport,
                 actual_dep_city,
                 actual_arr_city,
+                nearby_distance,
                 v.instance_id,
                 v.flight_no,
                 v.dep_airport_code,
@@ -324,6 +326,7 @@ class SearchService:
                     v.dep_airport_code AS replaced_airport,
                     v.dep_city AS actual_dep_city,
                     NULL AS actual_arr_city,
+                    dep_near.distance AS nearby_distance,
                     v.instance_id,
                     v.flight_no,
                     v.flight_date,
@@ -358,6 +361,7 @@ class SearchService:
                     v.arr_airport_code AS replaced_airport,
                     NULL AS actual_dep_city,
                     v.arr_city AS actual_arr_city,
+                    arr_near.distance AS nearby_distance,
                     v.instance_id,
                     v.flight_no,
                     v.flight_date,
@@ -488,6 +492,7 @@ def _nearby_candidate(row: Any) -> dict[str, Any]:
     candidate["replaced_airport"] = data["replaced_airport"]
     candidate["actual_dep_city"] = data.get("actual_dep_city")
     candidate["actual_arr_city"] = data.get("actual_arr_city")
+    candidate["nearby_distance"] = _number(data["nearby_distance"])
     return candidate
 
 

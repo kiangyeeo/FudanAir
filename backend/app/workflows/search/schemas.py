@@ -138,6 +138,7 @@ class NearbyFlightCandidate(BaseModel):
     replaced_airport: str
     actual_dep_city: str | None = None
     actual_arr_city: str | None = None
+    nearby_distance: float
     instance_id: str
     flight_no: str
     dep_airport_code: str

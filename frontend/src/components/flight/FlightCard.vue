@@ -124,6 +124,7 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
   font-size: 11px;
   font-weight: 700;
   color: #fff;
+  white-space: nowrap;
 }
 
 .ribbon.lowest {

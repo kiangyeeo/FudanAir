@@ -252,7 +252,7 @@ onMounted(() => {
   margin: 0;
   font-family: var(--fa-font-serif);
   font-size: 42px;
-  font-weight: 700;
+  font-weight: 900;
   letter-spacing: 0.01em;
   color: var(--fa-brand-dark);
 }

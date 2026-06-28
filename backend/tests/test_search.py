@@ -221,6 +221,7 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
                     "replaced_airport": "SHA",
                     "actual_dep_city": "上海",
                     "actual_arr_city": None,
+                    "nearby_distance": Decimal("85.00"),
                     "instance_id": "HO1001_20260510",
                     "flight_no": "HO1001",
                     "dep_airport_code": "SHA",
@@ -252,6 +253,8 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
     sql, _params = db.calls[0]
     assert "dep_near.distance > 0" in sql
     assert "arr_near.distance > 0" in sql
+    assert "dep_near.distance AS nearby_distance" in sql
+    assert "arr_near.distance AS nearby_distance" in sql
     assert "v.instance_status = :bookable_status" in sql
     assert "TIMESTAMP(v.flight_date, v.scheduled_departure) > :now" in sql
     assert "UNION ALL" in sql
@@ -259,6 +262,7 @@ def test_nearby_search_always_uses_positive_distance_replacements() -> None:
     assert rows[0]["replacement"] == "departure"
     assert rows[0]["replaced_airport"] == "SHA"
     assert rows[0]["actual_dep_city"] == "上海"
+    assert rows[0]["nearby_distance"] == 85.0
 
 
 def test_search_flights_endpoint_returns_frontend_contract_shape() -> None:

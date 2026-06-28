@@ -143,6 +143,7 @@ async function deleteAircraftType(row: AircraftType) {
       empty-text="未找到匹配机型"
       border
       row-key="model"
+      class="narrow-table"
     >
       <el-table-column prop="model" label="机型" width="140" />
       <el-table-column prop="economy_seats" label="经济舱座位" width="140" />
@@ -188,6 +189,11 @@ async function deleteAircraftType(row: AircraftType) {
 .admin-crud-page {
   display: grid;
   gap: 12px;
+}
+
+/* 字段较少的表格不铺满整行，避免短内容占据过宽单元格 */
+.narrow-table {
+  max-width: 720px;
 }
 
 .toolbar {

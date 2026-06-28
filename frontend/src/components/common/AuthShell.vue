@@ -1,24 +1,13 @@
 <script setup lang="ts">
-import { Promotion, Search, Tickets } from '@element-plus/icons-vue'
-
 withDefaults(
   defineProps<{
     title: string
     subtitle?: string
-    /** 品牌侧标语 */
-    tagline?: string
   }>(),
   {
     subtitle: '',
-    tagline: '一次搜索，直飞 · 中转 · 临近三种方案尽在眼前',
   },
 )
-
-const features = [
-  { icon: Search, text: '智能比价，快速锁定低价航班' },
-  { icon: Tickets, text: '一站式预订、改签与退票' },
-  { icon: Promotion, text: '中转衔接与临近机场智能推荐' },
-]
 </script>
 
 <template>
@@ -27,13 +16,6 @@ const features = [
       <div class="brand-medallion">
         <img src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
       </div>
-      <p class="tagline">{{ tagline }}</p>
-      <ul class="features">
-        <li v-for="(item, index) in features" :key="index">
-          <el-icon><component :is="item.icon" /></el-icon>
-          <span>{{ item.text }}</span>
-        </li>
-      </ul>
     </aside>
 
     <section class="form-side">
@@ -61,7 +43,8 @@ const features = [
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  align-items: center;
+  justify-content: center;
   padding: 44px 38px;
   color: #fff;
   background: var(--fa-grad-brand-deep);
@@ -71,11 +54,11 @@ const features = [
 .brand-medallion {
   display: grid;
   place-items: center;
-  width: 128px;
-  height: 128px;
+  width: 300px;
+  height: 300px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12), 0 16px 36px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 0 0 8px rgba(255, 255, 255, 0.12), 0 18px 40px rgba(0, 0, 0, 0.3);
   animation: fa-float 6s ease-in-out infinite;
 }
 
@@ -84,40 +67,6 @@ const features = [
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-}
-
-.tagline {
-  margin: 6px 0 0;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.6;
-  opacity: 0.95;
-}
-
-.features {
-  display: grid;
-  gap: 14px;
-  margin: auto 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.features li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  opacity: 0.92;
-}
-
-.features .el-icon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
-  font-size: 15px;
 }
 
 .form-side {

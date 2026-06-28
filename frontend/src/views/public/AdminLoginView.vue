@@ -20,7 +20,7 @@ async function submit() {
 </script>
 
 <template>
-  <AuthShell title="管理员登录" subtitle="进入 FudanAir 运营管理后台" tagline="航班、票价、订单，一站式后台管理">
+  <AuthShell title="管理员登录" subtitle="进入 FudanAir 运营管理后台">
     <el-form :model="form" label-position="top" class="auth-form" @submit.prevent>
       <el-form-item label="管理员编号">
         <el-input v-model="form.admin_id" size="large" :prefix-icon="UserFilled" autocomplete="username" placeholder="请输入管理员编号" />

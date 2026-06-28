@@ -287,7 +287,12 @@ onMounted(() => {
           <template v-else>
             <DirectFlightList :items="result?.direct ?? []" @select="selectFlight" />
             <TransitFlightList :items="result?.transit ?? []" @select="selectTransit" />
-            <NearbyFlightList :items="result?.nearby ?? []" @select="selectFlight" />
+            <NearbyFlightList
+              :items="result?.nearby ?? []"
+              :dep-city="searchStore.criteria?.dep_city"
+              :arr-city="searchStore.criteria?.arr_city"
+              @select="selectFlight"
+            />
           </template>
         </template>
       </div>
