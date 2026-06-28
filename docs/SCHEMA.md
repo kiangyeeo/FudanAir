@@ -261,6 +261,10 @@
 | instance_id  | VARCHAR(32)                                           | PK                                  | 否   | —      | 实例 ID（建议格式：`{flight_no}_{yyyymmdd}`，如 `CA1234_20260510`） |
 | flight_no    | VARCHAR(8)                                            | FK → flight(flight_no), NOT NULL    | 否   | —      | 航班号                                                       |
 | flight_date  | DATE                                                  | NOT NULL                            | 否   | —      | 执行日期                                                     |
+| scheduled_departure | TIME                                           | NOT NULL                            | 否   | —      | 该航班实例当天实际起飞时间                                   |
+| scheduled_arrival   | TIME                                           | NOT NULL                            | 否   | —      | 该航班实例当天实际到达时间                                   |
+| fuel_infra_fee      | DECIMAL(10,2)                                  | NOT NULL, CHECK (fuel_infra_fee >= 0) | 否 | 0.00   | 该航班实例当天实际燃油基建费                                 |
+| adjusted_at         | DATETIME                                       | —                                   | 是   | NULL   | 管理员修改实例航班号或起降时间时记录，用于用户端提示“有调整” |
 | economy_left | SMALLINT UNSIGNED                                     | NOT NULL, CHECK (economy_left >= 0) | 否   | —      | 经济舱剩余座位（汇总值，= 该实例下经济舱所有 fare_type 的 available_seats 之和） |
 | first_left   | SMALLINT UNSIGNED                                     | NOT NULL, CHECK (first_left >= 0)   | 否   | —      | 头等舱剩余座位（汇总值）                                     |
 | status       | ENUM('计划','可订','已起飞','已到达','已取消','延误') | NOT NULL                            | 否   | '计划' | 航班实例状态                                                 |
