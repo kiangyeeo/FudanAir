@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
 <template>
   <header class="app-header" :class="{ scrolled }">
     <RouterLink class="brand" to="/">
-      <BrandLogo :size="34" />
+      <BrandLogo :size="48" />
     </RouterLink>
 
     <el-menu :default-active="activeMenu" mode="horizontal" router class="nav-menu" :ellipsis="false">
@@ -105,6 +105,11 @@ onBeforeUnmount(() => {
 .brand {
   display: inline-flex;
   align-items: center;
+}
+
+/* 顶栏徽标不要描边/阴影 */
+.brand :deep(.mark) {
+  box-shadow: none;
 }
 
 .nav-menu {
