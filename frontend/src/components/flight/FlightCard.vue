@@ -73,7 +73,7 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
     <div class="price-block">
       <div class="price mono-num"><span class="cny">¥</span>{{ candidate.min_price.toFixed(0) }}</div>
       <div class="price-detail mono-num">
-        机票 {{ formatCurrency(candidate.min_ticket_price) }} + 燃油基建 {{ formatCurrency(candidate.fuel_infra_fee) }}
+        {{ candidate.min_cabin_class }} / {{ candidate.min_fare_type }} / 机票 {{ formatCurrency(candidate.min_ticket_price) }} + 燃油基建 {{ formatCurrency(candidate.fuel_infra_fee) }}
       </div>
       <el-button type="primary" round :icon="Tickets" @click="emit('select', candidate)">预订</el-button>
     </div>

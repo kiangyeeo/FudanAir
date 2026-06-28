@@ -14,6 +14,8 @@ export interface OrderListItem {
   ticket_count: number
   active_count: number
   refunded_count: number
+  affected_instance_count?: number
+  affected_instance_statuses?: string | null
 }
 
 export interface OrderTicket {
@@ -22,6 +24,7 @@ export interface OrderTicket {
   instance_id: string
   flight_no: string
   flight_date: string
+  flight_instance_status?: string | null
   scheduled_departure: string
   scheduled_arrival?: string | null
   dep_airport_code: string

@@ -51,6 +51,16 @@ class SearchService:
                 v.airline_code,
                 v.airline_name,
                 MIN(cp.price) AS min_ticket_price,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                    ',',
+                    1
+                ) AS min_cabin_class,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(cp.fare_type ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                    ',',
+                    1
+                ) AS min_fare_type,
                 v.fuel_infra_fee,
                 MIN(cp.price + v.fuel_infra_fee) AS min_price,
                 v.economy_left,
@@ -118,6 +128,16 @@ class SearchService:
                     v.airline_code,
                     v.airline_name,
                     MIN(cp.price) AS min_ticket_price,
+                    SUBSTRING_INDEX(
+                        GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                        ',',
+                        1
+                    ) AS min_cabin_class,
+                    SUBSTRING_INDEX(
+                        GROUP_CONCAT(cp.fare_type ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                        ',',
+                        1
+                    ) AS min_fare_type,
                     v.fuel_infra_fee,
                     MIN(cp.price + v.fuel_infra_fee) AS min_price,
                     v.economy_left,
@@ -167,6 +187,8 @@ class SearchService:
                 leg1.airline_code AS leg1_airline_code,
                 leg1.airline_name AS leg1_airline_name,
                 leg1.min_ticket_price AS leg1_min_ticket_price,
+                leg1.min_cabin_class AS leg1_min_cabin_class,
+                leg1.min_fare_type AS leg1_min_fare_type,
                 leg1.fuel_infra_fee AS leg1_fuel_infra_fee,
                 leg1.min_price AS leg1_min_price,
                 leg1.economy_left AS leg1_economy_left,
@@ -180,6 +202,8 @@ class SearchService:
                 leg2.airline_code AS leg2_airline_code,
                 leg2.airline_name AS leg2_airline_name,
                 leg2.min_ticket_price AS leg2_min_ticket_price,
+                leg2.min_cabin_class AS leg2_min_cabin_class,
+                leg2.min_fare_type AS leg2_min_fare_type,
                 leg2.fuel_infra_fee AS leg2_fuel_infra_fee,
                 leg2.min_price AS leg2_min_price,
                 leg2.economy_left AS leg2_economy_left,
@@ -267,6 +291,16 @@ class SearchService:
                 v.airline_code,
                 v.airline_name,
                 MIN(cp.price) AS min_ticket_price,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(cp.cabin_class ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                    ',',
+                    1
+                ) AS min_cabin_class,
+                SUBSTRING_INDEX(
+                    GROUP_CONCAT(cp.fare_type ORDER BY cp.price + v.fuel_infra_fee, cp.cabin_class, cp.fare_type),
+                    ',',
+                    1
+                ) AS min_fare_type,
                 v.fuel_infra_fee,
                 MIN(cp.price + v.fuel_infra_fee) AS min_price,
                 v.economy_left,
@@ -427,6 +461,8 @@ def _direct_candidate(row: Any, prefix: str = "") -> dict[str, Any]:
         "airline_name": data[f"{prefix}airline_name"],
         "min_price": _number(data[f"{prefix}min_price"]),
         "min_ticket_price": _number(data[f"{prefix}min_ticket_price"]),
+        "min_cabin_class": data[f"{prefix}min_cabin_class"],
+        "min_fare_type": data[f"{prefix}min_fare_type"],
         "fuel_infra_fee": _number(data[f"{prefix}fuel_infra_fee"]),
         "economy_left": int(data[f"{prefix}economy_left"]),
         "first_left": int(data[f"{prefix}first_left"]),

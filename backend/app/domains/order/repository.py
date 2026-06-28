@@ -101,6 +101,7 @@ class OrderRepository:
                     t.instance_id,
                     fi.flight_no,
                     fi.flight_date,
+                    fi.status AS flight_instance_status,
                     fi.scheduled_departure,
                     fi.scheduled_arrival,
                     f.dep_airport_code,
@@ -164,7 +165,23 @@ class OrderRepository:
                     created_at,
                     ticket_count,
                     active_count,
-                    refunded_count
+                    refunded_count,
+                    (
+                        SELECT COUNT(DISTINCT fi.instance_id)
+                        FROM ticket t
+                        JOIN flight_instance fi ON t.instance_id = fi.instance_id
+                        WHERE t.order_no = v_order_summary.order_no
+                          AND t.status = '有效'
+                          AND fi.status <> '可订'
+                    ) AS affected_instance_count,
+                    (
+                        SELECT GROUP_CONCAT(DISTINCT fi.status ORDER BY fi.status SEPARATOR '、')
+                        FROM ticket t
+                        JOIN flight_instance fi ON t.instance_id = fi.instance_id
+                        WHERE t.order_no = v_order_summary.order_no
+                          AND t.status = '有效'
+                          AND fi.status <> '可订'
+                    ) AS affected_instance_statuses
                 FROM v_order_summary
                 {where_sql}
                 ORDER BY created_at DESC, order_no DESC
@@ -182,6 +199,6 @@ class OrderRepository:
 
 def _summary_row(row: Any) -> dict[str, Any]:
     data = dict(row)
-    for key in ("ticket_count", "active_count", "refunded_count"):
+    for key in ("ticket_count", "active_count", "refunded_count", "affected_instance_count"):
         data[key] = int(data.get(key) or 0)
     return data

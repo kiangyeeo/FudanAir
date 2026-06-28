@@ -108,7 +108,6 @@ class FlightInstanceBatchCreate(BaseModel):
 
 
 class FlightInstanceUpdate(BaseModel):
-    flight_no: str | None = Field(default=None, min_length=1, max_length=8)
     scheduled_departure: time | None = None
     scheduled_arrival: time | None = None
     fuel_infra_fee: Decimal | None = Field(default=None, ge=Decimal("0"))

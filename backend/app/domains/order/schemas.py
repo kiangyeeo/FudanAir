@@ -28,6 +28,8 @@ class OrderListItem(BaseModel):
     ticket_count: int = 0
     active_count: int = 0
     refunded_count: int = 0
+    affected_instance_count: int = 0
+    affected_instance_statuses: str | None = None
 
 
 class OrderPageResponse(BaseModel):
@@ -48,6 +50,7 @@ class OrderTicketDetail(BaseModel):
     instance_id: str
     flight_no: str
     flight_date: date
+    flight_instance_status: str | None = None
     scheduled_departure: time
     scheduled_arrival: time | None = None
     dep_airport_code: str

@@ -14,6 +14,7 @@ def start_scheduler() -> None:
 
     from app.jobs.expire_orders import expire_orders_job
     from app.jobs.generate_instances import generate_instances_daily
+    from app.jobs.sync_flight_status import sync_flight_status_job
 
     scheduler.add_job(
         expire_orders_job,
@@ -29,6 +30,15 @@ def start_scheduler() -> None:
         trigger="cron",
         hour=settings.INSTANCE_GENERATION_HOUR,
         id="generate_instances",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        sync_flight_status_job,
+        trigger="interval",
+        seconds=settings.SCHEDULER_INTERVAL_SECONDS,
+        id="sync_flight_status",
         max_instances=1,
         coalesce=True,
         replace_existing=True,

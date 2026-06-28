@@ -304,6 +304,10 @@ class FlightService:
         except IntegrityError as exc:
             raise AppException(f"航班实例 {instance_id} 状态更新失败") from exc
 
+    def sync_time_statuses(self, now: datetime | None = None) -> tuple[int, int]:
+        with transaction(self.db):
+            return self.instance_repo.update_departed_and_arrived(now or datetime.now())
+
     def delete_instance(self, instance_id: str) -> None:
         try:
             with transaction(self.db):
@@ -445,11 +449,6 @@ class FlightService:
     ) -> dict[str, Any]:
         raw_data = payload.model_dump(exclude_unset=True)
         data = {key: value for key, value in raw_data.items() if value is not None}
-        if "flight_no" in data:
-            data["flight_no"] = _flight_no(data["flight_no"])
-            if not self.flight_repo.get(data["flight_no"]):
-                raise ResourceNotFoundError(f"航班 {data['flight_no']} 不存在")
-            self._ensure_date_in_weekday(data["flight_no"], instance.flight_date)
         departure = data.get("scheduled_departure", instance.scheduled_departure)
         arrival = data.get("scheduled_arrival", instance.scheduled_arrival)
         self._validate_time_order(departure, arrival)
@@ -470,9 +469,6 @@ class FlightService:
             fields.add("scheduled_departure")
         if "scheduled_arrival" in data:
             fields.add("scheduled_arrival")
-        if "flight_no" in data:
-            new_route = self.flight_repo.route_snapshot(data["flight_no"])
-            fields.update(self._route_adjustment_fields(old_route, new_route))
         return fields
 
     @staticmethod

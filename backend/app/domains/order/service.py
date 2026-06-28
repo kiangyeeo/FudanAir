@@ -121,6 +121,7 @@ def _ticket_detail(row: dict[str, Any]) -> dict[str, Any]:
         "instance_id": row["instance_id"],
         "flight_no": row["flight_no"],
         "flight_date": row["flight_date"],
+        "flight_instance_status": row["flight_instance_status"],
         "scheduled_departure": row["scheduled_departure"],
         "scheduled_arrival": row["scheduled_arrival"],
         "dep_airport_code": row["dep_airport_code"],

@@ -96,7 +96,6 @@ const batchRules: FormRules<BatchForm> = {
 }
 
 const updateRules: FormRules<UpdateForm> = {
-  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
   scheduled_departure: [{ required: true, message: '请选择起飞时间', trigger: 'change' }],
   scheduled_arrival: [{ required: true, message: '请选择到达时间', trigger: 'change' }],
   fuel_infra_fee: [{ required: true, message: '请输入燃油基建费', trigger: 'change' }],
@@ -246,7 +245,6 @@ async function submitUpdate() {
     return
   }
   await adminApi.updateInstance(updateForm.instance_id, {
-    flight_no: normalizeFlightNo(updateForm.flight_no),
     scheduled_departure: updateForm.scheduled_departure,
     scheduled_arrival: updateForm.scheduled_arrival,
     fuel_infra_fee: updateForm.fuel_infra_fee,
@@ -411,7 +409,7 @@ function openPrices(row: FlightInstance) {
           <el-input v-model="updateForm.instance_id" disabled />
         </el-form-item>
         <el-form-item label="航班号" prop="flight_no">
-          <el-input v-model="updateForm.flight_no" maxlength="8" class="full-width" />
+          <el-input v-model="updateForm.flight_no" maxlength="8" class="full-width" disabled />
         </el-form-item>
         <div class="form-grid">
           <el-form-item label="起飞时间" prop="scheduled_departure">

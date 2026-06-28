@@ -1,4 +1,4 @@
-import type { CabinClass, SortOrder } from './common'
+import type { CabinClass, FareType, SortOrder } from './common'
 
 export interface SearchFilters {
   airline_code?: string | null
@@ -35,6 +35,8 @@ export interface DirectFlightCandidate {
   airline_name: string
   min_price: number
   min_ticket_price: number
+  min_cabin_class: CabinClass
+  min_fare_type: FareType
   fuel_infra_fee: number
   economy_left: number
   first_left: number

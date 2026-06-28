@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 CabinClass = Literal["经济舱", "头等舱"]
+FareType = Literal["标准", "特价"]
 SortField = Literal["price", "duration", "departure"]
 SortOrder = Literal["asc", "desc"]
 
@@ -106,6 +107,8 @@ class DirectFlightCandidate(BaseModel):
     airline_name: str
     min_price: float
     min_ticket_price: float
+    min_cabin_class: CabinClass
+    min_fare_type: FareType
     fuel_infra_fee: float
     economy_left: int
     first_left: int
@@ -144,6 +147,8 @@ class NearbyFlightCandidate(BaseModel):
     airline_name: str
     min_price: float
     min_ticket_price: float
+    min_cabin_class: CabinClass
+    min_fare_type: FareType
     fuel_infra_fee: float
     economy_left: int
     first_left: int

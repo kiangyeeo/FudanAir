@@ -299,6 +299,33 @@ class FlightInstanceRepository:
         self.db.flush()
         return instance
 
+    def update_departed_and_arrived(self, now: datetime) -> tuple[int, int]:
+        departed = self.db.execute(
+            text(
+                """
+                UPDATE flight_instance
+                SET status = '已起飞'
+                WHERE status IN ('计划', '可订')
+                  AND TIMESTAMP(flight_date, scheduled_departure) <= :now
+                  AND TIMESTAMP(flight_date, scheduled_arrival) > :now
+                """
+            ),
+            {"now": now},
+        )
+        arrived = self.db.execute(
+            text(
+                """
+                UPDATE flight_instance
+                SET status = '已到达'
+                WHERE status IN ('计划', '可订', '已起飞')
+                  AND TIMESTAMP(flight_date, scheduled_arrival) <= :now
+                """
+            ),
+            {"now": now},
+        )
+        self.db.flush()
+        return int(departed.rowcount or 0), int(arrived.rowcount or 0)
+
     def delete(self, instance: FlightInstance) -> None:
         self.db.delete(instance)
         self.db.flush()

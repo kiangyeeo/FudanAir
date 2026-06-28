@@ -91,7 +91,6 @@ export interface FlightInstanceCreatePayload {
 }
 
 export interface FlightInstanceUpdatePayload {
-  flight_no?: string
   scheduled_departure?: string
   scheduled_arrival?: string
   fuel_infra_fee?: number

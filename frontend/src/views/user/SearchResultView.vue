@@ -69,28 +69,27 @@ function resetSearch() {
 }
 
 function selectFlight(candidate: DirectFlightCandidate | NearbyFlightCandidate) {
-  const cabinClass = searchStore.criteria?.filters?.cabin_class ?? '经济舱'
   router.push({
     name: 'booking',
     query: {
       instance_id: candidate.instance_id,
-      cabin_class: cabinClass,
-      fare_type: '标准',
+      cabin_class: candidate.min_cabin_class,
+      fare_type: candidate.min_fare_type,
     },
   })
 }
 
 function selectTransit(candidate: TransitCandidate) {
-  const cabinClass = searchStore.criteria?.filters?.cabin_class ?? '经济舱'
   router.push({
     name: 'booking',
     query: {
       segments: [candidate.leg1.instance_id, candidate.leg2.instance_id].join(','),
-      cabin_class: cabinClass,
-      fare_type: '标准',
+      cabin_class: candidate.leg1.min_cabin_class,
+      fare_type: candidate.leg1.min_fare_type,
     },
   })
 }
+
 
 function collectFlightNos(data: import('@/types/search').FlightSearchResponse): string[] {
   const nos: string[] = []

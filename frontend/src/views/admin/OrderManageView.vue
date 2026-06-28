@@ -79,6 +79,10 @@ function handlePageChange(page: number) {
   void loadOrders()
 }
 
+function hasAffectedInstance(row: OrderListItem) {
+  return Number(row.affected_instance_count ?? 0) > 0
+}
+
 function statusTagType(status: OrderStatus) {
   const map: Record<OrderStatus, 'success' | 'info' | 'warning' | 'danger'> = {
     待支付: 'warning',

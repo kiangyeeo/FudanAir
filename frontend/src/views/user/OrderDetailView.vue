@@ -31,6 +31,10 @@ async function loadDetail() {
   }
 }
 
+const affectedTickets = computed(() =>
+  (detail.value?.tickets ?? []).filter((ticket) => ticket.status === '有效' && ticket.flight_instance_status !== '可订'),
+)
+
 function statusTagType(status: OrderStatus | string) {
   const map: Record<string, 'success' | 'info' | 'warning' | 'danger'> = {
     待支付: 'warning',
@@ -66,6 +70,14 @@ onMounted(() => {
       <h1 class="page-title">订单详情</h1>
       <template v-if="detail">
         <OrderTimeline :status="detail.status" />
+        <el-alert
+          v-if="affectedTickets.length"
+          type="warning"
+          show-icon
+          :closable="false"
+          class="status-alert"
+          :title="`订单内有 ${affectedTickets.length} 张有效客票对应航班实例已不是可订状态，请留意航班状态。`"
+        />
         <el-descriptions :column="3" border class="summary">
           <el-descriptions-item label="订单号">{{ detail.order_no }}</el-descriptions-item>
           <el-descriptions-item label="状态">
@@ -101,6 +113,9 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="flight-line">
               <span>{{ row.flight_no }} · {{ row.instance_id }}</span>
+              <el-tag v-if="row.flight_instance_status && row.flight_instance_status !== '可订'" size="small" :type="statusTagType(row.flight_instance_status)">
+                {{ row.flight_instance_status }}
+              </el-tag>
               <el-tag
                 v-for="label in row.adjustment_labels ?? []"
                 :key="label"
@@ -153,6 +168,10 @@ onMounted(() => {
 }
 
 .summary {
+  margin-top: 14px;
+}
+
+.status-alert {
   margin-top: 14px;
 }
 
