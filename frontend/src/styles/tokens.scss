@@ -80,8 +80,11 @@
   --fa-z-dropdown: 1000;
   --fa-z-modal: 2000;
 
+  /* ---------- 字体 ---------- */
+  --fa-font-serif: "FA Serif", "STSong", "SimSun", serif;
+
   /* ---------- 兼容旧别名 ---------- */
   --fa-radius-base: var(--fa-radius);
   --fa-text-primary: var(--fa-text);
-  --fa-header-height: 64px;
+  --fa-header-height: 72px;
 }

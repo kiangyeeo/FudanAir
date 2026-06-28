@@ -51,9 +51,10 @@ withDefaults(
 }
 
 .text {
+  font-family: var(--fa-font-serif);
   font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: 0;
   color: var(--fa-text);
 }
 
