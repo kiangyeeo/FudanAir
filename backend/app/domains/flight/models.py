@@ -13,6 +13,7 @@ class Flight(Base):
     scheduled_departure = Column(Time, nullable=False)
     scheduled_arrival = Column(Time, nullable=False)
     fuel_infra_fee = Column(Numeric(10, 2), nullable=False, default=0)
+    base_price = Column(Numeric(10, 2), nullable=False, default=0)
     dep_airport_code = Column(
         String(3),
         ForeignKey("airport.iata_code"),

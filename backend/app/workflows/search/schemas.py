@@ -30,6 +30,8 @@ class SearchFilters(BaseModel):
     price_min: Decimal | None = Field(default=None, ge=0)
     price_max: Decimal | None = Field(default=None, ge=0)
     include_stopover: bool = True
+    include_transit: bool = True
+    include_nearby: bool = True
 
     model_config = {"str_strip_whitespace": True}
 

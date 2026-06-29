@@ -25,6 +25,7 @@ class FlightBase(BaseModel):
     scheduled_departure: time
     scheduled_arrival: time
     fuel_infra_fee: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0"))
+    base_price: Decimal = Field(..., ge=Decimal("0"))
     dep_airport_code: str = Field(..., min_length=3, max_length=3)
     dep_terminal: str | None = Field(default=None, max_length=8)
     arr_airport_code: str = Field(..., min_length=3, max_length=3)
@@ -58,6 +59,7 @@ class FlightListResponse(BaseModel):
     scheduled_departure: time
     scheduled_arrival: time
     fuel_infra_fee: float
+    base_price: float
     dep_airport_code: str
     dep_terminal: str | None = None
     arr_airport_code: str

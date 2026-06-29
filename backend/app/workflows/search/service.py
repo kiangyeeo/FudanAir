@@ -29,13 +29,20 @@ class SearchService:
         self.db = db
 
     def search_flights(self, payload: FlightSearchRequest) -> dict[str, list[dict[str, Any]]]:
-        return {
-            "direct": self._search_direct(payload),
-            "transit": self._search_transit(payload),
-            "nearby": self._search_nearby(payload),
-        }
+        filters = payload.filters
+        direct = self._search_direct(payload)
+        threshold = _max_direct_price(direct)
+        transit: list[dict[str, Any]] = []
+        if filters.include_transit:
+            transit = _filter_cheaper(self._search_transit(payload), "total_min_price", threshold)
+        nearby: list[dict[str, Any]] = []
+        if filters.include_nearby:
+            nearby = _filter_cheaper(self._search_nearby(payload), "min_price", threshold)
+        return {"direct": direct, "transit": transit, "nearby": nearby}
 
     def search_transit(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
+        # 标准中转构件: 返回原始中转方案, 不做"比最贵直飞便宜"的过滤。
+        # 该价格过滤是跨类别(中转 vs 直飞)的展示规则, 仅在 search_flights 合并搜索中应用。
         return self._search_transit(payload)
 
     def _search_direct(self, payload: FlightSearchRequest) -> list[dict[str, Any]]:
@@ -398,6 +405,28 @@ class SearchService:
         )
         rows = self.db.execute(sql, _query_params(payload)).mappings().all()
         return [_nearby_candidate(row) for row in rows]
+
+
+def _max_direct_price(direct: list[dict[str, Any]]) -> float | None:
+    """最贵直飞方案的代表价(各直飞 min_price 的最大值)。
+
+    作为中转/临近方案的价格阈值: 只有比"最贵直飞"还便宜的替代方案才有展示价值。
+    无直飞时返回 None, 表示不设阈值(此时中转/临近本就是仅有的选择)。
+    """
+    if not direct:
+        return None
+    return max(candidate["min_price"] for candidate in direct)
+
+
+def _filter_cheaper(
+    candidates: list[dict[str, Any]],
+    price_key: str,
+    threshold: float | None,
+) -> list[dict[str, Any]]:
+    """仅保留代表价严格低于最贵直飞价的方案; threshold 为 None(无直飞)时全部保留。"""
+    if threshold is None:
+        return candidates
+    return [candidate for candidate in candidates if candidate[price_key] < threshold]
 
 
 def _query_params(payload: FlightSearchRequest) -> dict[str, Any]:

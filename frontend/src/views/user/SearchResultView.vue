@@ -5,12 +5,11 @@ import { ElMessage } from 'element-plus'
 import { Right } from '@element-plus/icons-vue'
 import { flightApi } from '@/api/flight'
 import { searchApi } from '@/api/search'
-import DirectFlightList from '@/components/flight/DirectFlightList.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import FilterPanel from '@/components/flight/FilterPanel.vue'
+import FlightCard from '@/components/flight/FlightCard.vue'
 import FlightCardSkeleton from '@/components/flight/FlightCardSkeleton.vue'
-import NearbyFlightList from '@/components/flight/NearbyFlightList.vue'
-import TransitFlightList from '@/components/flight/TransitFlightList.vue'
+import TransitCard from '@/components/flight/TransitCard.vue'
 import { useSearchStore } from '@/stores/search'
 import { useAirportStore } from '@/stores/airport'
 import { useFlightMetaStore } from '@/stores/flightMeta'
@@ -18,6 +17,7 @@ import type { Airline } from '@/types/flight'
 import type { CabinClass, SortOrder } from '@/types/common'
 import type { DirectFlightCandidate, FlightSearchRequest, NearbyFlightCandidate, TransitCandidate } from '@/types/search'
 import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
+import { minutesBetween } from '@/utils/format'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,6 +36,91 @@ const totalCount = computed(() => {
   }
   return data.direct.length + data.transit.length + data.nearby.length
 })
+
+// 三类候选合并为一条按价格(或所选排序)综合排序的列表
+type MergedRow =
+  | { kind: 'direct'; key: string; price: number; departure: string; duration: number | null; data: DirectFlightCandidate }
+  | { kind: 'nearby'; key: string; price: number; departure: string; duration: number | null; data: NearbyFlightCandidate; tag: string }
+  | { kind: 'transit'; key: string; price: number; departure: string; duration: number; data: TransitCandidate }
+
+const mergedRows = computed<MergedRow[]>(() => {
+  const data = result.value
+  if (!data) {
+    return []
+  }
+  const rows: MergedRow[] = []
+  for (const item of data.direct) {
+    rows.push({
+      kind: 'direct',
+      key: `direct-${item.instance_id}`,
+      price: item.min_price,
+      departure: item.scheduled_departure,
+      duration: minutesBetween(item.scheduled_departure, item.scheduled_arrival),
+      data: item,
+    })
+  }
+  for (const item of data.transit) {
+    rows.push({
+      kind: 'transit',
+      key: `transit-${item.leg1.instance_id}-${item.leg2.instance_id}`,
+      price: item.total_min_price,
+      departure: item.leg1.scheduled_departure,
+      duration: item.total_duration_minutes,
+      data: item,
+    })
+  }
+  for (const item of data.nearby) {
+    rows.push({
+      kind: 'nearby',
+      key: `nearby-${item.replacement}-${item.instance_id}`,
+      price: item.min_price,
+      departure: item.scheduled_departure,
+      duration: minutesBetween(item.scheduled_departure, item.scheduled_arrival),
+      data: item,
+      tag: nearbyTag(item),
+    })
+  }
+  return sortRows(rows)
+})
+
+const lowestKey = computed(() => {
+  const rows = mergedRows.value
+  if (!rows.length) {
+    return null
+  }
+  return rows.reduce((min, row) => (row.price < min.price ? row : min)).key
+})
+
+function sortRows(rows: MergedRow[]): MergedRow[] {
+  const sort = searchStore.criteria?.sort ?? { field: 'price', order: 'asc' }
+  const direction = sort.order === 'desc' ? -1 : 1
+  const sortValue = (row: MergedRow): number => {
+    if (sort.field === 'duration') {
+      return row.duration ?? Number.MAX_SAFE_INTEGER
+    }
+    if (sort.field === 'departure') {
+      return departureMinutes(row.departure)
+    }
+    return row.price
+  }
+  return [...rows].sort((a, b) => {
+    const diff = sortValue(a) - sortValue(b)
+    return diff !== 0 ? diff * direction : a.price - b.price
+  })
+}
+
+function departureMinutes(value: string): number {
+  const [hour, minute] = value.split(':').map(Number)
+  return (Number.isFinite(hour) ? hour : 0) * 60 + (Number.isFinite(minute) ? minute : 0)
+}
+
+function nearbyTag(item: NearbyFlightCandidate): string {
+  const side = item.replacement === 'departure' ? '替换出发' : '替换到达'
+  const city = item.replacement === 'departure' ? searchStore.criteria?.dep_city : searchStore.criteria?.arr_city
+  const fromCity = city ? `距${city}` : '距搜索城市'
+  const km = Math.round(item.nearby_distance)
+  return `临近 · ${side} ${airportStore.display(item.replaced_airport)} · ${fromCity}约 ${km} km`
+}
 
 async function runSearch(payload: FlightSearchRequest) {
   const criteria = normalizeCriteria(payload)
@@ -130,6 +215,8 @@ function normalizeCriteria(payload: FlightSearchRequest): FlightSearchRequest {
       price_min: priceMin,
       price_max: priceMax,
       include_stopover: payload.filters?.include_stopover ?? true,
+      include_transit: payload.filters?.include_transit ?? true,
+      include_nearby: payload.filters?.include_nearby ?? true,
     },
     sort: {
       field: payload.sort?.field ?? 'price',
@@ -166,6 +253,12 @@ function criteriaToQuery(payload: FlightSearchRequest) {
   if (payload.filters?.include_stopover === false) {
     query.include_stopover = 'false'
   }
+  if (payload.filters?.include_transit === false) {
+    query.include_transit = 'false'
+  }
+  if (payload.filters?.include_nearby === false) {
+    query.include_nearby = 'false'
+  }
   return query
 }
 
@@ -191,6 +284,8 @@ function criteriaFromRoute(): FlightSearchRequest | null {
       price_min: queryNumber('price_min'),
       price_max: queryNumber('price_max'),
       include_stopover: queryText('include_stopover') !== 'false',
+      include_transit: queryText('include_transit') !== 'false',
+      include_nearby: queryText('include_nearby') !== 'false',
     },
     sort: {
       field: sortFieldQuery(queryText('sort_field')),
@@ -282,17 +377,30 @@ onMounted(() => {
       <div class="result-lists">
         <FlightCardSkeleton v-if="loading" :count="5" />
         <template v-else>
-          <EmptyState v-if="!searched && !result" title="等待搜索" description="填写条件后会展示直飞、中转和临近机场方案。" />
+          <EmptyState v-if="!searched && !result" title="等待搜索" description="填写条件后会综合直飞、中转和临近机场方案，按价格排序展示。" />
           <EmptyState v-else-if="searched && result && totalCount === 0" title="暂无匹配航班" description="可以调整日期、城市或筛选条件后重新搜索。" />
           <template v-else>
-            <DirectFlightList :items="result?.direct ?? []" @select="selectFlight" />
-            <TransitFlightList :items="result?.transit ?? []" @select="selectTransit" />
-            <NearbyFlightList
-              :items="result?.nearby ?? []"
-              :dep-city="searchStore.criteria?.dep_city"
-              :arr-city="searchStore.criteria?.arr_city"
-              @select="selectFlight"
-            />
+            <template v-for="(row, index) in mergedRows" :key="row.key">
+              <TransitCard
+                v-if="row.kind === 'transit'"
+                :candidate="row.data"
+                :lowest="row.key === lowestKey"
+                v-motion
+                :initial="{ opacity: 0, y: 14 }"
+                :enter="{ opacity: 1, y: 0, transition: { duration: 300, delay: Math.min(index, 8) * 45 } }"
+                @select="selectTransit"
+              />
+              <FlightCard
+                v-else
+                :candidate="row.data"
+                :lowest="row.key === lowestKey"
+                :nearby-tag="row.kind === 'nearby' ? row.tag : null"
+                v-motion
+                :initial="{ opacity: 0, y: 14 }"
+                :enter="{ opacity: 1, y: 0, transition: { duration: 300, delay: Math.min(index, 8) * 45 } }"
+                @select="selectFlight"
+              />
+            </template>
           </template>
         </template>
       </div>
@@ -408,7 +516,7 @@ onMounted(() => {
 .result-lists {
   display: grid;
   min-height: 240px;
-  gap: 18px;
+  gap: 12px;
 }
 
 @media (max-width: 900px) {

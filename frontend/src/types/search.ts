@@ -8,6 +8,8 @@ export interface SearchFilters {
   price_min?: number | null
   price_max?: number | null
   include_stopover?: boolean
+  include_transit?: boolean
+  include_nearby?: boolean
 }
 
 export interface SearchSort {

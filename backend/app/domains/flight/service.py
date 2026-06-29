@@ -220,8 +220,7 @@ class FlightService:
                 specs = default_cabin_price_specs(
                     economy_seats,
                     first_seats,
-                    flight.scheduled_departure,
-                    flight.scheduled_arrival,
+                    flight.base_price,
                 )
                 for spec in specs:
                     self.cabin_repo.create(
@@ -423,6 +422,7 @@ class FlightService:
             "scheduled_departure": flight.scheduled_departure,
             "scheduled_arrival": flight.scheduled_arrival,
             "fuel_infra_fee": float(flight.fuel_infra_fee),
+            "base_price": float(flight.base_price),
             "dep_airport_code": flight.dep_airport_code,
             "dep_terminal": flight.dep_terminal,
             "arr_airport_code": flight.arr_airport_code,
@@ -494,6 +494,7 @@ class FlightService:
             "scheduled_departure": payload.scheduled_departure,
             "scheduled_arrival": payload.scheduled_arrival,
             "fuel_infra_fee": payload.fuel_infra_fee,
+            "base_price": payload.base_price,
             "dep_airport_code": _airport_code(payload.dep_airport_code),
             "dep_terminal": _optional_text(payload.dep_terminal),
             "arr_airport_code": _airport_code(payload.arr_airport_code),

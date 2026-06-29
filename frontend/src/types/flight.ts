@@ -41,6 +41,7 @@ export interface Flight {
   scheduled_arrival: string
   aircraft_model: string
   fuel_infra_fee: number
+  base_price: number
   weekdays?: number[]
   stopovers?: string[]
 }
@@ -49,6 +50,7 @@ export interface FlightPayload {
   scheduled_departure: string
   scheduled_arrival: string
   fuel_infra_fee: number
+  base_price: number
   dep_airport_code: string
   dep_terminal?: string | null
   arr_airport_code: string

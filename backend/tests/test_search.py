@@ -15,7 +15,11 @@ from app.core.constants import TRANSIT_MAX_MINUTES, TRANSIT_MIN_MINUTES
 from app.deps import get_db
 from app.workflows.search.router import router
 from app.workflows.search.schemas import FlightSearchRequest
-from app.workflows.search.service import SearchService
+from app.workflows.search.service import (
+    SearchService,
+    _filter_cheaper,
+    _max_direct_price,
+)
 
 
 class FakeResult:
@@ -318,3 +322,125 @@ def test_search_flights_endpoint_returns_frontend_contract_shape() -> None:
     assert data["direct"][0]["aircraft_model"] == "A320"
     assert data["transit"] == []
     assert data["nearby"] == []
+
+
+def test_max_direct_price_and_filter_rule() -> None:
+    direct = [{"min_price": 700.0}, {"min_price": 850.0}, {"min_price": 600.0}]
+    assert _max_direct_price(direct) == 850.0
+    assert _max_direct_price([]) is None
+
+    transit = [
+        {"total_min_price": 700.0},
+        {"total_min_price": 850.0},   # 等于最贵直飞: 严格小于 -> 剔除
+        {"total_min_price": 900.0},
+    ]
+    kept = _filter_cheaper(transit, "total_min_price", 850.0)
+    assert [item["total_min_price"] for item in kept] == [700.0]
+
+    # 无直飞(threshold=None): 全部保留
+    assert _filter_cheaper(transit, "total_min_price", None) == transit
+
+
+def _direct_row(flight_no: str, min_price: str, dep: time = time(8, 0)) -> dict[str, Any]:
+    return {
+        "instance_id": f"{flight_no}_20260510",
+        "flight_no": flight_no,
+        "dep_airport_code": "SHA",
+        "arr_airport_code": "PEK",
+        "scheduled_departure": dep,
+        "scheduled_arrival": time(10, 20),
+        "airline_code": flight_no[:2],
+        "airline_name": "测试航空",
+        "aircraft_model": "A320",
+        "min_ticket_price": Decimal(min_price),
+        "min_cabin_class": "经济舱",
+        "min_fare_type": "标准",
+        "fuel_infra_fee": Decimal("50.00"),
+        "min_price": Decimal(min_price),
+        "economy_left": 9,
+        "first_left": 1,
+    }
+
+
+def _transit_row(total_min_price: str) -> dict[str, Any]:
+    leg1 = {f"leg1_{key}": value for key, value in _direct_row("CA1001", "500.00").items()}
+    leg2 = {f"leg2_{key}": value for key, value in _direct_row("MU2001", "500.00").items()}
+    return {
+        **leg1,
+        **leg2,
+        "leg1_arr_airport_code": "XIY",
+        "leg2_dep_airport_code": "XIY",
+        "transit_airport": "XIY",
+        "transit_minutes": 180,
+        "total_duration_minutes": 420,
+        "total_ticket_price": Decimal(total_min_price),
+        "total_fuel_infra_fee": Decimal("110.00"),
+        "total_min_price": Decimal(total_min_price),
+    }
+
+
+def _nearby_row(min_price: str) -> dict[str, Any]:
+    row = _direct_row("HO1001", min_price)
+    row.update(
+        {
+            "replacement": "departure",
+            "replaced_airport": "SHA",
+            "actual_dep_city": "上海",
+            "actual_arr_city": None,
+            "nearby_distance": Decimal("85.00"),
+        }
+    )
+    return row
+
+
+def test_search_flights_filters_alternatives_against_most_expensive_direct() -> None:
+    # 最贵直飞代表价 = 850; 中转用 total_min_price, 临近用 min_price, 均需严格小于 850
+    db = FakeSession(
+        [
+            [_direct_row("MU1001", "700.00"), _direct_row("CA1002", "850.00")],
+            [_transit_row("800.00"), _transit_row("850.00"), _transit_row("900.00")],
+            [_nearby_row("700.00"), _nearby_row("850.00"), _nearby_row("950.00")],
+        ]
+    )
+    payload = FlightSearchRequest(dep_city="上海", arr_city="北京", flight_date=date(2026, 5, 10))
+
+    result = SearchService(db).search_flights(payload)
+
+    assert len(result["direct"]) == 2
+    assert [item["total_min_price"] for item in result["transit"]] == [800.0]
+    assert [item["min_price"] for item in result["nearby"]] == [700.0]
+
+
+def test_search_flights_keeps_all_alternatives_when_no_direct() -> None:
+    db = FakeSession(
+        [
+            [],
+            [_transit_row("900.00"), _transit_row("1300.00")],
+            [_nearby_row("950.00")],
+        ]
+    )
+    payload = FlightSearchRequest(dep_city="上海", arr_city="北京", flight_date=date(2026, 5, 10))
+
+    result = SearchService(db).search_flights(payload)
+
+    assert result["direct"] == []
+    assert len(result["transit"]) == 2
+    assert len(result["nearby"]) == 1
+
+
+def test_search_flights_skips_categories_when_toggled_off() -> None:
+    # 仅提供直飞结果集: 关闭中转/临近后不应再发起这两类查询
+    db = FakeSession([[_direct_row("MU1001", "700.00")]])
+    payload = FlightSearchRequest(
+        dep_city="上海",
+        arr_city="北京",
+        flight_date=date(2026, 5, 10),
+        filters={"include_transit": False, "include_nearby": False},
+    )
+
+    result = SearchService(db).search_flights(payload)
+
+    assert len(result["direct"]) == 1
+    assert result["transit"] == []
+    assert result["nearby"] == []
+    assert len(db.calls) == 1  # 只查了直飞

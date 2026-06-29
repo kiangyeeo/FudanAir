@@ -13,6 +13,7 @@ interface FlightForm {
   scheduled_departure: string
   scheduled_arrival: string
   fuel_infra_fee: number
+  base_price: number
   dep_airport_code: string
   dep_terminal: string
   arr_airport_code: string
@@ -59,6 +60,7 @@ const form = reactive<FlightForm>({
   scheduled_departure: '',
   scheduled_arrival: '',
   fuel_infra_fee: 0,
+  base_price: 0,
   dep_airport_code: '',
   dep_terminal: '',
   arr_airport_code: '',
@@ -81,6 +83,7 @@ const rules: FormRules<FlightForm> = {
   scheduled_departure: [{ required: true, message: '请选择起飞时间', trigger: 'change' }],
   scheduled_arrival: [{ required: true, message: '请选择到达时间', trigger: 'change' }],
   fuel_infra_fee: [{ required: true, message: '请输入燃油基建费', trigger: 'change' }],
+  base_price: [{ required: true, message: '请输入机票价格(裸价)', trigger: 'change' }],
   weekdays: [{ type: 'array', required: true, min: 1, message: '请选择飞行日', trigger: 'change' }],
 }
 
@@ -160,6 +163,7 @@ function resetForm() {
     scheduled_departure: '',
     scheduled_arrival: '',
     fuel_infra_fee: 0,
+    base_price: 0,
     dep_airport_code: '',
     dep_terminal: '',
     arr_airport_code: '',
@@ -190,6 +194,7 @@ async function openEdit(row: Flight) {
       scheduled_departure: detail.scheduled_departure,
       scheduled_arrival: detail.scheduled_arrival,
       fuel_infra_fee: Number(detail.fuel_infra_fee),
+      base_price: Number(detail.base_price),
       dep_airport_code: detail.dep_airport_code,
       dep_terminal: detail.dep_terminal || '',
       arr_airport_code: detail.arr_airport_code,
@@ -226,6 +231,7 @@ function buildPayload(): FlightPayload {
     scheduled_departure: form.scheduled_departure,
     scheduled_arrival: form.scheduled_arrival,
     fuel_infra_fee: form.fuel_infra_fee,
+    base_price: form.base_price,
     dep_airport_code: form.dep_airport_code.trim().toUpperCase(),
     dep_terminal: form.dep_terminal.trim() || null,
     arr_airport_code: form.arr_airport_code.trim().toUpperCase(),
@@ -326,6 +332,9 @@ async function deleteFlight(row: Flight) {
         <template #default="{ row }">{{ formatTime(row.scheduled_arrival) }}</template>
       </el-table-column>
       <el-table-column prop="aircraft_model" label="机型" width="130" />
+      <el-table-column label="机票价格" width="120">
+        <template #default="{ row }">{{ formatCurrency(Number(row.base_price)) }}</template>
+      </el-table-column>
       <el-table-column label="燃油基建费" width="120">
         <template #default="{ row }">{{ formatCurrency(Number(row.fuel_infra_fee)) }}</template>
       </el-table-column>
@@ -380,6 +389,10 @@ async function deleteFlight(row: Flight) {
                 :value="aircraft.model"
               />
             </el-select>
+          </el-form-item>
+          <el-form-item label="机票价格" prop="base_price">
+            <el-input-number v-model="form.base_price" :min="0" :precision="2" :step="10" class="full-width" />
+            <div class="form-tip">经济舱标准裸票价(不含燃油基建);特价、头等舱价按系数自动派生</div>
           </el-form-item>
           <el-form-item label="燃油基建费" prop="fuel_infra_fee">
             <el-input-number v-model="form.fuel_infra_fee" :min="0" :precision="2" :step="10" class="full-width" />
@@ -522,5 +535,12 @@ async function deleteFlight(row: Flight) {
 
 .stopover-select {
   width: 100%;
+}
+
+.form-tip {
+  margin-top: 4px;
+  color: var(--fa-text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 </style>

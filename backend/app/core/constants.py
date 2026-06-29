@@ -21,8 +21,8 @@ NEARBY_DISTANCE_MAX_KM = 300
 ECONOMY_STANDARD_RATIO = 0.9
 
 # 航班实例默认定价规则
-DEFAULT_ECONOMY_BASE_PRICE = "420.00"
-DEFAULT_ECONOMY_MINUTE_RATE = "2.10"
+# 经济舱标准裸票价直接取 flight.base_price(由 CSV / 管理员维护, 非线性整十定价);
+# 经济舱特价 = 标准价 × 特价折扣, 头等舱标准价 = 标准价 × 头等系数, 均按价格步长取整。
 DEFAULT_ECONOMY_SPECIAL_DISCOUNT = "0.72"
 DEFAULT_FIRST_CLASS_MULTIPLIER = "3.20"
 DEFAULT_PRICE_STEP = "10.00"

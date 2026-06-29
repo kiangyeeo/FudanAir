@@ -30,7 +30,7 @@ def generate_flight_instances(cur: Any) -> int:
     params: list[tuple[Any, ...]] = []
 
     with tqdm(total=total, desc="生成航班实例", unit="row") as progress:
-        for flight_no, weekday, economy_seats, first_seats, departure, arrival, fuel_fee in seed_rows:
+        for flight_no, weekday, economy_seats, first_seats, departure, arrival, fuel_fee, _base_price in seed_rows:
             flight_dates = dates_by_weekday[int(weekday)]
             for flight_date in flight_dates:
                 params.append(
@@ -67,15 +67,15 @@ def generate_cabin_prices(cur: Any) -> int:
             weekday,
             economy_seats,
             first_seats,
-            departure,
-            arrival,
+            _departure,
+            _arrival,
             _fuel_fee,
+            base_price,
         ) in seed_rows:
             specs = default_cabin_price_specs(
                 int(economy_seats),
                 int(first_seats),
-                departure,
-                arrival,
+                base_price,
             )
             flight_dates = dates_by_weekday[int(weekday)]
             for flight_date in flight_dates:
@@ -122,7 +122,8 @@ def _flight_seed_rows(cur: Any) -> tuple[tuple[Any, ...], ...]:
             at.first_seats,
             f.scheduled_departure,
             f.scheduled_arrival,
-            f.fuel_infra_fee
+            f.fuel_infra_fee,
+            f.base_price
         FROM flight f
         JOIN flight_weekday fw ON f.flight_no = fw.flight_no
         JOIN aircraft_type at ON f.aircraft_model = at.model
@@ -145,12 +146,11 @@ def _total_cabin_prices(
 ) -> int:
     total = 0
     for row in rows:
-        _, weekday, economy_seats, first_seats, departure, arrival, fuel_fee = row
+        _, weekday, economy_seats, first_seats, _departure, _arrival, _fuel_fee, base_price = row
         specs = default_cabin_price_specs(
             int(economy_seats),
             int(first_seats),
-            departure,
-            arrival,
+            base_price,
         )
         total += len(dates_by_weekday[int(weekday)]) * len(specs)
     return total

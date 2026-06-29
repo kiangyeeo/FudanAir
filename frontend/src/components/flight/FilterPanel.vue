@@ -39,6 +39,8 @@ type SearchFormFilters = {
   price_min: number | null
   price_max: number | null
   include_stopover: boolean
+  include_transit: boolean
+  include_nearby: boolean
 }
 
 const form = reactive<SearchForm>({
@@ -84,6 +86,8 @@ function defaultFilters(): SearchFormFilters {
     price_min: null,
     price_max: null,
     include_stopover: true,
+    include_transit: true,
+    include_nearby: true,
   }
 }
 
@@ -102,6 +106,8 @@ function applyCriteria(criteria: FlightSearchRequest) {
     price_min: normalizePriceValue(criteria.filters?.price_min),
     price_max: normalizePriceValue(criteria.filters?.price_max),
     include_stopover: criteria.filters?.include_stopover ?? true,
+    include_transit: criteria.filters?.include_transit ?? true,
+    include_nearby: criteria.filters?.include_nearby ?? true,
   }
   form.sort = { ...defaultSort(), ...criteria.sort }
 }
@@ -119,6 +125,8 @@ function buildPayload(): FlightSearchRequest {
       price_min: normalizePriceValue(form.filters.price_min),
       price_max: normalizePriceValue(form.filters.price_max),
       include_stopover: form.filters.include_stopover,
+      include_transit: form.filters.include_transit,
+      include_nearby: form.filters.include_nearby,
     },
     sort: { field: form.sort.field, order: form.sort.order },
   }
@@ -216,7 +224,11 @@ function swapCities() {
     <el-form-item label="顺序">
       <el-segmented v-model="form.sort.order" :options="[{ label: '升序', value: 'asc' }, { label: '降序', value: 'desc' }]" />
     </el-form-item>
-    <el-checkbox v-model="form.filters.include_stopover">包含经停航班</el-checkbox>
+    <div class="include-toggles">
+      <el-checkbox v-model="form.filters.include_stopover">包含经停航班</el-checkbox>
+      <el-checkbox v-model="form.filters.include_transit">包含中转方案</el-checkbox>
+      <el-checkbox v-model="form.filters.include_nearby">包含临近机场方案</el-checkbox>
+    </div>
     <div class="actions">
       <el-button type="primary" :loading="loading" @click="submit">搜索</el-button>
       <el-button @click="reset">重置</el-button>
@@ -352,6 +364,18 @@ function swapCities() {
 .filter-panel :deep(.el-range-separator) {
   flex: 0 0 auto;
   padding: 0 4px;
+}
+
+.include-toggles {
+  display: grid;
+  gap: 10px;
+  margin: 6px 0 10px;
+}
+
+.include-toggles :deep(.el-checkbox) {
+  height: auto;
+  margin-right: 0;
+  line-height: 1.2;
 }
 
 .actions {
