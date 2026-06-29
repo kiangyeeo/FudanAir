@@ -154,7 +154,7 @@ def load_aircraft_types(cur: Any) -> int:
 def load_flights(cur: Any) -> int:
     headers = [
         "flight_no", "scheduled_departure", "scheduled_arrival",
-        "fuel_infra_fee", "dep_airport_code", "dep_terminal",
+        "fuel_infra_fee", "base_price", "dep_airport_code", "dep_terminal",
         "arr_airport_code", "arr_terminal", "airline_code", "aircraft_model",
     ]
     rows = _read_csv("flights.csv", headers)
@@ -203,6 +203,7 @@ def _flight_params(row: dict[str, str]) -> tuple[Any, ...]:
         _required(row, "scheduled_departure"),
         _required(row, "scheduled_arrival"),
         _decimal_value(row, "fuel_infra_fee"),
+        _decimal_value(row, "base_price"),
         _required(row, "dep_airport_code"),
         _nullable(row, "dep_terminal"),
         _required(row, "arr_airport_code"),
@@ -244,10 +245,10 @@ def _flight_sql() -> str:
     return """
         INSERT INTO flight (
             flight_no, scheduled_departure, scheduled_arrival, fuel_infra_fee,
-            dep_airport_code, dep_terminal, arr_airport_code, arr_terminal,
+            base_price, dep_airport_code, dep_terminal, arr_airport_code, arr_terminal,
             airline_code, aircraft_model
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
 
