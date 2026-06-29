@@ -22,9 +22,9 @@ const now = ref(Date.now())
 let timer: number | undefined
 
 const payMethods = [
-  { value: 'wechat', label: '微信支付', desc: '亿万用户的选择', tag: '微', color: '#07c160' },
-  { value: 'alipay', label: '支付宝', desc: '账户余额 / 花呗', tag: '支', color: '#1677ff' },
-  { value: 'bank', label: '银行卡', desc: '储蓄卡 / 信用卡', tag: '卡', color: '#6b7280' },
+  { value: 'wechat', label: '微信支付', desc: '亿万用户的选择', icon: 'wechat' },
+  { value: 'alipay', label: '支付宝', desc: '账户余额 / 花呗', icon: 'alipay' },
+  { value: 'bank', label: '银行卡', desc: '储蓄卡 / 信用卡', icon: 'bank' },
 ]
 const payMethod = ref('wechat')
 
@@ -281,7 +281,21 @@ watch(orderNo, () => {
             :class="{ active: payMethod === method.value }"
             @click="payMethod = method.value"
           >
-            <span class="method-tag" :style="{ background: method.color }">{{ method.tag }}</span>
+            <span class="method-logo" :class="`method-logo-${method.value}`" aria-hidden="true">
+              <svg v-if="method.icon === 'wechat'" viewBox="0 0 48 48" role="img">
+                <path fill="#07c160" d="M4 24c0-11.05 8.95-20 20-20s20 8.95 20 20-8.95 20-20 20S4 35.05 4 24Z" />
+                <path fill="#fff" d="M21.1 16.1c-5.8 0-10.5 3.8-10.5 8.4 0 2.6 1.5 4.9 3.9 6.4l-.8 2.7 3.1-1.6c1.3.5 2.8.8 4.3.8.5 0 1 0 1.5-.1-.3-.8-.5-1.6-.5-2.5 0-4.2 4-7.6 9.2-7.8-1.2-3.6-5.2-6.3-10.2-6.3Zm-3.6 6.3a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm7.2 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z" />
+                <path fill="#fff" d="M32.1 24.4c-4.5 0-8.1 2.9-8.1 6.4s3.6 6.4 8.1 6.4c1.1 0 2.2-.2 3.1-.5l2.4 1.2-.6-2.1c1.9-1.1 3.1-2.9 3.1-5 0-3.5-3.6-6.4-8-6.4Zm-2.8 4.8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Zm5.7 0a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z" />
+              </svg>
+              <svg v-else-if="method.icon === 'alipay'" viewBox="0 0 48 48" role="img">
+                <path fill="#1677ff" d="M4 10a6 6 0 0 1 6-6h28a6 6 0 0 1 6 6v28a6 6 0 0 1-6 6H10a6 6 0 0 1-6-6V10Z" />
+                <path fill="#fff" d="M35.3 31.2c-2.5-1.5-5.5-2.7-8.9-3.5 1.3-2.2 2.1-4.7 2.5-7.4h7v-3.5H26V12h-4v4.8H12v3.5h12.9c-.4 2.4-1.2 4.6-2.5 6.4-5.6-.8-10-.1-10.9 2.8-.7 2.4 1.3 4.8 4.9 5.9 3.5 1 6.7-.2 9.2-2.9 2.9.8 5.5 2 7.7 3.4l2-4.7Zm-15.4-.1c-1.2 1-2.4 1.3-3.7.9-1.2-.4-1.9-1-1.7-1.6.3-1 2.7-1.1 6-.7-.2.5-.4.9-.6 1.4Z" />
+              </svg>
+              <svg v-else viewBox="0 0 48 48" role="img">
+                <path fill="#4b5563" d="M7 14a5 5 0 0 1 5-5h24a5 5 0 0 1 5 5v20a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5V14Z" />
+                <path fill="#fff" d="M11 17h26v5H11v-5Zm4 11h11v3H15v-3Zm0 5h17v3H15v-3Z" opacity=".95" />
+              </svg>
+            </span>
             <span class="method-info">
               <strong>{{ method.label }}</strong>
               <small>{{ method.desc }}</small>
@@ -364,15 +378,18 @@ watch(orderNo, () => {
   box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.12);
 }
 
-.method-tag {
+.method-logo {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+}
+
+.method-logo svg {
+  display: block;
+  width: 40px;
+  height: 40px;
 }
 
 .method-info {

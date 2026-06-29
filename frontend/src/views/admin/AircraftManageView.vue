@@ -140,17 +140,18 @@ async function deleteAircraftType(row: AircraftType) {
       v-if="aircraftTypes.length || loading"
       v-loading="loading"
       :data="filteredAircraftTypes"
+      class="aircraft-table"
       empty-text="未找到匹配机型"
       border
       row-key="model"
     >
-      <el-table-column prop="model" label="机型" width="140" />
-      <el-table-column prop="economy_seats" label="经济舱座位" width="140" />
-      <el-table-column prop="first_seats" label="头等舱座位" width="140" />
-      <el-table-column label="总座位" width="120">
+      <el-table-column prop="model" label="机型" min-width="180" />
+      <el-table-column prop="economy_seats" label="经济舱座位" min-width="180" />
+      <el-table-column prop="first_seats" label="头等舱座位" min-width="180" />
+      <el-table-column label="总座位" min-width="160">
         <template #default="{ row }">{{ row.economy_seats + row.first_seats }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" min-width="180" align="center">
         <template #default="{ row }">
           <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
           <el-button link type="danger" :icon="Delete" @click="deleteAircraftType(row)">删除</el-button>
@@ -202,6 +203,10 @@ async function deleteAircraftType(row: AircraftType) {
 
 .aircraft-search {
   width: 220px;
+}
+
+.aircraft-table {
+  width: 100%;
 }
 
 .full-width {
