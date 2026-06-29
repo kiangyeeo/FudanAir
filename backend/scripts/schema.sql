@@ -62,6 +62,7 @@ CREATE TABLE flight (
     scheduled_departure  TIME          NOT NULL,
     scheduled_arrival    TIME          NOT NULL,
     fuel_infra_fee       DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    base_price           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     dep_airport_code     CHAR(3)       NOT NULL,
     dep_terminal         VARCHAR(8)    DEFAULT NULL,
     arr_airport_code     CHAR(3)       NOT NULL,
@@ -80,7 +81,8 @@ CREATE TABLE flight (
         REFERENCES airline(iata_code),
     CONSTRAINT fk_flight_aircraft FOREIGN KEY (aircraft_model)
         REFERENCES aircraft_type(model),
-    CONSTRAINT chk_flight_fee CHECK (fuel_infra_fee >= 0)
+    CONSTRAINT chk_flight_fee CHECK (fuel_infra_fee >= 0),
+    CONSTRAINT chk_flight_base_price CHECK (base_price >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE flight_weekday (
