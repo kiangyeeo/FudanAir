@@ -6,12 +6,14 @@ import { bookingApi } from '@/api/booking'
 import { orderApi } from '@/api/order'
 import PaymentCountdown from '@/components/order/PaymentCountdown.vue'
 import { useBookingStore } from '@/stores/booking'
-import { formatCurrency, formatDate } from '@/utils/format'
-import type { OrderDetail } from '@/types/order'
+import { useAirportStore } from '@/stores/airport'
+import { formatChineseDate, formatCurrency, formatDate } from '@/utils/format'
+import type { OrderDetail, OrderTicket } from '@/types/order'
 
 const route = useRoute()
 const router = useRouter()
 const bookingStore = useBookingStore()
+const airportStore = useAirportStore()
 const detail = ref<OrderDetail | null>(null)
 const detailLoading = ref(false)
 const loading = ref(false)
@@ -39,36 +41,49 @@ const totalAmount = computed(() => order.value?.total_amount ?? detail.value?.to
 const ticketCount = computed(() => order.value?.tickets.length ?? detail.value?.tickets.length ?? null)
 const isPending = computed(() => status.value === '待支付')
 const quantityLabel = computed(() => (isPending.value ? '锁座数量' : '客票数量'))
-const priceRows = computed(() => {
-  const segments = order.value?.amount_breakdown.segments ?? []
-  if (segments.length) {
-    return segments.map((item, index) => ({
-      key: `${index}-${item.instance_id}`,
-      label: segments.length > 1 ? `第 ${index + 1} 段` : '航段',
-      instance_id: item.instance_id,
-      cabin_class: item.cabin_class,
-      fare_type: item.fare_type,
-      ticketPrice: item.ticket_price_per_seat,
-      fuelFee: item.fuel_infra_fee_per_seat,
-      actualPrice: item.actual_price_per_seat,
-      count: item.passenger_count,
-      subtotal: item.subtotal,
-    }))
-  }
+interface PriceRow {
+  key: string
+  label: string
+  flightNo: string
+  flightDate: string
+  depCode: string | null
+  arrCode: string | null
+  cabin_class: string
+  fare_type: string
+  ticketPrice: number | null
+  fuelFee: number | null
+  actualPrice: number
+  count: number
+  subtotal: number
+}
 
-  const grouped = new Map<string, {
-    key: string
-    label: string
-    instance_id: string
-    cabin_class: string
-    fare_type: string
-    ticketPrice: number | null
-    fuelFee: number | null
-    actualPrice: number
-    count: number
-    subtotal: number
-  }>()
-  for (const ticket of detail.value?.tickets ?? []) {
+// 客票数据(含航班号/日期/起降机场)优先; 刚下单还没拿到详情时用下单返回的分段做兜底
+const priceRows = computed<PriceRow[]>(() => {
+  const tickets = detail.value?.tickets ?? []
+  if (tickets.length) {
+    return rowsFromTickets(tickets)
+  }
+  const segments = order.value?.amount_breakdown.segments ?? []
+  return segments.map((item, index) => ({
+    key: `${index}-${item.instance_id}`,
+    label: segments.length > 1 ? `第 ${index + 1} 段` : '航段',
+    flightNo: flightNoFromInstance(item.instance_id),
+    flightDate: dateFromInstance(item.instance_id),
+    depCode: null,
+    arrCode: null,
+    cabin_class: item.cabin_class,
+    fare_type: item.fare_type,
+    ticketPrice: item.ticket_price_per_seat,
+    fuelFee: item.fuel_infra_fee_per_seat,
+    actualPrice: item.actual_price_per_seat,
+    count: item.passenger_count,
+    subtotal: item.subtotal,
+  }))
+})
+
+function rowsFromTickets(tickets: OrderTicket[]): PriceRow[] {
+  const grouped = new Map<string, PriceRow>()
+  for (const ticket of tickets) {
     const fuelFee = ticket.fuel_infra_fee ?? null
     const ticketPrice = ticket.ticket_price ?? (fuelFee !== null ? ticket.actual_price - fuelFee : null)
     const key = `${ticket.instance_id}-${ticket.cabin_class}-${ticket.fare_type}-${ticket.actual_price}`
@@ -81,7 +96,10 @@ const priceRows = computed(() => {
     grouped.set(key, {
       key,
       label: '航段',
-      instance_id: ticket.instance_id,
+      flightNo: ticket.flight_no,
+      flightDate: ticket.flight_date,
+      depCode: ticket.dep_airport_code,
+      arrCode: ticket.arr_airport_code,
       cabin_class: ticket.cabin_class,
       fare_type: ticket.fare_type,
       ticketPrice,
@@ -95,7 +113,19 @@ const priceRows = computed(() => {
     ...item,
     label: rows.length > 1 ? `第 ${index + 1} 段` : item.label,
   }))
-})
+}
+
+// 实例号形如 {航班号}_{yyyymmdd}; 兜底时由它还原航班号与日期
+function flightNoFromInstance(instanceId: string): string {
+  const idx = instanceId.lastIndexOf('_')
+  return idx > 0 ? instanceId.slice(0, idx) : instanceId
+}
+
+function dateFromInstance(instanceId: string): string {
+  const idx = instanceId.lastIndexOf('_')
+  const raw = idx > 0 ? instanceId.slice(idx + 1) : ''
+  return /^\d{8}$/.test(raw) ? `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}` : raw
+}
 const isExpired = computed(() => {
   if (!expiresAt.value || !isPending.value) {
     return false
@@ -151,7 +181,7 @@ async function cancelOrder() {
 }
 
 async function loadDetail() {
-  if (!orderNo.value || order.value) {
+  if (!orderNo.value) {
     return
   }
   detailLoading.value = true
@@ -174,6 +204,7 @@ onMounted(() => {
   timer = window.setInterval(() => {
     now.value = Date.now()
   }, 1000)
+  void airportStore.ensureLoaded()
   void loadDetail()
 })
 
@@ -212,7 +243,15 @@ watch(orderNo, () => {
 
       <el-table v-if="priceRows.length" :data="priceRows" border row-key="key">
         <el-table-column prop="label" label="航段" width="90" />
-        <el-table-column prop="instance_id" label="航班实例" min-width="180" />
+        <el-table-column label="航班" min-width="220">
+          <template #default="{ row }">
+            <div class="flight-name mono-num">{{ row.flightNo }}</div>
+            <div class="subtle">{{ formatChineseDate(row.flightDate) }}</div>
+            <div v-if="row.depCode && row.arrCode" class="subtle">
+              {{ airportStore.display(row.depCode) }} → {{ airportStore.display(row.arrCode) }}
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="舱位票价" min-width="240">
           <template #default="{ row }">
             <div>{{ row.cabin_class }} · {{ row.fare_type }}</div>
@@ -388,6 +427,10 @@ watch(orderNo, () => {
 .price {
   color: var(--fa-promo);
   font-weight: 800;
+}
+
+.flight-name {
+  font-weight: 600;
 }
 
 .subtle {

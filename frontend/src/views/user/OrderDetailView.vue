@@ -4,11 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { orderApi } from '@/api/order'
 import EmptyState from '@/components/common/EmptyState.vue'
 import OrderTimeline from '@/components/order/OrderTimeline.vue'
-import { formatCurrency, formatDate, formatTime } from '@/utils/format'
+import { formatCurrency, formatDate, formatTime, maskIdNo } from '@/utils/format'
+import { useAirportStore } from '@/stores/airport'
 import type { OrderDetail, OrderStatus, OrderTicket } from '@/types/order'
 
 const route = useRoute()
 const router = useRouter()
+const airportStore = useAirportStore()
 const orderNo = computed(() => String(route.params.orderNo || ''))
 const detail = ref<OrderDetail | null>(null)
 const loading = ref(false)
@@ -60,6 +62,7 @@ function change(ticket: OrderTicket) {
 }
 
 onMounted(() => {
+  void airportStore.ensureLoaded()
   void loadDetail()
 })
 </script>
@@ -106,13 +109,13 @@ onMounted(() => {
         <el-table-column label="乘机人" min-width="160">
           <template #default="{ row }">
             <div>{{ row.passenger.real_name }}</div>
-            <span class="subtle">{{ row.passenger.id_no }}</span>
+            <span class="subtle mono-num">{{ maskIdNo(row.passenger.id_no) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="航班" min-width="180">
           <template #default="{ row }">
             <div class="flight-line">
-              <span>{{ row.flight_no }} · {{ row.instance_id }}</span>
+              <span class="mono-num">{{ row.flight_no }}</span>
               <el-tag v-if="row.flight_instance_status && row.flight_instance_status !== '可订'" size="small" :type="statusTagType(row.flight_instance_status)">
                 {{ row.flight_instance_status }}
               </el-tag>
@@ -125,7 +128,7 @@ onMounted(() => {
                 {{ label }}
               </el-tag>
             </div>
-            <span class="subtle">{{ row.dep_airport_code }} → {{ row.arr_airport_code }}</span>
+            <span class="subtle">{{ airportStore.display(row.dep_airport_code) }} → {{ airportStore.display(row.arr_airport_code) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="日期时间" min-width="170">

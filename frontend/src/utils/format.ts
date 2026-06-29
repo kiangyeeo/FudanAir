@@ -68,6 +68,33 @@ export function withTerminal(name: string, terminal?: string | null) {
   return t ? `${name}${t}` : name
 }
 
+/** YYYY-MM-DD -> "2026年7月8日"（去前导零）；非该格式原样返回 */
+export function formatChineseDate(value?: string | null) {
+  if (!value) {
+    return '--'
+  }
+  const matched = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(value)
+  if (!matched) {
+    return value
+  }
+  return `${Number(matched[1])}年${Number(matched[2])}月${Number(matched[3])}日`
+}
+
+/** 证件号脱敏：保留前 4 位与后 4 位，中间打码（不足 8 位时仅露首尾各 1 位） */
+export function maskIdNo(idNo?: string | null) {
+  if (!idNo) {
+    return '--'
+  }
+  const value = String(idNo).trim()
+  if (value.length <= 2) {
+    return value
+  }
+  if (value.length < 8) {
+    return `${value[0]}${'*'.repeat(value.length - 2)}${value[value.length - 1]}`
+  }
+  return `${value.slice(0, 4)}${'*'.repeat(value.length - 8)}${value.slice(-4)}`
+}
+
 /** 合并 YYYY-MM-DD 与 HH:MM[:SS] 为本地 Date；任一缺失返回 null */
 export function combineDateTime(dateStr?: string | null, timeStr?: string | null): Date | null {
   if (!dateStr || !timeStr) {

@@ -2,7 +2,7 @@
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowDown, Tickets, User, SwitchButton } from '@element-plus/icons-vue'
+import { ArrowDown, Tickets, Document, User, SwitchButton } from '@element-plus/icons-vue'
 import BrandLogo from '@/components/common/BrandLogo.vue'
 import { useAuthStore } from '@/stores/auth'
 
@@ -68,7 +68,8 @@ onBeforeUnmount(() => {
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="/profile" :icon="User">个人中心</el-dropdown-item>
-              <el-dropdown-item command="/orders" :icon="Tickets">我的订单</el-dropdown-item>
+              <el-dropdown-item command="/trips" :icon="Tickets">我的机票</el-dropdown-item>
+              <el-dropdown-item command="/orders" :icon="Document">我的订单</el-dropdown-item>
               <el-dropdown-item command="logout" :icon="SwitchButton" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
