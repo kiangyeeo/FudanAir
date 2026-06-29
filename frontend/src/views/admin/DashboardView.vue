@@ -3,16 +3,18 @@ import { computed, onMounted, ref } from 'vue'
 import { Calendar, Tickets, TrendCharts, User } from '@element-plus/icons-vue'
 import CountUp from '@/components/common/CountUp.vue'
 import { adminApi } from '@/api/admin'
+import { useAirportStore } from '@/stores/airport'
 import type { AdminDashboard } from '@/types/admin'
 
 const dashboard = ref<AdminDashboard | null>(null)
 const loading = ref(false)
+const airportStore = useAirportStore()
 
 const statCards = [
-  { key: 'total_orders', title: '总订单数', icon: Tickets, color: '#1677ff' },
-  { key: 'today_orders', title: '今日新增订单', icon: Calendar, color: '#18b56a' },
-  { key: 'total_users', title: '总用户数', icon: User, color: '#722ed1' },
-  { key: 'active_users_30d', title: '活跃用户数', icon: TrendCharts, color: '#ff7a45' },
+  { key: 'total_orders', title: '总订单数', icon: Tickets, color: '#2563eb', bg: '#eaf2ff' },
+  { key: 'today_orders', title: '今日新增订单', icon: Calendar, color: '#0f9f6e', bg: '#e9f8f1' },
+  { key: 'total_users', title: '总用户数', icon: User, color: '#7c3aed', bg: '#f1ecff' },
+  { key: 'active_users_30d', title: '活跃用户数', icon: TrendCharts, color: '#c27803', bg: '#fff6dd' },
 ] as const
 
 function statValue(key: (typeof statCards)[number]['key']) {
@@ -30,6 +32,10 @@ function heatWidth(count: number) {
   return `${Math.max(12, Math.round((count / maxRouteCount.value) * 100))}%`
 }
 
+function airportName(code: string) {
+  return airportStore.display(code)
+}
+
 async function loadDashboard() {
   loading.value = true
   try {
@@ -39,7 +45,10 @@ async function loadDashboard() {
   }
 }
 
-onMounted(loadDashboard)
+onMounted(() => {
+  void airportStore.ensureLoaded()
+  void loadDashboard()
+})
 </script>
 
 <template>
@@ -53,7 +62,7 @@ onMounted(loadDashboard)
         :initial="{ opacity: 0, y: 16 }"
         :enter="{ opacity: 1, y: 0, transition: { duration: 360, delay: index * 70 } }"
       >
-        <span class="stat-icon" :style="{ background: item.color }">
+        <span class="stat-icon" :style="{ color: item.color, background: item.bg }">
           <el-icon><component :is="item.icon" /></el-icon>
         </span>
         <div class="stat-body">
@@ -65,7 +74,10 @@ onMounted(loadDashboard)
 
     <section class="content-grid">
       <div class="revenue-card">
-        <span class="revenue-label">今日成交额</span>
+        <div class="revenue-topline">
+          <span class="revenue-label">今日成交额</span>
+          <span class="revenue-chip">已支付</span>
+        </div>
         <div class="revenue-value">
           <span class="cny">¥</span><CountUp :value="dashboard?.today_revenue ?? 0" :decimals="2" />
         </div>
@@ -86,13 +98,19 @@ onMounted(loadDashboard)
 
           <el-table-column label="出发机场" prop="dep_airport_code" min-width="120">
             <template #default="{ row }">
-              <span class="airport-code">{{ row.dep_airport_code }}</span>
+              <div class="airport-cell">
+                <span class="airport-code">{{ row.dep_airport_code }}</span>
+                <span class="airport-name">{{ airportName(row.dep_airport_code) }}</span>
+              </div>
             </template>
           </el-table-column>
 
           <el-table-column label="到达机场" prop="arr_airport_code" min-width="120">
             <template #default="{ row }">
-              <span class="airport-code">{{ row.arr_airport_code }}</span>
+              <div class="airport-cell">
+                <span class="airport-code">{{ row.arr_airport_code }}</span>
+                <span class="airport-name">{{ airportName(row.arr_airport_code) }}</span>
+              </div>
             </template>
           </el-table-column>
 
@@ -115,7 +133,7 @@ onMounted(loadDashboard)
 <style scoped lang="scss">
 .dashboard {
   display: grid;
-  gap: 16px;
+  gap: 18px;
 }
 
 .summary-grid {
@@ -128,40 +146,42 @@ onMounted(loadDashboard)
   display: flex;
   align-items: center;
   gap: 14px;
+  min-height: 110px;
   padding: 20px;
   background: var(--fa-surface);
   border: 1px solid var(--fa-border);
   border-radius: var(--fa-radius);
-  box-shadow: var(--fa-shadow-1);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
   transition: transform var(--fa-dur-base) var(--fa-ease), box-shadow var(--fa-dur-base) var(--fa-ease);
 }
 
 .stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--fa-shadow-2);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.07);
 }
 
 .stat-icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  color: #fff;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
   font-size: 22px;
 }
 
 .stat-body {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .stat-title {
-  color: var(--fa-text-tertiary);
+  color: var(--fa-text-secondary);
   font-size: 13px;
 }
 
 .stat-value {
+  color: var(--fa-text);
   font-size: 28px;
   font-weight: 800;
   letter-spacing: 0;
@@ -169,30 +189,52 @@ onMounted(loadDashboard)
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 0.8fr) minmax(420px, 1.2fr);
+  grid-template-columns: minmax(280px, 0.75fr) minmax(520px, 1.25fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .revenue-card {
   display: grid;
-  gap: 10px;
-  padding: 26px;
+  align-content: space-between;
+  gap: 18px;
+  min-height: 230px;
+  padding: 24px;
+  color: var(--fa-text);
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+  border: 1px solid var(--fa-border);
+  border-top: 4px solid var(--fa-brand);
   border-radius: var(--fa-radius);
-  color: #fff;
-  background: var(--fa-grad-brand-deep);
-  box-shadow: var(--fa-shadow-2);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.revenue-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .revenue-label {
+  color: var(--fa-text-secondary);
   font-size: 14px;
-  opacity: 0.9;
+  font-weight: 700;
+}
+
+.revenue-chip {
+  padding: 3px 10px;
+  color: #0f9f6e;
+  background: #e9f8f1;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .revenue-value {
   display: flex;
   align-items: baseline;
-  font-size: 38px;
+  color: var(--fa-brand-dark);
+  font-size: 40px;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -203,13 +245,13 @@ onMounted(loadDashboard)
 }
 
 .revenue-foot {
+  color: var(--fa-text-tertiary);
   font-size: 12px;
-  opacity: 0.78;
 }
 
 .route-card {
   border-radius: var(--fa-radius);
-  border: 1px solid rgba(22, 119, 255, 0.1);
+  border: 1px solid var(--fa-border);
   box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
@@ -217,22 +259,22 @@ onMounted(loadDashboard)
   color: var(--fa-text);
   font-size: 16px;
   font-weight: 700;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  background: #fff;
+  border-bottom: 1px solid var(--fa-border);
 }
 
-.route-table {
-  border-radius: 10px;
-  overflow: hidden;
+.route-card :deep(.el-card__body) {
+  padding: 0;
 }
 
 .route-table :deep(.el-table__header th) {
-  color: var(--fa-text);
+  color: var(--fa-text-secondary);
   font-weight: 700;
-  background: #f6faff;
+  background: #f8fafc;
 }
 
 .route-table :deep(.el-table__row) {
-  height: 58px;
+  height: 64px;
 }
 
 .route-table :deep(.el-table__row:hover > td) {
@@ -244,24 +286,32 @@ onMounted(loadDashboard)
   place-items: center;
   width: 28px;
   height: 28px;
-  color: #fff;
+  color: var(--fa-brand-dark);
   font-size: 13px;
   font-weight: 800;
-  background: var(--fa-brand);
+  background: #eaf2ff;
   border-radius: 50%;
 }
 
+.airport-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
 .airport-code {
-  display: inline-block;
-  min-width: 52px;
-  padding: 4px 10px;
-  color: var(--fa-brand);
+  color: var(--fa-text);
   font-size: 14px;
   font-weight: 800;
   letter-spacing: 0;
-  text-align: center;
-  background: rgba(22, 119, 255, 0.08);
-  border-radius: 999px;
+}
+
+.airport-name {
+  overflow: hidden;
+  color: var(--fa-text-tertiary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .order-cell {
@@ -278,13 +328,13 @@ onMounted(loadDashboard)
 .heat-track {
   height: 8px;
   overflow: hidden;
-  background: #e8f1ff;
+  background: #edf2f7;
   border-radius: 999px;
 }
 
 .heat-bar {
   height: 100%;
-  background: linear-gradient(90deg, var(--fa-brand), #67c23a);
+  background: linear-gradient(90deg, #2563eb, #0f9f6e);
   border-radius: inherit;
 }
 

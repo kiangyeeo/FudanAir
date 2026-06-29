@@ -320,25 +320,32 @@ async function deleteFlight(row: Flight) {
       </div>
     </div>
 
-    <el-table v-if="flights.length || loading" v-loading="loading" :data="flights" border row-key="flight_no">
-      <el-table-column prop="flight_no" label="航班号" width="110" />
-      <el-table-column prop="airline_code" label="航司" width="90" />
-      <el-table-column prop="dep_airport_code" label="起飞机场" width="110" />
-      <el-table-column prop="arr_airport_code" label="到达机场" width="110" />
-      <el-table-column label="起飞" width="100">
+    <el-table
+      v-if="flights.length || loading"
+      v-loading="loading"
+      :data="flights"
+      class="flight-table"
+      border
+      row-key="flight_no"
+    >
+      <el-table-column prop="flight_no" label="航班号" min-width="120" />
+      <el-table-column prop="airline_code" label="航司" min-width="120" />
+      <el-table-column prop="dep_airport_code" label="起飞机场" min-width="160" />
+      <el-table-column prop="arr_airport_code" label="到达机场" min-width="160" />
+      <el-table-column label="起飞" min-width="120">
         <template #default="{ row }">{{ formatTime(row.scheduled_departure) }}</template>
       </el-table-column>
-      <el-table-column label="到达" width="100">
+      <el-table-column label="到达" min-width="120">
         <template #default="{ row }">{{ formatTime(row.scheduled_arrival) }}</template>
       </el-table-column>
-      <el-table-column prop="aircraft_model" label="机型" width="130" />
-      <el-table-column label="机票价格" width="120">
+      <el-table-column prop="aircraft_model" label="机型" min-width="140" />
+      <el-table-column label="机票价格" min-width="140">
         <template #default="{ row }">{{ formatCurrency(Number(row.base_price)) }}</template>
       </el-table-column>
-      <el-table-column label="燃油基建费" width="120">
+      <el-table-column label="燃油基建费" min-width="140">
         <template #default="{ row }">{{ formatCurrency(Number(row.fuel_infra_fee)) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column label="操作" min-width="180" align="center">
         <template #default="{ row }">
           <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
           <el-button link type="danger" :icon="Delete" @click="deleteFlight(row)">删除</el-button>
@@ -499,6 +506,10 @@ async function deleteFlight(row: Flight) {
 
 .flight-no-filter {
   width: 150px;
+}
+
+.flight-table {
+  width: 100%;
 }
 
 .pager {
