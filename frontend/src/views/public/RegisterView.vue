@@ -13,21 +13,21 @@ const form = reactive<RegisterRequest>({ phone: '', password: '', name: '' })
 
 async function submit() {
   await auth.register(form)
-  ElMessage.success('注册成功，请登录')
+  ElMessage.success('Account created. Please sign in')
   router.push('/login')
 }
 </script>
 
 <template>
-  <AuthShell title="创建账号" subtitle="加入 FudanAir，开启说走就走的旅程">
+  <AuthShell title="Create Account" subtitle="Join FudanAir and start your next trip">
     <el-form :model="form" label-position="top" class="auth-form" @submit.prevent>
-      <el-form-item label="姓名">
-        <el-input v-model="form.name" size="large" :prefix-icon="User" placeholder="请输入姓名" />
+      <el-form-item label="Name">
+        <el-input v-model="form.name" size="large" :prefix-icon="User" placeholder="Enter name" />
       </el-form-item>
-      <el-form-item label="手机号">
-        <el-input v-model="form.phone" size="large" :prefix-icon="Iphone" autocomplete="username" placeholder="请输入手机号" />
+      <el-form-item label="Phone">
+        <el-input v-model="form.phone" size="large" :prefix-icon="Iphone" autocomplete="username" placeholder="Enter phone number" />
       </el-form-item>
-      <el-form-item label="密码">
+      <el-form-item label="Password">
         <el-input
           v-model="form.password"
           size="large"
@@ -35,13 +35,13 @@ async function submit() {
           :prefix-icon="Lock"
           autocomplete="new-password"
           show-password
-          placeholder="设置 6-32 位密码"
+          placeholder="Set a 6-32 character password"
           @keyup.enter="submit"
         />
       </el-form-item>
-      <el-button type="primary" size="large" class="full-button" @click="submit">注册</el-button>
+      <el-button type="primary" size="large" class="full-button" @click="submit">Register</el-button>
     </el-form>
-    <RouterLink class="back-link" to="/login">已有账号，去登录</RouterLink>
+    <RouterLink class="back-link" to="/login">Already have an account? Log in</RouterLink>
   </AuthShell>
 </template>
 
