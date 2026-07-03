@@ -5,6 +5,7 @@ import { orderApi } from '@/api/order'
 import EmptyState from '@/components/common/EmptyState.vue'
 import OrderTimeline from '@/components/order/OrderTimeline.vue'
 import { formatCurrency, formatDate, formatTime, maskIdNo } from '@/utils/format'
+import { adjustmentLabel, cabinClassLabel, fareTypeLabel, instanceStatusLabel, orderStatusLabel, ticketStatusLabel } from '@/utils/labels'
 import { useAirportStore } from '@/stores/airport'
 import type { OrderDetail, OrderStatus, OrderTicket } from '@/types/order'
 
@@ -70,7 +71,7 @@ onMounted(() => {
 <template>
   <div class="page-shell order-detail">
     <section v-loading="loading" class="page-section">
-      <h1 class="page-title">订单详情</h1>
+      <h1 class="page-title">Order Details</h1>
       <template v-if="detail">
         <OrderTimeline :status="detail.status" />
         <el-alert
@@ -79,45 +80,45 @@ onMounted(() => {
           show-icon
           :closable="false"
           class="status-alert"
-          :title="`订单内有 ${affectedTickets.length} 张有效客票对应航班实例已不是可订状态，请留意航班状态。`"
+          :title="`${affectedTickets.length} active ticket(s) are linked to flight instances that are no longer bookable. Check flight status.`"
         />
         <el-descriptions :column="3" border class="summary">
-          <el-descriptions-item label="订单号">{{ detail.order_no }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTagType(detail.status)">{{ detail.status }}</el-tag>
+          <el-descriptions-item label="Order No.">{{ detail.order_no }}</el-descriptions-item>
+          <el-descriptions-item label="Status">
+            <el-tag :type="statusTagType(detail.status)">{{ orderStatusLabel(detail.status) }}</el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="金额">{{ formatCurrency(detail.total_amount) }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ formatDate(detail.created_at) }}</el-descriptions-item>
-          <el-descriptions-item label="用户 ID">{{ detail.user_id }}</el-descriptions-item>
-          <el-descriptions-item :label="hasIssuedTickets ? '客票数' : '锁座人数'">{{ detail.tickets.length }}</el-descriptions-item>
+          <el-descriptions-item label="Amount">{{ formatCurrency(detail.total_amount) }}</el-descriptions-item>
+          <el-descriptions-item label="Created At">{{ formatDate(detail.created_at) }}</el-descriptions-item>
+          <el-descriptions-item label="User ID">{{ detail.user_id }}</el-descriptions-item>
+          <el-descriptions-item :label="hasIssuedTickets ? 'Tickets' : 'Reserved Seats'">{{ detail.tickets.length }}</el-descriptions-item>
         </el-descriptions>
       </template>
-      <EmptyState v-else title="暂无订单详情" :description="`当前订单号：${orderNo || '--'}`" />
+      <EmptyState v-else title="No Order Details" :description="`Current order no.: ${orderNo || '--'}`" />
     </section>
 
     <section class="page-section">
-      <h2>{{ hasIssuedTickets ? '客票' : '锁座信息' }}</h2>
+      <h2>{{ hasIssuedTickets ? 'Tickets' : 'Reserved Seats' }}</h2>
       <el-alert
         v-if="detail && !hasIssuedTickets"
         type="info"
         show-icon
         :closable="false"
-        title="订单未支付完成，暂不展示客票号和退改入口。支付成功后再查看客票。"
+        title="This order is not paid yet. Ticket numbers and refund/change actions will be available after payment."
       />
       <el-table v-else :data="detail?.tickets ?? []" border row-key="ticket_no">
-        <el-table-column prop="ticket_no" label="票号" min-width="180" />
-        <el-table-column label="乘机人" min-width="160">
+        <el-table-column prop="ticket_no" label="Ticket No." min-width="180" />
+        <el-table-column label="Passenger" min-width="160">
           <template #default="{ row }">
             <div>{{ row.passenger.real_name }}</div>
             <span class="subtle mono-num">{{ maskIdNo(row.passenger.id_no) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="航班" min-width="180">
+        <el-table-column label="Flight" min-width="180">
           <template #default="{ row }">
             <div class="flight-line">
               <span class="mono-num">{{ row.flight_no }}</span>
               <el-tag v-if="row.flight_instance_status && row.flight_instance_status !== '可订'" size="small" :type="statusTagType(row.flight_instance_status)">
-                {{ row.flight_instance_status }}
+                {{ instanceStatusLabel(row.flight_instance_status) }}
               </el-tag>
               <el-tag
                 v-for="label in row.adjustment_labels ?? []"
@@ -125,37 +126,37 @@ onMounted(() => {
                 size="small"
                 type="warning"
               >
-                {{ label }}
+                {{ adjustmentLabel(label) }}
               </el-tag>
             </div>
             <span class="subtle">{{ airportStore.display(row.dep_airport_code) }} → {{ airportStore.display(row.arr_airport_code) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="日期时间" min-width="170">
+        <el-table-column label="Date & Time" min-width="170">
           <template #default="{ row }">
             <div>{{ formatDate(row.flight_date) }}</div>
             <span class="subtle">{{ formatTime(row.scheduled_departure) }} - {{ formatTime(row.scheduled_arrival) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="舱位票价" min-width="230">
+        <el-table-column label="Cabin & Fare" min-width="230">
           <template #default="{ row }">
-            <div>{{ row.cabin_class }} · {{ row.fare_type }}</div>
+            <div>{{ cabinClassLabel(row.cabin_class) }} · {{ fareTypeLabel(row.fare_type) }}</div>
             <span class="subtle mono-num">
-              机票 {{ formatCurrency(row.ticket_price) }} + 燃油基建 {{ formatCurrency(row.fuel_infra_fee) }}
+              Ticket {{ formatCurrency(row.ticket_price) }} + Fuel & airport fee {{ formatCurrency(row.fuel_infra_fee) }}
             </span>
             <div class="price mono-num">{{ formatCurrency(row.actual_price) }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="120">
+        <el-table-column label="Status" width="120">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ row.status }}</el-tag>
+            <el-tag :type="statusTagType(row.status)">{{ ticketStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="140" fixed="right">
+        <el-table-column label="Actions" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === '有效'" link type="primary" @click="refund(row)">退票</el-button>
-            <el-button v-if="row.status === '有效'" link type="primary" @click="change(row)">改签</el-button>
-            <span v-else class="subtle">不可操作</span>
+            <el-button v-if="row.status === '有效'" link type="primary" @click="refund(row)">Refund</el-button>
+            <el-button v-if="row.status === '有效'" link type="primary" @click="change(row)">Change</el-button>
+            <span v-else class="subtle">Unavailable</span>
           </template>
         </el-table-column>
       </el-table>

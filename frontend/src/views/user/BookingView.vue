@@ -10,6 +10,7 @@ import FlightPath from '@/components/flight/FlightPath.vue'
 import { useBookingStore } from '@/stores/booking'
 import { useAirportStore } from '@/stores/airport'
 import { formatCurrency, formatTime, minutesBetween } from '@/utils/format'
+import { cabinClassLabel, cabinClassOptions, fareTypeLabel, fareTypeOptions } from '@/utils/labels'
 import type { BookingRequest, BookingSegmentSelection } from '@/types/booking'
 import type { CabinClass, FareType } from '@/types/common'
 import type { FlightInstance } from '@/types/flight'
@@ -59,7 +60,7 @@ const priceRows = computed(() =>
     const actualPrice = ticketPrice !== null && fuelFee !== null ? ticketPrice + fuelFee : null
     return {
       key: `${index}-${segment.instance_id}`,
-      label: isTransitBooking.value ? `第 ${index + 1} 段` : '航段',
+      label: isTransitBooking.value ? `Segment ${index + 1}` : 'Segment',
       segment,
       detail,
       ticketPrice,
@@ -93,7 +94,7 @@ async function submit() {
   try {
     const order = await bookingApi.createOrder(payload)
     bookingStore.setCurrentOrder(order)
-    ElMessage.success('订单已创建，请在 15 分钟内支付')
+    ElMessage.success('Order created. Please pay within 15 minutes')
     router.push(`/payment/${order.order_no}`)
   } finally {
     loading.value = false
@@ -134,14 +135,14 @@ async function loadSegmentDetails() {
 function appendSavedPassengers() {
   const selected = savedPassengers.value.filter((item) => selectedSavedIds.value.includes(item.id_no))
   if (!selected.length) {
-    ElMessage.warning('请选择常用乘机人')
+    ElMessage.warning('Select saved passengers')
     return
   }
 
   const existingIds = new Set(passengers.value.map((item) => item.id_no.trim()).filter(Boolean))
   const additions = selected.filter((item) => !existingIds.has(item.id_no))
   if (!additions.length) {
-    ElMessage.warning('所选乘机人已在订单中')
+    ElMessage.warning('Selected passengers are already in the order')
     return
   }
 
@@ -153,7 +154,7 @@ function appendSavedPassengers() {
 function normalizePayload(): BookingRequest | null {
   const bookingSegments = selectedSegments.value
   if (!bookingSegments.length) {
-    ElMessage.warning('请填写航班实例 ID')
+    ElMessage.warning('Enter a flight instance ID')
     return null
   }
 
@@ -164,18 +165,18 @@ function normalizePayload(): BookingRequest | null {
   }))
 
   if (!normalizedPassengers.length) {
-    ElMessage.warning('请至少填写一位乘机人')
+    ElMessage.warning('Enter at least one passenger')
     return null
   }
 
   const ids = new Set<string>()
   for (const passenger of normalizedPassengers) {
     if (!passenger.id_no || !passenger.real_name || !passenger.birth_date) {
-      ElMessage.warning('请完整填写乘机人证件号、姓名和出生日期')
+      ElMessage.warning('Complete passenger ID number, name, and date of birth')
       return null
     }
     if (ids.has(passenger.id_no)) {
-      ElMessage.warning(`乘机人证件号重复：${passenger.id_no}`)
+      ElMessage.warning(`Duplicate passenger ID number: ${passenger.id_no}`)
       return null
     }
     ids.add(passenger.id_no)
@@ -268,28 +269,26 @@ function currentDraft(): BookingRequest | null {
   <div class="page-shell booking-page">
     <div class="booking-main">
       <section class="page-section">
-        <h1 class="page-title">填写订单</h1>
+        <h1 class="page-title">Create Order</h1>
         <el-form :model="form" label-position="top" class="booking-form">
-          <el-form-item v-if="!isTransitBooking" label="航班实例 ID">
-            <el-input v-model="form.instance_id" placeholder="如 CA1234_20260510" />
+          <el-form-item v-if="!isTransitBooking" label="Flight Instance ID">
+            <el-input v-model="form.instance_id" placeholder="e.g. CA1234_20260510" />
           </el-form-item>
-          <el-form-item v-else label="中转航段">
+          <el-form-item v-else label="Transfer Segments">
             <div class="segment-tags">
               <el-tag v-for="row in priceRows" :key="row.key" type="info">
                 {{ row.label }} · {{ row.segment.instance_id }}
               </el-tag>
             </div>
           </el-form-item>
-          <el-form-item label="舱位">
+          <el-form-item label="Cabin">
             <el-select v-model="form.cabin_class">
-              <el-option label="经济舱" value="经济舱" />
-              <el-option label="头等舱" value="头等舱" />
+              <el-option v-for="item in cabinClassOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
-          <el-form-item label="票价类型">
+          <el-form-item label="Fare Type">
             <el-select v-model="form.fare_type">
-              <el-option label="标准" value="标准" />
-              <el-option label="特价" value="特价" />
+              <el-option v-for="item in fareTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </el-form-item>
         </el-form>
@@ -297,7 +296,7 @@ function currentDraft(): BookingRequest | null {
 
       <section class="page-section">
         <div class="section-header">
-          <h2>乘机人</h2>
+          <h2>Passengers</h2>
           <div class="passenger-picker">
             <el-select
               v-model="selectedSavedIds"
@@ -307,11 +306,11 @@ function currentDraft(): BookingRequest | null {
               collapse-tags-tooltip
               :loading="passengerLoading"
               :disabled="!savedPassengerOptions.length"
-              placeholder="选择常用乘机人"
+              placeholder="Select saved passengers"
             >
               <el-option v-for="item in savedPassengerOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
-            <el-button :disabled="!savedPassengerOptions.length" @click="appendSavedPassengers">带入</el-button>
+            <el-button :disabled="!savedPassengerOptions.length" @click="appendSavedPassengers">Add</el-button>
           </div>
         </div>
         <PassengerForm v-model="passengers" />
@@ -320,7 +319,7 @@ function currentDraft(): BookingRequest | null {
 
     <aside class="booking-aside">
       <section v-loading="detailLoading" class="page-section summary-card">
-        <h2 class="summary-title">订单摘要</h2>
+        <h2 class="summary-title">Order Summary</h2>
         <div v-if="selectedSegments.length" class="seg-list">
           <div v-for="row in priceRows" :key="row.key" class="seg-item">
             <div class="seg-head">
@@ -343,32 +342,32 @@ function currentDraft(): BookingRequest | null {
               </div>
             </div>
             <div class="seg-fee">
-              <span class="subtle">{{ row.segment.cabin_class }} · {{ row.segment.fare_type }}</span>
+              <span class="subtle">{{ cabinClassLabel(row.segment.cabin_class) }} · {{ fareTypeLabel(row.segment.fare_type) }}</span>
               <span class="price mono-num">{{ formatCurrency(row.actualPrice) }}</span>
             </div>
             <div class="subtle mono-num seg-breakdown">
-              机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
+              Ticket {{ formatCurrency(row.ticketPrice) }} + Fuel & airport fee {{ formatCurrency(row.fuelFee) }}
             </div>
           </div>
         </div>
-        <p v-else class="subtle">请选择航班后查看价格明细。</p>
+        <p v-else class="subtle">Select a flight to view price details.</p>
 
         <div class="summary-foot">
           <div class="foot-row">
-            <span>单人合计</span>
+            <span>Per Passenger</span>
             <span class="mono-num">{{ formatCurrency(totalPerPassenger) }}</span>
           </div>
           <div class="foot-row">
-            <span>乘机人数</span>
+            <span>Passengers</span>
             <span class="mono-num">× {{ passengers.length }}</span>
           </div>
           <div class="foot-row total">
-            <span>预计总额</span>
+            <span>Estimated Total</span>
             <span class="price mono-num">
               {{ totalPerPassenger != null ? formatCurrency(totalPerPassenger * passengers.length) : '¥--' }}
             </span>
           </div>
-          <el-button type="primary" size="large" class="submit-btn" :loading="loading" @click="submit">提交订单</el-button>
+          <el-button type="primary" size="large" class="submit-btn" :loading="loading" @click="submit">Submit Order</el-button>
         </div>
       </section>
     </aside>

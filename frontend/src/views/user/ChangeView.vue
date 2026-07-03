@@ -11,6 +11,7 @@ import AirlineLogo from '@/components/flight/AirlineLogo.vue'
 import FlightPath from '@/components/flight/FlightPath.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { formatCurrency, formatDate, formatTime, minutesBetween } from '@/utils/format'
+import { cabinClassLabel, fareTypeLabel, instanceStatusLabel, refundTierLabel, ticketStatusLabel } from '@/utils/labels'
 import type { CabinPrice, FlightInstance } from '@/types/flight'
 import type { OrderDetail, OrderTicket } from '@/types/order'
 import type { ChangeRequest, ChangeTicketResponse, RefundQuote } from '@/types/refund'
@@ -76,7 +77,7 @@ const quoteMatches = computed(() =>
       form.new_fare_type,
   ),
 )
-const settlementLabel = computed(() => ((quote.value?.amount_user_pays ?? 0) >= 0 ? '需补缴' : '可退还'))
+const settlementLabel = computed(() => ((quote.value?.amount_user_pays ?? 0) >= 0 ? 'Amount Due' : 'Refundable'))
 const canSubmit = computed(() => Boolean(quote.value && quoteMatches.value && !result.value))
 
 async function loadOriginalTicket() {
@@ -89,12 +90,12 @@ async function loadOriginalTicket() {
     const detail: OrderDetail = await orderApi.getDetail(orderNo.value)
     originalTicket.value = detail.tickets.find((item) => item.ticket_no === normalizedTicketNo.value) ?? null
     if (!originalTicket.value) {
-      ElMessage.warning('订单中未找到当前客票')
+      ElMessage.warning('Ticket not found in this order')
       return
     }
     await fillSearchCities(originalTicket.value)
   } catch {
-    ElMessage.warning('未能自动回填改签搜索条件')
+    ElMessage.warning('Could not autofill change search criteria')
   } finally {
     originalLoading.value = false
   }
@@ -112,11 +113,11 @@ async function fillSearchCities(ticket: OrderTicket) {
 
 function openSearchDialog() {
   if (!searchForm.dep_city || !searchForm.arr_city) {
-    ElMessage.warning('未获取到原航线城市，无法搜索')
+    ElMessage.warning('Original route cities are unavailable')
     return
   }
   if (!searchForm.flight_date) {
-    ElMessage.warning('请选择目标日期')
+    ElMessage.warning('Select a target date')
     return
   }
   dialogVisible.value = true
@@ -165,7 +166,7 @@ async function selectCandidate(candidate: ChangeCandidate) {
     }
     const first = cabinPriceChoices.value[0]
     if (!first) {
-      ElMessage.warning('该航班暂无可售舱位票价')
+      ElMessage.warning('No available cabin fares for this flight')
       return
     }
     await selectCabinPrice(first)
@@ -203,14 +204,14 @@ async function loadQuote() {
 
 async function submit() {
   if (!canSubmit.value || !quote.value) {
-    ElMessage.warning('请先完成改签费用试算')
+    ElMessage.warning('Calculate change fees first')
     return
   }
 
   try {
-    await ElMessageBox.confirm(confirmText(), '确认改签', {
-      confirmButtonText: '确认改签',
-      cancelButtonText: '取消',
+    await ElMessageBox.confirm(confirmText(), 'Confirm Change', {
+      confirmButtonText: 'Confirm Change',
+      cancelButtonText: 'Cancel',
       type: 'warning',
     })
   } catch {
@@ -220,7 +221,7 @@ async function submit() {
   submitLoading.value = true
   try {
     result.value = await refundApi.change({ ...form, ticket_no: normalizedTicketNo.value })
-    ElMessage.success('改签申请已提交')
+    ElMessage.success('Change submitted')
   } finally {
     submitLoading.value = false
   }
@@ -230,7 +231,7 @@ function searchPayload(): FlightSearchRequest | null {
   const depCity = searchForm.dep_city.trim()
   const arrCity = searchForm.arr_city.trim()
   if (!depCity || !arrCity || !searchForm.flight_date) {
-    ElMessage.warning('请选择目标日期')
+    ElMessage.warning('Select a target date')
     return null
   }
   return {
@@ -244,11 +245,11 @@ function searchPayload(): FlightSearchRequest | null {
 
 function validateQuoteParams() {
   if (!normalizedTicketNo.value) {
-    ElMessage.warning('缺少原客票号')
+    ElMessage.warning('Missing original ticket number')
     return false
   }
   if (!form.new_instance_id || !form.new_cabin_class || !form.new_fare_type) {
-    ElMessage.warning('请选择新航班和舱位票价')
+    ElMessage.warning('Select a new flight and fare')
     return false
   }
   return true
@@ -265,11 +266,11 @@ function clearSelectedTarget() {
 
 function isChangeTargetBookable(instance: FlightInstance) {
   if (instance.status !== BOOKABLE_INSTANCE_STATUS) {
-    ElMessage.warning(`该航班实例当前为${instance.status},不可改签`)
+    ElMessage.warning(`The selected instance is ${instanceStatusLabel(instance.status)} and cannot be selected for change`)
     return false
   }
   if (isDeparted(instance)) {
-    ElMessage.warning('该航班已起飞,不可改签')
+    ElMessage.warning('This flight has departed and cannot be selected')
     return false
   }
   return true
@@ -293,7 +294,7 @@ function backToOrder() {
 
 function confirmText() {
   const amount = quote.value?.amount_user_pays ?? 0
-  return `确认将 ${normalizedTicketNo.value} 改签到 ${form.new_instance_id}？${settlementLabel.value} ${formatCurrency(Math.abs(amount))}。`
+  return `Change ${normalizedTicketNo.value} to ${form.new_instance_id}? ${settlementLabel.value}: ${formatCurrency(Math.abs(amount))}.`
 }
 
 function feeRateText(rate?: number) {
@@ -339,41 +340,41 @@ onMounted(() => {
     <section v-loading="originalLoading" class="page-section">
       <div class="page-heading">
         <div>
-          <h1 class="page-title">改签</h1>
-          <span>出发与到达城市保持不变，可更改出行日期并重新选择航班。</span>
+          <h1 class="page-title">Change Flight</h1>
+          <span>Departure and arrival cities stay the same. Change the travel date and select a new flight.</span>
         </div>
-        <el-button v-if="orderNo" :icon="Back" @click="backToOrder">返回订单</el-button>
+        <el-button v-if="orderNo" :icon="Back" @click="backToOrder">Back to Order</el-button>
       </div>
 
       <el-descriptions v-if="originalTicket" :column="3" border class="original-ticket">
-        <el-descriptions-item label="原客票">{{ originalTicket.ticket_no }}</el-descriptions-item>
-        <el-descriptions-item label="乘机人">{{ originalTicket.passenger.real_name }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="originalTicket.status === '有效' ? 'success' : 'info'">{{ originalTicket.status }}</el-tag>
+        <el-descriptions-item label="Original Ticket">{{ originalTicket.ticket_no }}</el-descriptions-item>
+        <el-descriptions-item label="Passenger">{{ originalTicket.passenger.real_name }}</el-descriptions-item>
+        <el-descriptions-item label="Status">
+          <el-tag :type="originalTicket.status === '有效' ? 'success' : 'info'">{{ ticketStatusLabel(originalTicket.status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="原航班">
+        <el-descriptions-item label="Original Flight">
           {{ originalTicket.flight_no }} · {{ originalTicket.instance_id }}
         </el-descriptions-item>
-        <el-descriptions-item label="航线">
+        <el-descriptions-item label="Route">
           {{ originalTicket.dep_airport_code }} → {{ originalTicket.arr_airport_code }}
         </el-descriptions-item>
-        <el-descriptions-item label="日期时间">
+        <el-descriptions-item label="Date & Time">
           {{ formatDate(originalTicket.flight_date) }} {{ formatTime(originalTicket.scheduled_departure) }} - {{ formatTime(originalTicket.scheduled_arrival) }}
         </el-descriptions-item>
-        <el-descriptions-item label="原舱位票价">
-          {{ originalTicket.cabin_class }} · {{ originalTicket.fare_type }}
+        <el-descriptions-item label="Original Cabin & Fare">
+          {{ cabinClassLabel(originalTicket.cabin_class) }} · {{ fareTypeLabel(originalTicket.fare_type) }}
         </el-descriptions-item>
-        <el-descriptions-item label="原成交价">
+        <el-descriptions-item label="Original Paid Price">
           <span class="mono-num price">{{ formatCurrency(originalTicket.actual_price) }}</span>
         </el-descriptions-item>
       </el-descriptions>
     </section>
 
     <section class="page-section">
-      <h2>改签条件</h2>
+      <h2>Change Criteria</h2>
       <div class="change-criteria">
         <div class="criteria-field">
-          <label>航线（不可更改）</label>
+          <label>Route (locked)</label>
           <div class="route-lock">
             <span class="city">{{ searchForm.dep_city || '--' }}</span>
             <el-icon class="route-arrow"><Right /></el-icon>
@@ -381,85 +382,89 @@ onMounted(() => {
           </div>
         </div>
         <div class="criteria-field">
-          <label>目标日期</label>
+          <label>Target Date</label>
           <el-date-picker
             v-model="searchForm.flight_date"
             type="date"
             value-format="YYYY-MM-DD"
             :prefix-icon="Calendar"
-            placeholder="选择目标日期"
+            placeholder="Select target date"
             class="date-control"
           />
         </div>
         <el-button type="primary" :icon="Search" :loading="searchLoading" @click="openSearchDialog">
-          搜索可改签航班
+          Search Changeable Flights
         </el-button>
       </div>
-      <p v-if="!selectedInstance" class="criteria-hint">点击「搜索可改签航班」，在弹窗中挑选新的航班后再选舱位试算费用。</p>
+      <p v-if="!selectedInstance" class="criteria-hint">Click Search Changeable Flights, choose a new flight, then select a cabin fare to calculate fees.</p>
     </section>
 
     <section v-if="selectedInstance" v-loading="detailLoading || quoteLoading" class="page-section">
       <div class="section-head">
-        <h2>新航班与舱位</h2>
-        <el-button text type="primary" :icon="Search" @click="openSearchDialog">重新选择航班</el-button>
+        <h2>New Flight & Cabin</h2>
+        <el-button text type="primary" :icon="Search" @click="openSearchDialog">Choose Another Flight</el-button>
       </div>
       <el-descriptions :column="3" border class="instance-summary">
-        <el-descriptions-item label="新实例">{{ selectedInstance.instance_id }}</el-descriptions-item>
-        <el-descriptions-item label="航班号">{{ selectedInstance.flight_no }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ selectedInstance.status }}</el-descriptions-item>
-        <el-descriptions-item label="航线">
+        <el-descriptions-item label="New Instance">{{ selectedInstance.instance_id }}</el-descriptions-item>
+        <el-descriptions-item label="Flight No.">{{ selectedInstance.flight_no }}</el-descriptions-item>
+        <el-descriptions-item label="Status">{{ instanceStatusLabel(selectedInstance.status) }}</el-descriptions-item>
+        <el-descriptions-item label="Route">
           {{ selectedInstance.dep_airport_code }} → {{ selectedInstance.arr_airport_code }}
         </el-descriptions-item>
-        <el-descriptions-item label="日期">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
-        <el-descriptions-item label="时间">
+        <el-descriptions-item label="Date">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
+        <el-descriptions-item label="Time">
           {{ formatTime(selectedInstance.scheduled_departure) }} - {{ formatTime(selectedInstance.scheduled_arrival) }}
         </el-descriptions-item>
       </el-descriptions>
 
       <el-table :data="cabinPriceChoices" border row-key="key" class="price-table">
-        <el-table-column label="舱位" min-width="120" prop="cabin_class" />
-        <el-table-column label="票价类型" min-width="120" prop="fare_type" />
-        <el-table-column label="余票" min-width="100" prop="available_seats" />
-        <el-table-column label="价格明细" min-width="230">
+        <el-table-column label="Cabin" min-width="120" prop="cabin_class">
+          <template #default="{ row }">{{ cabinClassLabel(row.cabin_class) }}</template>
+        </el-table-column>
+        <el-table-column label="Fare Type" min-width="120" prop="fare_type">
+          <template #default="{ row }">{{ fareTypeLabel(row.fare_type) }}</template>
+        </el-table-column>
+        <el-table-column label="Seats Left" min-width="100" prop="available_seats" />
+        <el-table-column label="Price Details" min-width="230">
           <template #default="{ row }">
             <span class="mono-num">
-              机票 {{ formatCurrency(row.price) }} + 燃油基建 {{ formatCurrency(selectedInstance?.fuel_infra_fee) }}
+              Ticket {{ formatCurrency(row.price) }} + Fuel & airport fee {{ formatCurrency(selectedInstance?.fuel_infra_fee) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="新成交价" width="130">
+        <el-table-column label="New Paid Price" width="130">
           <template #default="{ row }">
             <span class="mono-num price">{{ formatCurrency(row.actual_price) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="130" fixed="right">
+        <el-table-column label="Actions" width="130" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :disabled="selectedPriceKey === row.key" @click="selectCabinPrice(row)">
-              {{ selectedPriceKey === row.key ? '已选择' : '选择试算' }}
+              {{ selectedPriceKey === row.key ? 'Selected' : 'Select & Quote' }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-      <el-alert v-if="selectedInstance && !cabinPriceChoices.length" type="warning" show-icon :closable="false" title="该实例暂无可售舱位票价。" />
+      <el-alert v-if="selectedInstance && !cabinPriceChoices.length" type="warning" show-icon :closable="false" title="No available cabin fares for this instance." />
     </section>
 
     <section v-if="quote && quoteMatches" class="page-section">
-      <h2>改签费用明细</h2>
+      <h2>Change Fee Details</h2>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="费率档位">{{ quote.tier }}</el-descriptions-item>
-        <el-descriptions-item label="手续费率">{{ feeRateText(quote.fee_rate) }}</el-descriptions-item>
-        <el-descriptions-item label="旧票成交价">
+        <el-descriptions-item label="Fee Tier">{{ refundTierLabel(quote.tier) }}</el-descriptions-item>
+        <el-descriptions-item label="Fee Rate">{{ feeRateText(quote.fee_rate) }}</el-descriptions-item>
+        <el-descriptions-item label="Old Paid Price">
           <span class="mono-num">{{ formatCurrency(quote.old_actual_price) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="新票成交价">
+        <el-descriptions-item label="New Paid Price">
           <span class="mono-num">{{ formatCurrency(quote.new_actual_price) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="票价差额">
+        <el-descriptions-item label="Fare Difference">
           <span class="mono-num" :class="{ danger: (quote.price_diff ?? 0) > 0, success: (quote.price_diff ?? 0) < 0 }">
             {{ formatSignedCurrency(quote.price_diff) }}
           </span>
         </el-descriptions-item>
-        <el-descriptions-item label="手续费">
+        <el-descriptions-item label="Fee">
           <span class="mono-num danger">{{ formatCurrency(quote.fee) }}</span>
         </el-descriptions-item>
         <el-descriptions-item :label="settlementLabel">
@@ -470,45 +475,45 @@ onMounted(() => {
       </el-descriptions>
 
       <div class="formula-box mono-num">
-        <div>差价 = 新票成交价 {{ formatCurrency(quote.new_actual_price) }} - 旧票成交价 {{ formatCurrency(quote.old_actual_price) }} = {{ formatSignedCurrency(quote.price_diff) }}</div>
-        <div>手续费 = 旧票成交价 {{ formatCurrency(quote.old_actual_price) }} × 手续费率 {{ feeRateText(quote.fee_rate) }} = {{ formatCurrency(quote.fee) }}</div>
-        <div>最终金额 = 手续费 {{ formatCurrency(quote.fee) }} + 差价 {{ formatSignedCurrency(quote.price_diff) }} = {{ formatSignedCurrency(quote.amount_user_pays) }}</div>
+        <div>Difference = new paid price {{ formatCurrency(quote.new_actual_price) }} - old paid price {{ formatCurrency(quote.old_actual_price) }} = {{ formatSignedCurrency(quote.price_diff) }}</div>
+        <div>Fee = old paid price {{ formatCurrency(quote.old_actual_price) }} × fee rate {{ feeRateText(quote.fee_rate) }} = {{ formatCurrency(quote.fee) }}</div>
+        <div>Final amount = fee {{ formatCurrency(quote.fee) }} + difference {{ formatSignedCurrency(quote.price_diff) }} = {{ formatSignedCurrency(quote.amount_user_pays) }}</div>
       </div>
 
       <div class="actions">
-        <el-button type="primary" :icon="Check" :loading="submitLoading" :disabled="!canSubmit" @click="submit">确认改签</el-button>
+        <el-button type="primary" :icon="Check" :loading="submitLoading" :disabled="!canSubmit" @click="submit">Confirm Change</el-button>
       </div>
     </section>
 
     <section v-if="result" class="page-section">
-      <h2>改签结果</h2>
+      <h2>Change Result</h2>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="退改记录 ID">{{ result.refund_id }}</el-descriptions-item>
-        <el-descriptions-item label="新票号">{{ result.new_ticket_no }}</el-descriptions-item>
-        <el-descriptions-item label="旧票状态">
-          <el-tag type="warning">{{ result.old_ticket_status }}</el-tag>
+        <el-descriptions-item label="Change Record ID">{{ result.refund_id }}</el-descriptions-item>
+        <el-descriptions-item label="New Ticket No.">{{ result.new_ticket_no }}</el-descriptions-item>
+        <el-descriptions-item label="Old Ticket Status">
+          <el-tag type="warning">{{ ticketStatusLabel(result.old_ticket_status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="新票状态">
-          <el-tag type="success">{{ result.new_ticket_status }}</el-tag>
+        <el-descriptions-item label="New Ticket Status">
+          <el-tag type="success">{{ ticketStatusLabel(result.new_ticket_status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="手续费">
+        <el-descriptions-item label="Fee">
           <span class="mono-num danger">{{ formatCurrency(result.fee) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="差价">
+        <el-descriptions-item label="Difference">
           <span class="mono-num">{{ formatSignedCurrency(result.price_diff) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item :label="result.amount_user_pays >= 0 ? '需补缴' : '可退还'">
+        <el-descriptions-item :label="result.amount_user_pays >= 0 ? 'Amount Due' : 'Refundable'">
           <span class="mono-num" :class="{ danger: result.amount_user_pays >= 0, success: result.amount_user_pays < 0 }">
             {{ formatCurrency(Math.abs(result.amount_user_pays)) }}
           </span>
         </el-descriptions-item>
       </el-descriptions>
       <div class="actions">
-        <el-button :icon="Back" @click="backToOrder">返回订单详情</el-button>
+        <el-button :icon="Back" @click="backToOrder">Back to Order Details</el-button>
       </div>
     </section>
 
-    <el-dialog v-model="dialogVisible" title="选择改签航班" width="760px" top="8vh" class="change-dialog">
+    <el-dialog v-model="dialogVisible" title="Select New Flight" width="760px" top="8vh" class="change-dialog">
       <div class="dialog-toolbar">
         <div class="dialog-route">
           <span class="city">{{ searchForm.dep_city }}</span>
@@ -520,11 +525,11 @@ onMounted(() => {
           type="date"
           value-format="YYYY-MM-DD"
           :prefix-icon="Calendar"
-          placeholder="目标日期"
+          placeholder="Target date"
           class="dialog-date"
           @change="runSearch"
         />
-        <el-button :icon="Search" :loading="searchLoading" @click="runSearch">搜索</el-button>
+        <el-button :icon="Search" :loading="searchLoading" @click="runSearch">Search</el-button>
       </div>
 
       <div v-loading="searchLoading" class="dialog-body">
@@ -551,17 +556,17 @@ onMounted(() => {
               </div>
               <div class="pick-sub subtle">
                 <span>{{ c.dep_airport_code }} → {{ c.arr_airport_code }}</span>
-                <el-tag v-if="c.type === 'nearby'" size="small" type="warning" effect="plain">临近机场</el-tag>
-                <span class="seat mono-num">经济 {{ c.economy_left }} / 头等 {{ c.first_left }}</span>
+                <el-tag v-if="c.type === 'nearby'" size="small" type="warning" effect="plain">Nearby Airport</el-tag>
+                <span class="seat mono-num">Economy {{ c.economy_left }} / First {{ c.first_left }}</span>
               </div>
             </div>
             <div class="pick-right">
-              <div class="pick-price mono-num"><span class="cny">¥</span>{{ c.min_price.toFixed(0) }}<small>起</small></div>
-              <span class="pick-select">选择 →</span>
+              <div class="pick-price mono-num"><span class="cny">¥</span>{{ c.min_price.toFixed(0) }}<small>from</small></div>
+              <span class="pick-select">Select -></span>
             </div>
           </button>
         </div>
-        <EmptyState v-else-if="!searchLoading" title="暂无可改签航班" description="换个出行日期再试试。" />
+        <EmptyState v-else-if="!searchLoading" title="No Changeable Flights" description="Try another travel date." />
       </div>
     </el-dialog>
   </div>
