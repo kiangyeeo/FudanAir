@@ -8,6 +8,7 @@ import PaymentCountdown from '@/components/order/PaymentCountdown.vue'
 import { useBookingStore } from '@/stores/booking'
 import { useAirportStore } from '@/stores/airport'
 import { formatChineseDate, formatCurrency, formatDate } from '@/utils/format'
+import { cabinClassLabel, fareTypeLabel, orderStatusLabel } from '@/utils/labels'
 import type { OrderDetail, OrderTicket } from '@/types/order'
 
 const route = useRoute()
@@ -22,9 +23,9 @@ const now = ref(Date.now())
 let timer: number | undefined
 
 const payMethods = [
-  { value: 'wechat', label: '微信支付', desc: '亿万用户的选择', tag: '微', color: '#07c160' },
-  { value: 'alipay', label: '支付宝', desc: '账户余额 / 花呗', tag: '支', color: '#1677ff' },
-  { value: 'bank', label: '银行卡', desc: '储蓄卡 / 信用卡', tag: '卡', color: '#6b7280' },
+  { value: 'wechat', label: 'WeChat Pay', desc: 'Popular mobile wallet', tag: 'W', color: '#07c160' },
+  { value: 'alipay', label: 'Alipay', desc: 'Balance / credit pay', tag: 'A', color: '#1677ff' },
+  { value: 'bank', label: 'Bank Card', desc: 'Debit / credit card', tag: 'B', color: '#6b7280' },
 ]
 const payMethod = ref('wechat')
 
@@ -40,7 +41,7 @@ const expiresAt = computed(() => order.value?.expires_at ?? fallbackExpiresAt(de
 const totalAmount = computed(() => order.value?.total_amount ?? detail.value?.total_amount ?? null)
 const ticketCount = computed(() => order.value?.tickets.length ?? detail.value?.tickets.length ?? null)
 const isPending = computed(() => status.value === '待支付')
-const quantityLabel = computed(() => (isPending.value ? '锁座数量' : '客票数量'))
+const quantityLabel = computed(() => (isPending.value ? 'Reserved Seats' : 'Tickets'))
 interface PriceRow {
   key: string
   label: string
@@ -66,7 +67,7 @@ const priceRows = computed<PriceRow[]>(() => {
   const segments = order.value?.amount_breakdown.segments ?? []
   return segments.map((item, index) => ({
     key: `${index}-${item.instance_id}`,
-    label: segments.length > 1 ? `第 ${index + 1} 段` : '航段',
+    label: segments.length > 1 ? `Segment ${index + 1}` : 'Segment',
     flightNo: flightNoFromInstance(item.instance_id),
     flightDate: dateFromInstance(item.instance_id),
     depCode: null,
@@ -95,7 +96,7 @@ function rowsFromTickets(tickets: OrderTicket[]): PriceRow[] {
     }
     grouped.set(key, {
       key,
-      label: '航段',
+      label: 'Segment',
       flightNo: ticket.flight_no,
       flightDate: ticket.flight_date,
       depCode: ticket.dep_airport_code,
@@ -111,7 +112,7 @@ function rowsFromTickets(tickets: OrderTicket[]): PriceRow[] {
   }
   return Array.from(grouped.values()).map((item, index, rows) => ({
     ...item,
-    label: rows.length > 1 ? `第 ${index + 1} 段` : item.label,
+    label: rows.length > 1 ? `Segment ${index + 1}` : item.label,
   }))
 }
 
@@ -136,18 +137,18 @@ const canPay = computed(() => Boolean(orderNo.value) && isPending.value && !isEx
 
 async function pay() {
   if (!orderNo.value) {
-    ElMessage.warning('缺少订单号')
+    ElMessage.warning('Missing order number')
     return
   }
   if (!canPay.value) {
-    ElMessage.warning(isExpired.value ? '订单已超时' : '当前订单不可支付')
+    ElMessage.warning(isExpired.value ? 'Order has expired' : 'This order cannot be paid')
     return
   }
   loading.value = true
   try {
     await bookingApi.pay(orderNo.value)
     bookingStore.finish()
-    ElMessage.success('支付成功')
+    ElMessage.success('Payment successful')
     router.push(`/orders/${orderNo.value}`)
   } finally {
     loading.value = false
@@ -156,13 +157,13 @@ async function pay() {
 
 async function cancelOrder() {
   if (!orderNo.value) {
-    ElMessage.warning('缺少订单号')
+    ElMessage.warning('Missing order number')
     return
   }
   try {
-    await ElMessageBox.confirm('确认取消该待支付订单？库存会释放。', '取消订单', {
-      confirmButtonText: '确认取消',
-      cancelButtonText: '再看看',
+    await ElMessageBox.confirm('Cancel this pending order? Reserved inventory will be released.', 'Cancel Order', {
+      confirmButtonText: 'Cancel Order',
+      cancelButtonText: 'Keep Order',
       type: 'warning',
     })
   } catch {
@@ -173,7 +174,7 @@ async function cancelOrder() {
   try {
     await bookingApi.cancel(orderNo.value)
     bookingStore.clearCurrentOrder()
-    ElMessage.success('订单已取消')
+    ElMessage.success('Order canceled')
     router.push('/orders')
   } finally {
     cancelLoading.value = false
@@ -225,25 +226,25 @@ watch(orderNo, () => {
     <section v-loading="detailLoading" class="page-section payment-panel">
       <div class="pay-head">
         <div>
-          <h1 class="page-title">订单支付</h1>
-          <span class="order-no mono-num">订单号 {{ orderNo || '--' }} · {{ status }}</span>
+          <h1 class="page-title">Payment</h1>
+          <span class="order-no mono-num">Order {{ orderNo || '--' }} · {{ orderStatusLabel(status) }}</span>
         </div>
         <PaymentCountdown v-if="isPending && expiresAt" :expires-at="expiresAt" />
       </div>
 
-      <el-alert v-if="isExpired" type="warning" show-icon :closable="false" title="订单已超过 15 分钟支付窗口，请返回订单列表查看状态。" />
+      <el-alert v-if="isExpired" type="warning" show-icon :closable="false" title="The 15-minute payment window has expired. Return to the order list to check status." />
 
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="订单号">{{ orderNo || '--' }}</el-descriptions-item>
-        <el-descriptions-item label="订单状态">{{ status }}</el-descriptions-item>
+        <el-descriptions-item label="Order No.">{{ orderNo || '--' }}</el-descriptions-item>
+        <el-descriptions-item label="Order Status">{{ orderStatusLabel(status) }}</el-descriptions-item>
         <el-descriptions-item :label="quantityLabel">{{ ticketCount ?? '--' }}</el-descriptions-item>
-        <el-descriptions-item label="创建时间">{{ formatDate(order?.created_at ?? detail?.created_at) }}</el-descriptions-item>
-        <el-descriptions-item label="支付截止" :span="2">{{ formatDate(expiresAt) }}</el-descriptions-item>
+        <el-descriptions-item label="Created At">{{ formatDate(order?.created_at ?? detail?.created_at) }}</el-descriptions-item>
+        <el-descriptions-item label="Payment Deadline" :span="2">{{ formatDate(expiresAt) }}</el-descriptions-item>
       </el-descriptions>
 
       <el-table v-if="priceRows.length" :data="priceRows" border row-key="key">
-        <el-table-column prop="label" label="航段" width="90" />
-        <el-table-column label="航班" min-width="220">
+        <el-table-column prop="label" label="Segment" width="90" />
+        <el-table-column label="Flight" min-width="220">
           <template #default="{ row }">
             <div class="flight-name mono-num">{{ row.flightNo }}</div>
             <div class="subtle">{{ formatChineseDate(row.flightDate) }}</div>
@@ -252,18 +253,18 @@ watch(orderNo, () => {
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="舱位票价" min-width="240">
+        <el-table-column label="Cabin & Fare" min-width="240">
           <template #default="{ row }">
-            <div>{{ row.cabin_class }} · {{ row.fare_type }}</div>
+            <div>{{ cabinClassLabel(row.cabin_class) }} · {{ fareTypeLabel(row.fare_type) }}</div>
             <span class="subtle mono-num">
-              机票 {{ formatCurrency(row.ticketPrice) }} + 燃油基建 {{ formatCurrency(row.fuelFee) }}
+              Ticket {{ formatCurrency(row.ticketPrice) }} + Fuel & airport fee {{ formatCurrency(row.fuelFee) }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="数量" width="90">
+        <el-table-column label="Qty" width="90">
           <template #default="{ row }">{{ row.count }}</template>
         </el-table-column>
-        <el-table-column label="小计" width="130">
+        <el-table-column label="Subtotal" width="130">
           <template #default="{ row }">
             <span class="price mono-num">{{ formatCurrency(row.subtotal) }}</span>
           </template>
@@ -271,7 +272,7 @@ watch(orderNo, () => {
       </el-table>
 
       <div v-if="isPending && !isExpired" class="pay-methods">
-        <h2 class="block-title">选择支付方式</h2>
+        <h2 class="block-title">Select Payment Method</h2>
         <div class="method-grid">
           <button
             v-for="method in payMethods"
@@ -293,11 +294,11 @@ watch(orderNo, () => {
 
       <div class="pay-bar">
         <div class="pay-total">
-          应付金额 <span class="price mono-num">{{ formatCurrency(totalAmount) }}</span>
+          Amount Due <span class="price mono-num">{{ formatCurrency(totalAmount) }}</span>
         </div>
         <div class="actions">
-          <el-button :disabled="!isPending" :loading="cancelLoading" @click="cancelOrder">取消订单</el-button>
-          <el-button type="primary" size="large" :disabled="!canPay" :loading="loading" @click="pay">确认支付</el-button>
+          <el-button :disabled="!isPending" :loading="cancelLoading" @click="cancelOrder">Cancel Order</el-button>
+          <el-button type="primary" size="large" :disabled="!canPay" :loading="loading" @click="pay">Pay Now</el-button>
         </div>
       </div>
     </section>
