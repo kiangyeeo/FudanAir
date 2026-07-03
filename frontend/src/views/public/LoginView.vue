@@ -14,18 +14,18 @@ const form = reactive<LoginRequest>({ phone: '', password: '' })
 
 async function submit() {
   await auth.login(form)
-  ElMessage.success('登录成功')
+  ElMessage.success('Signed in')
   router.push(String(route.query.redirect || '/'))
 }
 </script>
 
 <template>
-  <AuthShell title="欢迎回来" subtitle="登录 FudanAir，继续你的旅程">
+  <AuthShell title="Welcome Back" subtitle="Sign in to FudanAir and continue your trip">
     <el-form :model="form" label-position="top" class="auth-form" @submit.prevent>
-      <el-form-item label="手机号">
-        <el-input v-model="form.phone" size="large" :prefix-icon="Iphone" autocomplete="username" placeholder="请输入手机号" />
+      <el-form-item label="Phone">
+        <el-input v-model="form.phone" size="large" :prefix-icon="Iphone" autocomplete="username" placeholder="Enter phone number" />
       </el-form-item>
-      <el-form-item label="密码">
+      <el-form-item label="Password">
         <el-input
           v-model="form.password"
           size="large"
@@ -33,15 +33,15 @@ async function submit() {
           :prefix-icon="Lock"
           autocomplete="current-password"
           show-password
-          placeholder="请输入密码"
+          placeholder="Enter password"
           @keyup.enter="submit"
         />
       </el-form-item>
-      <el-button type="primary" size="large" class="full-button" @click="submit">登录</el-button>
+      <el-button type="primary" size="large" class="full-button" @click="submit">Log In</el-button>
     </el-form>
     <div class="auth-links">
-      <RouterLink to="/register">注册新账号</RouterLink>
-      <RouterLink to="/admin/login">管理员入口</RouterLink>
+      <RouterLink to="/register">Create Account</RouterLink>
+      <RouterLink to="/admin/login">Admin Portal</RouterLink>
     </div>
   </AuthShell>
 </template>
