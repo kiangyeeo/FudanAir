@@ -5,6 +5,7 @@ import { Back, Check, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { refundApi } from '@/api/refund'
 import { formatCurrency } from '@/utils/format'
+import { orderStatusLabel, refundTierLabel, ticketStatusLabel } from '@/utils/labels'
 import type { RefundQuote, RefundTicketResponse } from '@/types/refund'
 
 const route = useRoute()
@@ -23,7 +24,7 @@ const canSubmit = computed(() => Boolean(quote.value && quoteMatches.value && !r
 async function loadQuote() {
   const ticketNo = normalizedTicketNo.value
   if (!ticketNo) {
-    ElMessage.warning('请填写客票号')
+    ElMessage.warning('Enter a ticket number')
     return
   }
 
@@ -38,17 +39,17 @@ async function loadQuote() {
 
 async function submit() {
   if (!canSubmit.value || !quote.value) {
-    ElMessage.warning('请先完成退票费用试算')
+    ElMessage.warning('Calculate the refund fees first')
     return
   }
 
   try {
     await ElMessageBox.confirm(
-      `确认退票 ${quote.value.ticket_no}？预计退款 ${formatCurrency(quote.value.refund_amount)}，手续费 ${formatCurrency(quote.value.fee)}。`,
-      '确认退票',
+      `Refund ticket ${quote.value.ticket_no}? Estimated refund ${formatCurrency(quote.value.refund_amount)}, fee ${formatCurrency(quote.value.fee)}.`,
+      'Confirm Refund',
       {
-        confirmButtonText: '确认退票',
-        cancelButtonText: '取消',
+        confirmButtonText: 'Confirm Refund',
+        cancelButtonText: 'Cancel',
         type: 'warning',
       },
     )
@@ -59,7 +60,7 @@ async function submit() {
   submitLoading.value = true
   try {
     result.value = await refundApi.refund({ ticket_no: quote.value.ticket_no })
-    ElMessage.success('退票申请已提交')
+    ElMessage.success('Refund submitted')
   } finally {
     submitLoading.value = false
   }
@@ -110,74 +111,74 @@ onMounted(() => {
     <section class="page-section">
       <div class="page-heading">
         <div>
-          <h1 class="page-title">退票</h1>
-          <span>先试算手续费和退款金额，再确认提交。</span>
+          <h1 class="page-title">Refund</h1>
+          <span>Calculate fees and refund amount before submitting.</span>
         </div>
-        <el-button v-if="orderNo" :icon="Back" @click="backToOrder">返回订单</el-button>
+        <el-button v-if="orderNo" :icon="Back" @click="backToOrder">Back to Order</el-button>
       </div>
 
       <div v-if="form.ticket_no" class="ticket-readonly">
         <div class="ticket-field">
-          <label>客票号</label>
+          <label>Ticket No.</label>
           <div class="ticket-value mono-num">{{ form.ticket_no }}</div>
         </div>
-        <el-button type="primary" :icon="Search" :loading="quoteLoading" @click="loadQuote">重新试算</el-button>
+        <el-button type="primary" :icon="Search" :loading="quoteLoading" @click="loadQuote">Recalculate</el-button>
       </div>
       <el-alert
         v-else
         type="info"
         show-icon
         :closable="false"
-        title="请从「订单详情」中的客票点击「退票」进入，客票号将自动带入。"
+        title="Open this page from Refund in Order Details so the ticket number is filled automatically."
       />
     </section>
 
     <section v-if="quote && quoteMatches" v-loading="quoteLoading" class="page-section">
-      <h2>退票费用明细</h2>
+      <h2>Refund Fee Details</h2>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="客票号">{{ quote.ticket_no }}</el-descriptions-item>
-        <el-descriptions-item label="费率档位">{{ quote.tier }}</el-descriptions-item>
-        <el-descriptions-item label="原成交价">
+        <el-descriptions-item label="Ticket No.">{{ quote.ticket_no }}</el-descriptions-item>
+        <el-descriptions-item label="Fee Tier">{{ refundTierLabel(quote.tier) }}</el-descriptions-item>
+        <el-descriptions-item label="Original Paid Price">
           <span class="mono-num">{{ formatCurrency(quote.actual_price) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="手续费率">{{ feeRateText(quote.fee_rate) }}</el-descriptions-item>
-        <el-descriptions-item label="手续费">
+        <el-descriptions-item label="Fee Rate">{{ feeRateText(quote.fee_rate) }}</el-descriptions-item>
+        <el-descriptions-item label="Fee">
           <span class="mono-num danger">{{ formatCurrency(quote.fee) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="预计退款">
+        <el-descriptions-item label="Estimated Refund">
           <span class="mono-num success">{{ formatCurrency(quote.refund_amount) }}</span>
         </el-descriptions-item>
       </el-descriptions>
 
       <div class="formula-box mono-num">
-        <div>手续费 = 原成交价 {{ formatCurrency(quote.actual_price) }} × 手续费率 {{ feeRateText(quote.fee_rate) }} = {{ formatCurrency(quote.fee) }}</div>
-        <div>退款金额 = 原成交价 {{ formatCurrency(quote.actual_price) }} - 手续费 {{ formatCurrency(quote.fee) }} = {{ formatCurrency(quote.refund_amount) }}</div>
+        <div>Fee = original paid price {{ formatCurrency(quote.actual_price) }} × fee rate {{ feeRateText(quote.fee_rate) }} = {{ formatCurrency(quote.fee) }}</div>
+        <div>Refund = original paid price {{ formatCurrency(quote.actual_price) }} - fee {{ formatCurrency(quote.fee) }} = {{ formatCurrency(quote.refund_amount) }}</div>
       </div>
 
       <div class="actions">
-        <el-button type="danger" :icon="Check" :loading="submitLoading" :disabled="!canSubmit" @click="submit">确认退票</el-button>
+        <el-button type="danger" :icon="Check" :loading="submitLoading" :disabled="!canSubmit" @click="submit">Confirm Refund</el-button>
       </div>
     </section>
 
     <section v-if="result" class="page-section">
-      <h2>退票结果</h2>
+      <h2>Refund Result</h2>
       <el-descriptions :column="2" border>
-        <el-descriptions-item label="退票记录 ID">{{ result.refund_id }}</el-descriptions-item>
-        <el-descriptions-item label="客票状态">
-          <el-tag type="info">{{ result.ticket_status }}</el-tag>
+        <el-descriptions-item label="Refund Record ID">{{ result.refund_id }}</el-descriptions-item>
+        <el-descriptions-item label="Ticket Status">
+          <el-tag type="info">{{ ticketStatusLabel(result.ticket_status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="订单状态">
-          <el-tag :type="result.order_status === '已完成退款' ? 'info' : 'warning'">{{ result.order_status }}</el-tag>
+        <el-descriptions-item label="Order Status">
+          <el-tag :type="result.order_status === '已完成退款' ? 'info' : 'warning'">{{ orderStatusLabel(result.order_status) }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="实际退款">
+        <el-descriptions-item label="Actual Refund">
           <span class="mono-num success">{{ formatCurrency(result.refund_amount) }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="实际手续费">
+        <el-descriptions-item label="Actual Fee">
           <span class="mono-num danger">{{ formatCurrency(result.fee) }}</span>
         </el-descriptions-item>
       </el-descriptions>
       <div class="actions">
-        <el-button :icon="Back" @click="backToOrder">返回订单详情</el-button>
+        <el-button :icon="Back" @click="backToOrder">Back to Order Details</el-button>
       </div>
     </section>
   </div>

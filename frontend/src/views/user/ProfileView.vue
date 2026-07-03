@@ -81,7 +81,7 @@ async function saveProfile() {
     if (auth.currentUser?.role === 'user') {
       auth.setCurrentUser({ ...auth.currentUser, name: data.name, phone: data.phone })
     }
-    ElMessage.success('个人信息已更新')
+    ElMessage.success('Profile updated')
   } finally {
     profileSaving.value = false
   }
@@ -92,15 +92,15 @@ async function savePassword() {
   const newPassword = passwordForm.new_password.trim()
   const confirmPassword = passwordForm.confirm_password.trim()
   if (!oldPassword) {
-    ElMessage.warning('请输入原密码')
+    ElMessage.warning('Enter current password')
     return
   }
   if (!isPassword(newPassword)) {
-    ElMessage.warning('新密码长度需为 6-32 位')
+    ElMessage.warning('New password must be 6-32 characters')
     return
   }
   if (newPassword !== confirmPassword) {
-    ElMessage.warning('两次输入的新密码不一致')
+    ElMessage.warning('New passwords do not match')
     return
   }
 
@@ -113,7 +113,7 @@ async function savePassword() {
     passwordForm.old_password = ''
     passwordForm.new_password = ''
     passwordForm.confirm_password = ''
-    ElMessage.success('密码已更新')
+    ElMessage.success('Password updated')
   } finally {
     passwordSaving.value = false
   }
@@ -153,7 +153,7 @@ async function createPassenger() {
     const saved = await passengerApi.create(payload)
     replacePassenger(payload.id_no, saved)
     resetCreateForm()
-    ElMessage.success('乘机人已新增')
+    ElMessage.success('Passenger added')
   } finally {
     passengerCreating.value = false
   }
@@ -170,17 +170,17 @@ async function savePassenger(row: Passenger) {
     const saved = await passengerApi.update(row.id_no, payload)
     replacePassenger(row.id_no, saved)
     cancelEdit()
-    ElMessage.success('乘机人信息已更新')
+    ElMessage.success('Passenger updated')
   } finally {
     passengerSaving.value = false
   }
 }
 
 async function deletePassenger(row: Passenger) {
-  const confirmed = await ElMessageBox.confirm(`确定解绑乘机人 ${row.real_name} 吗？`, '解绑乘机人', {
+  const confirmed = await ElMessageBox.confirm(`Unbind passenger ${row.real_name}?`, 'Unbind Passenger', {
     type: 'warning',
-    confirmButtonText: '解绑',
-    cancelButtonText: '取消',
+    confirmButtonText: 'Unbind',
+    cancelButtonText: 'Cancel',
   }).catch(() => false)
   if (!confirmed) {
     return
@@ -193,7 +193,7 @@ async function deletePassenger(row: Passenger) {
     if (editingId.value === row.id_no) {
       cancelEdit()
     }
-    ElMessage.success('乘机人已解绑')
+    ElMessage.success('Passenger unbound')
   } finally {
     passengerDeletingId.value = ''
   }
@@ -203,11 +203,11 @@ function normalizeProfile(): UserProfileUpdate | null {
   const name = profileForm.name?.trim() ?? ''
   const phone = profileForm.phone?.trim() ?? ''
   if (!name) {
-    ElMessage.warning('请输入姓名')
+    ElMessage.warning('Enter name')
     return null
   }
   if (!isPhone(phone)) {
-    ElMessage.warning('手机号格式错误')
+    ElMessage.warning('Invalid phone number')
     return null
   }
   return { name, phone }
@@ -217,7 +217,7 @@ function normalizePassenger(form: PassengerCreate): PassengerCreate | null {
   const idNo = form.id_no.trim()
   const realName = form.real_name.trim()
   if (!idNo || !realName || !form.birth_date) {
-    ElMessage.warning('请完整填写乘机人证件号、姓名和出生日期')
+    ElMessage.warning('Complete passenger ID number, name, and date of birth')
     return null
   }
   return {
@@ -249,24 +249,24 @@ onMounted(() => {
     <section class="profile-hero">
       <span class="hero-avatar">{{ (profile?.name ?? 'U').charAt(0).toUpperCase() }}</span>
       <div class="hero-info">
-        <h1>{{ profile?.name || '旅客' }}</h1>
+        <h1>{{ profile?.name || 'Passenger' }}</h1>
         <p class="mono-num">{{ profile?.phone || '--' }} · ID {{ profile?.user_id ?? '--' }}</p>
       </div>
     </section>
 
     <section class="page-section">
       <el-tabs v-model="activeTab">
-        <el-tab-pane label="个人信息" name="profile">
+        <el-tab-pane label="Profile" name="profile">
           <div v-loading="profileLoading" class="tab-panel">
             <el-form :model="profileForm" label-position="top" class="profile-form">
               <div class="form-grid">
-                <el-form-item label="用户 ID">
+                <el-form-item label="User ID">
                   <el-input :model-value="profile?.user_id ?? ''" disabled />
                 </el-form-item>
-                <el-form-item label="姓名">
+                <el-form-item label="Name">
                   <el-input v-model="profileForm.name" maxlength="64" />
                 </el-form-item>
-                <el-form-item label="手机号">
+                <el-form-item label="Phone">
                   <el-input v-model="profileForm.phone" maxlength="20" />
                 </el-form-item>
               </div>
@@ -278,56 +278,56 @@ onMounted(() => {
                   :loading="profileSaving"
                   @click="saveProfile"
                 >
-                  保存资料
+                  Save Profile
                 </el-button>
-                <el-button :icon="Refresh" @click="loadProfile">刷新</el-button>
+                <el-button :icon="Refresh" @click="loadProfile">Refresh</el-button>
               </div>
             </el-form>
 
             <el-divider />
 
-            <h2>修改密码</h2>
+            <h2>Change Password</h2>
             <el-form :model="passwordForm" label-position="top" class="password-form">
               <div class="form-grid">
-                <el-form-item label="原密码">
+                <el-form-item label="Current Password">
                   <el-input v-model="passwordForm.old_password" type="password" show-password maxlength="32" />
                 </el-form-item>
-                <el-form-item label="新密码">
+                <el-form-item label="New Password">
                   <el-input v-model="passwordForm.new_password" type="password" show-password maxlength="32" />
                 </el-form-item>
-                <el-form-item label="确认新密码">
+                <el-form-item label="Confirm New Password">
                   <el-input v-model="passwordForm.confirm_password" type="password" show-password maxlength="32" />
                 </el-form-item>
               </div>
               <div class="actions">
                 <el-button type="primary" :icon="Lock" :loading="passwordSaving" @click="savePassword">
-                  修改密码
+                  Change Password
                 </el-button>
               </div>
             </el-form>
           </div>
         </el-tab-pane>
 
-        <el-tab-pane label="乘机人信息管理" name="passengers">
+        <el-tab-pane label="Passengers" name="passengers">
           <div class="tab-panel">
             <div class="table-toolbar">
-              <h2>乘机人</h2>
-              <el-button :icon="Refresh" :loading="passengerLoading" @click="loadPassengers">刷新</el-button>
+              <h2>Passengers</h2>
+              <el-button :icon="Refresh" :loading="passengerLoading" @click="loadPassengers">Refresh</el-button>
             </div>
             <el-form :model="createForm" label-position="top" class="passenger-create-form">
               <div class="passenger-form-grid">
-                <el-form-item label="证件号">
+                <el-form-item label="ID Number">
                   <el-input v-model="createForm.id_no" maxlength="32" />
                 </el-form-item>
-                <el-form-item label="姓名">
+                <el-form-item label="Name">
                   <el-input v-model="createForm.real_name" maxlength="64" />
                 </el-form-item>
-                <el-form-item label="出生日期">
+                <el-form-item label="Date of Birth">
                   <el-date-picker v-model="createForm.birth_date" type="date" value-format="YYYY-MM-DD" />
                 </el-form-item>
-                <el-form-item label="操作" class="create-actions">
+                <el-form-item label="Actions" class="create-actions">
                   <el-button type="primary" :icon="Plus" :loading="passengerCreating" @click="createPassenger">
-                    新增乘机人
+                    Add Passenger
                   </el-button>
                 </el-form-item>
               </div>
@@ -337,21 +337,21 @@ onMounted(() => {
               :data="passengers"
               border
               row-key="id_no"
-              empty-text="暂无常用乘机人"
+              empty-text="No saved passengers"
             >
-              <el-table-column label="证件号" min-width="220">
+              <el-table-column label="ID Number" min-width="220">
                 <template #default="{ row }">
                   <el-input v-if="editingId === row.id_no" v-model="editForm.id_no" maxlength="32" />
                   <span v-else>{{ row.id_no }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="姓名" min-width="160">
+              <el-table-column label="Name" min-width="160">
                 <template #default="{ row }">
                   <el-input v-if="editingId === row.id_no" v-model="editForm.real_name" maxlength="64" />
                   <span v-else>{{ row.real_name }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="出生日期" min-width="180">
+              <el-table-column label="Date of Birth" min-width="180">
                 <template #default="{ row }">
                   <el-date-picker
                     v-if="editingId === row.id_no"
@@ -362,13 +362,13 @@ onMounted(() => {
                   <span v-else>{{ row.birth_date }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="220" fixed="right">
+              <el-table-column label="Actions" width="220" fixed="right">
                 <template #default="{ row }">
                   <template v-if="editingId === row.id_no">
                     <el-button link type="primary" :icon="Check" :loading="passengerSaving" @click="savePassenger(row)">
-                      保存
+                      Save
                     </el-button>
-                    <el-button link :icon="Close" :disabled="passengerSaving" @click="cancelEdit">取消</el-button>
+                    <el-button link :icon="Close" :disabled="passengerSaving" @click="cancelEdit">Cancel</el-button>
                   </template>
                   <template v-else>
                     <el-button
@@ -378,7 +378,7 @@ onMounted(() => {
                       :disabled="Boolean(editingId)"
                       @click="startEdit(row)"
                     >
-                      编辑
+                      Edit
                     </el-button>
                     <el-button
                       link
@@ -388,7 +388,7 @@ onMounted(() => {
                       :loading="passengerDeletingId === row.id_no"
                       @click="deletePassenger(row)"
                     >
-                      解绑
+                      Unbind
                     </el-button>
                   </template>
                 </template>

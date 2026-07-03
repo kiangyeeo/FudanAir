@@ -115,22 +115,22 @@ function departureMinutes(value: string): number {
 }
 
 function nearbyTag(item: NearbyFlightCandidate): string {
-  const side = item.replacement === 'departure' ? '替换出发' : '替换到达'
+  const side = item.replacement === 'departure' ? 'departure alternative' : 'arrival alternative'
   const city = item.replacement === 'departure' ? searchStore.criteria?.dep_city : searchStore.criteria?.arr_city
-  const fromCity = city ? `距${city}` : '距搜索城市'
+  const fromCity = city ? `from ${city}` : 'from searched city'
   const km = Math.round(item.nearby_distance)
-  return `临近 · ${side} ${airportStore.display(item.replaced_airport)} · ${fromCity}约 ${km} km`
+  return `Nearby · ${side} ${airportStore.display(item.replaced_airport)} · about ${km} km ${fromCity}`
 }
 
 async function runSearch(payload: FlightSearchRequest) {
   const criteria = normalizeCriteria(payload)
   if (!criteria.dep_city || !criteria.arr_city || !criteria.flight_date) {
-    ElMessage.warning('请填写出发城市、到达城市和日期')
+    ElMessage.warning('Enter departure city, arrival city, and date')
     return
   }
   const { price_min: priceMin, price_max: priceMax } = criteria.filters ?? {}
   if (priceMin !== null && priceMin !== undefined && priceMax !== null && priceMax !== undefined && priceMin > priceMax) {
-    ElMessage.warning('价格区间上限不能小于下限')
+    ElMessage.warning('Maximum price cannot be lower than minimum price')
     return
   }
 
@@ -358,27 +358,27 @@ onMounted(() => {
     <main class="result-main">
       <div class="page-section summary-bar">
         <div class="route-info">
-          <h1 class="page-title">搜索结果</h1>
+          <h1 class="page-title">Search Results</h1>
           <div v-if="searchStore.criteria" class="route">
             <span class="city">{{ searchStore.criteria.dep_city }}</span>
             <el-icon class="arrow"><Right /></el-icon>
             <span class="city">{{ searchStore.criteria.arr_city }}</span>
             <span class="fa-chip date-chip">{{ searchStore.criteria.flight_date }}</span>
           </div>
-          <span v-else class="hint">请先输入搜索条件</span>
+          <span v-else class="hint">Enter search criteria first</span>
         </div>
         <div class="count-summary">
-          <span class="count-pill direct"><b class="mono-num">{{ result?.direct.length ?? 0 }}</b> 直飞</span>
-          <span class="count-pill transit"><b class="mono-num">{{ result?.transit.length ?? 0 }}</b> 中转</span>
-          <span class="count-pill nearby"><b class="mono-num">{{ result?.nearby.length ?? 0 }}</b> 临近</span>
+          <span class="count-pill direct"><b class="mono-num">{{ result?.direct.length ?? 0 }}</b> Nonstop</span>
+          <span class="count-pill transit"><b class="mono-num">{{ result?.transit.length ?? 0 }}</b> Transfer</span>
+          <span class="count-pill nearby"><b class="mono-num">{{ result?.nearby.length ?? 0 }}</b> Nearby</span>
         </div>
       </div>
 
       <div class="result-lists">
         <FlightCardSkeleton v-if="loading" :count="5" />
         <template v-else>
-          <EmptyState v-if="!searched && !result" title="等待搜索" description="填写条件后会综合直飞、中转和临近机场方案，按价格排序展示。" />
-          <EmptyState v-else-if="searched && result && totalCount === 0" title="暂无匹配航班" description="可以调整日期、城市或筛选条件后重新搜索。" />
+          <EmptyState v-if="!searched && !result" title="Ready to Search" description="Enter criteria to compare nonstop, transfer, and nearby airport options by price." />
+          <EmptyState v-else-if="searched && result && totalCount === 0" title="No Matching Flights" description="Adjust the date, cities, or filters and search again." />
           <template v-else>
             <template v-for="(row, index) in mergedRows" :key="row.key">
               <TransitCard
