@@ -1,40 +1,110 @@
-## 系统安装与使用
+<p align="center">
+  <img src="docs/logo/logo.png" alt="FudanAir logo" width="96" />
+</p>
 
-1. **克隆仓库**
+<h1 align="center">FudanAir Airline Ticketing System</h1>
+
+<p align="center">
+  A full-stack airline ticketing and database management system.
+</p>
+
+
+## Overview
+
+FudanAir is a local development project for an airline ticketing management system. It models a realistic booking workflow around flight search, seat inventory, order payment, ticket refund/change operations, and an admin console for operational data management.
+
+The system keeps the database model explicit and course-friendly: simple CRUD is implemented with SQLAlchemy ORM, while complex search, reporting, transit planning, and aggregation logic use hand-written SQL.
+
+## Features
+
+- Passenger flight search with direct flights, nearby-airport alternatives, and transit options.
+- Order creation, 15-minute payment window, simulated payment, cancellation, and automatic inventory restoration.
+- Ticket refund and flight-change workflows with fee tiers and price-difference calculation.
+- User center for profile, password, and saved passenger management.
+- Admin console for cities, airports, airlines, aircraft types, flights, flight instances, pricing, orders, and dashboard metrics.
+- Scheduled jobs for order expiration, flight-instance generation, and flight-status synchronization.
+- Inventory consistency between `cabin_price.available_seats` and `flight_instance.economy_left` / `first_left`.
+- English UI and API-facing messages while preserving the original database enum values and seed data.
+
+## Quick Start
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/kiangyeeo/FudanAir.git
 cd FudanAir
 ```
 
-2. **安装依赖**
+### 2. Configure the backend environment
 
-```bash
-pip install -r requirements.txt
+Windows PowerShell:
+
+```powershell
+cd backend
+Copy-Item .env.example .env
 ```
 
-3. **确保本地MySQL服务正在运行，并创建私有 `.env`**
+macOS or Linux:
 
 ```bash
+cd backend
 cp .env.example .env
 ```
 
- `.env` 中需要替换自己的MySQL密码。
+Edit `backend/.env` and replace `YOUR_PASSWORD` in `DB_URL` with your local MySQL password.
 
-4. **初始化数据库**
+### 3. Install backend dependencies
 
-```bash
-python backend/scripts/init_db.py 
+Windows PowerShell:
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
-5. **启动后端**
+macOS or Linux:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 4. Initialize the database
+
+```bash
+cd backend
+python scripts/init_db.py
+```
+
+This command recreates the configured database, executes `scripts/schema.sql`, loads CSV seed data, generates flight instances and cabin prices, and creates the default admin account.
+
+Default admin account:
+
+```text
+Admin ID: A001
+Password: admin123
+```
+
+### 5. Start the backend
 
 ```bash
 cd backend
 python start.py
 ```
 
-6. **启动前端**
+The API runs at:
+
+```text
+http://127.0.0.1:8000
+```
+
+### 6. Start the frontend
+
+Open a second terminal from the repository root:
 
 ```bash
 cd frontend
@@ -42,58 +112,75 @@ npm install
 npm run dev
 ```
 
+The web app runs at:
 
+```text
+http://localhost:5173
+```
 
-## 系统测试说明
+The Vite dev server proxies `/api` requests to `http://127.0.0.1:8000`.
 
-1. **前端功能验收**
+## Test and Verification
 
-   ```
-   前端：http://localhost:5173
-   后端：http://localhost:8000
-   ```
+Run backend tests:
 
-   - **用户注册与登录**
-     注册测试用户，再进入 `/login` 登录。
-   - **航班搜索**
-     在首页输入出发城市、到达城市和日期，验证直飞、临近机场、中转方案和价格筛选结果。
-   - **购票主流程**
-     选择航班，填写乘机人，下单，进入支付页完成模拟支付；然后在“我的订单”和“我的机票”中查看订单状态与客票信息。
-   - **退票与改签**
-     对已支付客票进行退票试算、提交退票；另选可改签航班完成改签，检查原客票状态和新客票生成情况。
-   - **管理员后台**
-     使用初始化管理员账号登录, 验证管理概览、城市、机场、航司、机型、航班、航班实例、票价和订单查询等后台页面。
+```bash
+cd backend
+python -m pytest
+```
 
-   ```
-   账号：A001
-   密码：admin123
-   ```
+Run frontend type checks:
 
-2. **并发抢票测试**
-   运行以下指令，测试8个并发请求同时购买1张票，最后仅有1个请求购买成功。
+```bash
+cd frontend
+npm run type-check
+```
 
-   ```
-   python backend/scripts/demo_concurrent_booking.py
-   ```
+Build the frontend:
 
-3. **后端自动化测试**
-   使用 `pytest` 进行后端功能测试，覆盖注册登录、航班搜索、下单支付、退改签、用户中心、管理员权限、后台统计和基础数据约束等核心功能。
+```bash
+cd frontend
+npm run build
+```
 
-   ```bash
-   cd backend
-   python -m pytest tests -q
-   ```
+Run the concurrent booking demo:
 
-   测试文件说明：
+```bash
+cd backend
+python scripts/demo_concurrent_booking.py
+```
 
-   | 测试文件                                                     | 验证内容                             |
-   | ------------------------------------------------------------ | ------------------------------------ |
-   | `test_login_validation.py` , `test_register_validation.py`   | 登录注册参数校验、错误提示           |
-   | `test_search.py`                                             | 直飞、中转、临近机场、价格筛选       |
-   | `test_booking_flow.py`                                       | 下单、扣库存、支付、取消、库存恢复   |
-   | `test_booking_concurrency.py`                                | 并发抢票、防止超卖、订单超时释放库存 |
-   | `test_refund_flow.py`                                        | 退票、改签、手续费试算、异常拦截     |
-   | `test_user_center.py`                                        | 个人信息、密码、常用乘机人           |
-   | `test_admin_permission.py` , `test_admin_dashboard.py`       | 管理员权限、后台统计                 |
-   | `test_airport_iata_update.py` , `test_airline_update.py` , `test_aircraft_type_update.py` | 基础数据修改约束                     |
+The concurrency demo sends multiple booking requests for limited stock and verifies that the system prevents overselling.
 
+## Main Workflows
+
+### Passenger Workflow
+
+1. Register or sign in as a passenger.
+2. Search flights by departure city, arrival city, date, and filters.
+3. Select a direct, nearby-airport, or transit itinerary.
+4. Add passengers and create an order.
+5. Complete simulated payment before the order expires.
+6. View orders, upcoming trips, refund quotes, and change-flight options.
+
+### Admin Workflow
+
+1. Sign in at `/admin/login` with the default admin credentials or a configured admin account.
+2. Review dashboard metrics.
+3. Manage cities, airports, airlines, aircraft types, flights, generated flight instances, fare tiers, and orders.
+4. Adjust flight-instance times or route data and let passenger-facing order details surface adjustment labels.
+
+## Design Notes
+
+- Transaction boundaries are owned by service/workflow code, not repository code.
+- Domain modules do not import one another directly; cross-domain orchestration belongs in `workflows/`.
+- Seat inventory changes must go through `FlightService.deduct_seat` and `FlightService.restore_seat`.
+- Airport-city consistency is maintained by the airport service when city or airport records change.
+- Complex SQL is intentionally visible for search, aggregation, dashboard, and transit logic.
+
+## Development Tips
+
+- Re-run `python scripts/init_db.py` after changing schema or seed data. This resets the local database.
+- Keep backend and frontend terminals open during manual testing.
+- Use the FastAPI `/docs` page to inspect request and response contracts.
+- Do not edit seed data or database schema unless the related business requirement is confirmed.
