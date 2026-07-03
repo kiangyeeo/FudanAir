@@ -14,9 +14,9 @@ const cities = ref<string[]>([])
 const tripType = ref<'oneway' | 'round' | 'multi'>('oneway')
 
 const tripTabs = [
-  { value: 'oneway', label: '单程', enabled: true },
-  { value: 'round', label: '往返', enabled: false },
-  { value: 'multi', label: '多程', enabled: false },
+  { value: 'oneway', label: 'One-way', enabled: true },
+  { value: 'round', label: 'Round-trip', enabled: false },
+  { value: 'multi', label: 'Multi-city', enabled: false },
 ] as const
 
 const hotRoutes = [
@@ -49,7 +49,7 @@ async function loadCities() {
 
 function setTripType(value: (typeof tripTabs)[number]['value'], enabled: boolean) {
   if (!enabled) {
-    ElMessage.info('往返 / 多程查询敬请期待')
+    ElMessage.info('Round-trip and multi-city search are coming soon')
     return
   }
   tripType.value = value
@@ -71,7 +71,7 @@ function submit() {
   const depCity = form.dep_city.trim()
   const arrCity = form.arr_city.trim()
   if (!depCity || !arrCity || !form.flight_date) {
-    ElMessage.warning('请填写出发城市、到达城市和日期')
+    ElMessage.warning('Enter departure city, arrival city, and date')
     return
   }
 
@@ -108,8 +108,8 @@ onMounted(() => {
     <div class="home-view">
       <div class="hero-copy" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 500 } }">
         <div class="hero-titles">
-          <h1 class="hero-name">FudanAir 航空票务系统</h1>
-          <p>直飞 · 中转 · 临近机场，一次搜索三种方案</p>
+          <h1 class="hero-name">FudanAir Airline Ticketing System</h1>
+          <p>Nonstop, transfer, and nearby airport options in one search</p>
         </div>
       </div>
 
@@ -137,20 +137,20 @@ onMounted(() => {
         <div class="search-form">
           <div class="cities">
             <div class="search-field">
-              <span class="field-label">出发城市</span>
-              <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="输入出发城市" />
+              <span class="field-label">Departure City</span>
+              <CityAutocomplete v-model="form.dep_city" :cities="cities" placeholder="Enter departure city" />
             </div>
-            <button type="button" class="swap-btn" title="交换出发/到达" @click="swapCities">
+            <button type="button" class="swap-btn" title="Swap departure and arrival" @click="swapCities">
               <el-icon><Sort /></el-icon>
             </button>
             <div class="search-field">
-              <span class="field-label">到达城市</span>
-              <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="输入到达城市" />
+              <span class="field-label">Arrival City</span>
+              <CityAutocomplete v-model="form.arr_city" :cities="cities" placeholder="Enter arrival city" />
             </div>
           </div>
 
           <div class="search-field">
-            <span class="field-label">出行日期</span>
+            <span class="field-label">Travel Date</span>
             <el-date-picker
               v-model="form.flight_date"
               type="date"
@@ -161,20 +161,20 @@ onMounted(() => {
           </div>
 
           <div class="search-field">
-            <span class="field-label">排序</span>
+            <span class="field-label">Sort By</span>
             <el-select v-model="form.sort!.field" class="full-control">
-              <el-option label="价格优先" value="price" />
-              <el-option label="总时长优先" value="duration" />
-              <el-option label="起飞时间优先" value="departure" />
+              <el-option label="Price First" value="price" />
+              <el-option label="Shortest Duration" value="duration" />
+              <el-option label="Earliest Departure" value="departure" />
             </el-select>
           </div>
 
-          <el-button type="primary" class="search-button" :icon="Promotion" @click="submit">查询航班</el-button>
+          <el-button type="primary" class="search-button" :icon="Promotion" @click="submit">Search Flights</el-button>
         </div>
       </section>
 
       <section class="hot-routes">
-        <p class="hot-head">热门航线 · 点击直达查询</p>
+        <p class="hot-head">Popular routes · click to search</p>
         <div class="route-pills">
           <button
             v-for="(route, index) in hotRoutes"
