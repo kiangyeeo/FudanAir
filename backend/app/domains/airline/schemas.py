@@ -34,7 +34,7 @@ class AircraftTypeCreate(BaseModel):
     @model_validator(mode="after")
     def validate_total_seats(self) -> AircraftTypeCreate:
         if self.economy_seats + self.first_seats <= 0:
-            raise ValueError("机型座位总数必须大于0")
+            raise ValueError("Aircraft type seat total must be greater than 0.")
         return self
 
 
@@ -48,7 +48,7 @@ class AircraftTypeUpdate(BaseModel):
     @model_validator(mode="after")
     def validate_total_seats(self) -> AircraftTypeUpdate:
         if self.economy_seats + self.first_seats <= 0:
-            raise ValueError("机型座位总数必须大于0")
+            raise ValueError("Aircraft type seat total must be greater than 0.")
         return self
 
 

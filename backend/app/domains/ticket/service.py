@@ -51,12 +51,12 @@ class TicketService:
                     status=_ticket_status(status),
                 )
         except IntegrityError as exc:
-            raise AppException("客票创建失败") from exc
+            raise AppException("Failed to create ticket.") from exc
 
     def lock_for_update(self, ticket_no: str) -> Ticket:
         ticket = self.repo.lock_for_update(ticket_no)
         if not ticket:
-            raise ResourceNotFoundError(f"客票 {ticket_no} 不存在")
+            raise ResourceNotFoundError(f"Ticket {ticket_no} does not exist")
         return ticket
 
     def update_status(self, ticket: Ticket, status: str) -> Ticket:
@@ -64,7 +64,7 @@ class TicketService:
             with transaction(self.db):
                 return self.repo.update_status(ticket, _ticket_status(status))
         except IntegrityError as exc:
-            raise AppException(f"客票 {ticket.ticket_no} 状态更新失败") from exc
+            raise AppException(f"Failed to update status for ticket {ticket.ticket_no}") from exc
 
     def list_by_order(self, order_no: str) -> list[Ticket]:
         return self.repo.list_by_order(order_no)
@@ -100,7 +100,7 @@ class RefundChangeService:
                     op_time=datetime.now(),
                 )
         except IntegrityError as exc:
-            raise AppException("退改记录创建失败") from exc
+            raise AppException("Failed to create refund/change record.") from exc
 
     def list_by_user(self, user_id: int, page: int, page_size: int) -> dict[str, object]:
         items, total = self.repo.list_by_user(user_id, page, page_size)
@@ -113,20 +113,20 @@ class RefundChangeService:
         price_diff: Decimal,
     ) -> None:
         if op_type == "退票" and (new_ticket_no is not None or price_diff != Decimal("0.00")):
-            raise AppException("退票记录字段不合法")
+            raise AppException("Invalid refund record fields.")
         if op_type == "改签" and new_ticket_no is None:
-            raise AppException("改签记录缺少新票号")
+            raise AppException("Change record is missing the new ticket number.")
 
 
 def _ticket_status(value: str) -> str:
     normalized = value.strip()
     if normalized not in ALLOWED_TICKET_STATUSES:
-        raise AppException("客票状态不合法")
+        raise AppException("Invalid ticket status.")
     return normalized
 
 
 def _refund_op_type(value: str) -> str:
     normalized = value.strip()
     if normalized not in ALLOWED_REFUND_OP_TYPES:
-        raise AppException("退改类型不合法")
+        raise AppException("Invalid refund/change operation type.")
     return normalized

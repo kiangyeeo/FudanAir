@@ -28,7 +28,7 @@ class PassengerService:
             with transaction(self.db):
                 return self._upsert_passenger(normalized_id, normalized_name, birth_date)
         except IntegrityError as exc:
-            raise AppException("乘机人保存失败") from exc
+            raise AppException("Failed to save passenger.") from exc
 
     def create(self, user_id: int, payload: PassengerCreate) -> Passenger:
         return self.save_for_user(user_id, payload.id_no, payload.real_name, payload.birth_date)
@@ -48,7 +48,7 @@ class PassengerService:
                 self.repo.bind_to_user(user_id, normalized_id)
                 return passenger
         except IntegrityError as exc:
-            raise AppException("乘机人保存失败") from exc
+            raise AppException("Failed to save passenger.") from exc
 
     def update(self, user_id: int, id_no: str, payload: PassengerUpdate) -> Passenger:
         old_id = _normalize_id(id_no)
@@ -57,20 +57,20 @@ class PassengerService:
         try:
             with transaction(self.db):
                 if not self.repo.belongs_to_user(user_id, old_id):
-                    raise ResourceNotFoundError(f"乘机人 {old_id} 不存在")
+                    raise ResourceNotFoundError(f"Passenger {old_id} does not exist")
                 passenger = self._upsert_passenger(new_id, normalized_name, payload.birth_date)
                 if new_id != old_id:
                     self.repo.bind_to_user(user_id, new_id)
                     self.repo.unbind_from_user(user_id, old_id)
                 return passenger
         except IntegrityError as exc:
-            raise AppException(f"乘机人 {old_id} 更新失败") from exc
+            raise AppException(f"Failed to update passenger {old_id}") from exc
 
     def delete(self, user_id: int, id_no: str) -> None:
         normalized_id = _normalize_id(id_no)
         with transaction(self.db):
             if not self.repo.unbind_from_user(user_id, normalized_id):
-                raise ResourceNotFoundError(f"乘机人 {normalized_id} 不存在")
+                raise ResourceNotFoundError(f"Passenger {normalized_id} does not exist")
 
     def _upsert_passenger(self, id_no: str, real_name: str, birth_date: date) -> Passenger:
         passenger = self.repo.get(id_no)

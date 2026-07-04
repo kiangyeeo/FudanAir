@@ -50,10 +50,10 @@ class UserService:
                     raise OldPasswordMismatchError()
                 self.repo.update_password(user, hash_password(payload.new_password))
         except IntegrityError as exc:
-            raise AppException("密码更新失败") from exc
+            raise AppException("Failed to update password.") from exc
 
     def _get_user(self, user_id: int) -> User:
         user = self.repo.get(user_id)
         if not user:
-            raise ResourceNotFoundError(f"用户 {user_id} 不存在")
+            raise ResourceNotFoundError(f"User {user_id} does not exist")
         return user
