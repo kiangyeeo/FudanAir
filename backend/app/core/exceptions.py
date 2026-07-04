@@ -3,7 +3,7 @@ from __future__ import annotations
 
 class AppException(Exception):
     code: str = "INTERNAL_ERROR"
-    message: str = "系统繁忙,请稍后重试"
+    message: str = "The system is busy. Please try again later."
     http_status: int = 500
 
     def __init__(self, message: str = "") -> None:
@@ -16,101 +16,101 @@ class AppException(Exception):
 
 class AuthenticationError(AppException):
     code = "AUTHENTICATION_FAILED"
-    message = "认证失败"
+    message = "Authentication failed."
     http_status = 401
 
 
 class UnauthorizedError(AppException):
     code = "UNAUTHORIZED"
-    message = "未登录或登录已失效"
+    message = "You are not signed in or your session has expired."
     http_status = 401
 
 
 class PermissionDeniedError(AppException):
     code = "PERMISSION_DENIED"
-    message = "无权限"
+    message = "Permission denied."
     http_status = 403
 
 
 class ResourceNotFoundError(AppException):
     code = "RESOURCE_NOT_FOUND"
-    message = "资源不存在"
+    message = "Resource not found."
     http_status = 404
 
 
 class ResourceInUseError(AppException):
     code = "RESOURCE_IN_USE"
-    message = "资源被引用,无法删除"
+    message = "This resource is in use and cannot be deleted."
     http_status = 409
 
 
 class PhoneAlreadyExistsError(AppException):
     code = "PHONE_ALREADY_EXISTS"
-    message = "手机号已注册"
+    message = "This phone number is already registered."
     http_status = 409
 
 
 class InsufficientStockError(AppException):
     code = "INSUFFICIENT_STOCK"
-    message = "库存不足"
+    message = "Insufficient inventory."
     http_status = 409
 
 
 class PassengerDuplicateError(AppException):
     code = "PASSENGER_DUPLICATE"
-    message = "同一乘机人在该航班实例已有有效票"
+    message = "This passenger already has an active ticket for this flight instance."
     http_status = 409
 
 
 class InstanceNotBookableError(AppException):
     code = "INSTANCE_NOT_BOOKABLE"
-    message = "航班实例不可订"
+    message = "This flight instance is not bookable."
     http_status = 409
 
 
 class OrderNotPayableError(AppException):
     code = "ORDER_NOT_PAYABLE"
-    message = "订单不可支付"
+    message = "This order cannot be paid."
     http_status = 409
 
 
 class OrderNotCancelableError(AppException):
     code = "ORDER_NOT_CANCELABLE"
-    message = "订单不可取消"
+    message = "This order cannot be canceled."
     http_status = 409
 
 
 class TicketNotRefundableError(AppException):
     code = "TICKET_NOT_REFUNDABLE"
-    message = "客票不可退"
+    message = "This ticket cannot be refunded."
     http_status = 409
 
 
 class TicketNotChangeableError(AppException):
     code = "TICKET_NOT_CHANGEABLE"
-    message = "客票不可改"
+    message = "This ticket cannot be changed."
     http_status = 409
 
 
 class InvalidPhoneFormatError(AppException):
     code = "INVALID_PHONE_FORMAT"
-    message = "手机号格式错误"
+    message = "Invalid phone number format."
     http_status = 400
 
 
 class OldPasswordMismatchError(AppException):
     code = "OLD_PASSWORD_MISMATCH"
-    message = "原密码错误"
+    message = "The current password is incorrect."
     http_status = 400
 
 
 class InconsistentAirportCityError(AppException):
     code = "INCONSISTENT_AIRPORT_CITY"
-    message = "机场所属城市与临近机场关系不一致"
+    message = "The airport city is inconsistent with the nearby-airport relation."
     http_status = 400
 
 
 class SameTicketNotAllowedError(AppException):
     code = "SAME_TICKET_NOT_ALLOWED"
-    message = "改签目标不能与原票相同"
+    message = "The change target cannot be the same as the original ticket."
     http_status = 400

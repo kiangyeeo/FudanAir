@@ -42,10 +42,10 @@ def decode_access_token(token: str) -> dict[str, str]:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[ALGORITHM])
     except JWTError as exc:
-        raise UnauthorizedError("未登录或登录已失效") from exc
+        raise UnauthorizedError("You are not signed in or your session has expired.") from exc
 
     subject = payload.get("sub")
     role = payload.get("role")
     if not subject or not role:
-        raise UnauthorizedError("登录凭证缺少身份信息")
+        raise UnauthorizedError("Login credentials are missing identity information.")
     return {"sub": str(subject), "role": str(role)}

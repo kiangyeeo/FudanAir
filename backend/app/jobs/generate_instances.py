@@ -30,4 +30,4 @@ def generate_instances_daily() -> None:
         ).scalars().all()
         for flight_no in flight_numbers:
             FlightService(db).create_instance(str(flight_no), target_date)
-    logger.info("已生成 %s 的航班实例,航班数=%s", target_date, len(flight_numbers))
+    logger.info("Generated flight instances for %s, flight_count=%s", target_date, len(flight_numbers))
