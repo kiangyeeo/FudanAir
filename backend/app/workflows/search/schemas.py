@@ -50,7 +50,7 @@ class SearchFilters(BaseModel):
         elif isinstance(value, (list, tuple, set)):
             raw_codes = value
         else:
-            raise ValueError("航司筛选必须是代码列表")
+            raise ValueError("Airline filters must be a list of codes.")
 
         codes: list[str] = []
         seen: set[str] = set()
@@ -59,7 +59,7 @@ class SearchFilters(BaseModel):
             if not code:
                 continue
             if len(code) != 2:
-                raise ValueError("航司代码必须为2位")
+                raise ValueError("Airline code must be 2 characters.")
             if code not in seen:
                 seen.add(code)
                 codes.append(code)
@@ -76,9 +76,9 @@ class SearchFilters(BaseModel):
         if self.departure_time_range is not None:
             start, end = self.departure_time_range
             if start > end:
-                raise ValueError("起飞时间段结束时间不能早于开始时间")
+                raise ValueError("Departure time range end cannot be earlier than start.")
         if self.price_min is not None and self.price_max is not None and self.price_min > self.price_max:
-            raise ValueError("价格区间上限不能小于下限")
+            raise ValueError("The maximum price cannot be lower than the minimum price.")
         return self
 
 

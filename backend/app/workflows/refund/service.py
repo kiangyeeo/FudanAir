@@ -76,7 +76,7 @@ class RefundService:
             )
             order_status = self._sync_refund_order_status(order)
 
-        logger.info("退票成功 ticket_no=%s user_id=%s refund_id=%s", ticket_no, user_id, record.refund_id)
+        logger.info("Ticket refunded successfully ticket_no=%s user_id=%s refund_id=%s", ticket_no, user_id, record.refund_id)
         return {
             "refund_id": record.refund_id,
             "ticket_no": ticket.ticket_no,
@@ -110,7 +110,7 @@ class RefundService:
             )
 
         logger.info(
-            "改签成功 old_ticket_no=%s new_ticket_no=%s user_id=%s refund_id=%s",
+            "Ticket changed successfully old_ticket_no=%s new_ticket_no=%s user_id=%s refund_id=%s",
             old_ticket.ticket_no,
             new_ticket.ticket_no,
             user_id,
@@ -136,22 +136,22 @@ class RefundService:
         ticket = self.ticket_svc.lock_for_update(ticket_no.strip())
         order = self.order_svc.lock_for_update(ticket.order_no)
         if int(order.user_id) != user_id:
-            raise ResourceNotFoundError(f"客票 {ticket_no} 不存在")
+            raise ResourceNotFoundError(f"Ticket {ticket_no} does not exist")
         self._ensure_ticket_operable(ticket, order, op_type)
         return ticket, order
 
     def _ensure_ticket_operable(self, ticket: Ticket, order: AptOrder, op_type: str) -> None:
         if ticket.status != TICKET_STATUS_ACTIVE:
-            _raise_ticket_not_operable(op_type, "客票状态不允许退改")
+            _raise_ticket_not_operable(op_type, "Ticket status does not allow refund or change.")
         if order.status not in {ORDER_STATUS_PAID, ORDER_STATUS_PARTIAL_REFUND}:
-            _raise_ticket_not_operable(op_type, "订单状态不允许退改")
+            _raise_ticket_not_operable(op_type, "Order status does not allow refund or change.")
 
     def _fee_quote(self, ticket: Ticket, op_type: str) -> dict[str, Any]:
         detail = self.flight_svc.get_instance_detail(ticket.instance_id)
         departure_at = _departure_at(detail)
         now = datetime.now()
         if departure_at <= now:
-            _raise_ticket_not_operable(op_type, "航班已起飞,不可退改")
+            _raise_ticket_not_operable(op_type, "The flight has departed and cannot be refunded or changed.")
         fee_rate, tier = _fee_rate(departure_at - now, op_type)
         fee = _money(_ticket_price(ticket) * fee_rate)
         return {"fee_rate": fee_rate, "fee": fee, "tier": tier}
@@ -161,7 +161,7 @@ class RefundService:
         for cabin_price in detail["cabin_prices"]:
             if cabin_price.cabin_class == target["cabin_class"] and cabin_price.fare_type == target["fare_type"]:
                 return _money(_decimal(cabin_price.price) + _decimal(detail["fuel_infra_fee"]))
-        raise ResourceNotFoundError("舱位价格档位不存在")
+        raise ResourceNotFoundError("Cabin fare tier does not exist.")
 
     def _actual_price_with_fuel(self, instance_id: str, ticket_price: Decimal) -> Decimal:
         detail = self.flight_svc.get_instance_detail(instance_id)
@@ -268,7 +268,7 @@ def _change_target(
         "fare_type": (fare_type or "").strip(),
     }
     if not target["instance_id"] or not target["cabin_class"] or not target["fare_type"]:
-        raise TicketNotChangeableError("缺少改签目标信息")
+        raise TicketNotChangeableError("Missing change target information.")
     return target
 
 
@@ -288,17 +288,17 @@ def _fee_rate(delta: timedelta, op_type: str) -> tuple[Decimal, str]:
         if days_until_departure >= Decimal(str(threshold)):
             rate = refund_rate if op_type == "refund" else change_rate
             return Decimal(str(rate)), _tier_label(index, tiers)
-    raise AppException("退改费率配置不合法")
+    raise AppException("Invalid refund/change fee configuration.")
 
 
 def _tier_label(index: int, tiers: list[tuple[int, float, float]]) -> str:
     threshold = tiers[index][0]
     if index == 0:
-        return f"≥{threshold}天"
+        return f">= {threshold} days"
     previous_threshold = tiers[index - 1][0]
     if index == len(tiers) - 1:
-        return f"<{previous_threshold}天"
-    return f"{threshold}-{previous_threshold}天"
+        return f"< {previous_threshold} days"
+    return f"{threshold}-{previous_threshold} days"
 
 
 def _departure_at(detail: dict[str, Any]) -> datetime:

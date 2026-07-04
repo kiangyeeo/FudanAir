@@ -41,7 +41,7 @@ class BookingRequest(BaseModel):
         if self.segments:
             return self
         if self.instance_id is None or self.cabin_class is None or self.fare_type is None:
-            raise ValueError("缺少航段信息")
+            raise ValueError("Missing segment information.")
         return self
 
 

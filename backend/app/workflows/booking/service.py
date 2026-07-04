@@ -104,7 +104,7 @@ class BookingService:
 
         instance_ids = ",".join(segment.instance_id for segment in segments)
         logger.info(
-            "下单成功 order_no=%s user_id=%s instances=%s passengers=%s tickets=%s",
+            "Booking created order_no=%s user_id=%s instances=%s passengers=%s tickets=%s",
             order.order_no,
             user_id,
             instance_ids,
@@ -119,7 +119,7 @@ class BookingService:
             order = self.order_svc.lock_for_update(order_no)
             self._ensure_order_owner(order, user_id)
             if order.status != ORDER_STATUS_PENDING:
-                raise OrderNotPayableError("订单状态不允许支付")
+                raise OrderNotPayableError("Order status does not allow payment.")
             if self._is_expired(order):
                 self._release_pending_order(order)
                 expired = True
@@ -127,11 +127,11 @@ class BookingService:
                 self.order_svc.update_status(order, ORDER_STATUS_PAID)
 
         if expired:
-            logger.info("支付时发现订单超时 order_no=%s user_id=%s", order_no, user_id)
-            raise OrderNotPayableError("订单已超时")
+            logger.info("Order expired during payment order_no=%s user_id=%s", order_no, user_id)
+            raise OrderNotPayableError("Order has expired.")
 
         paid_at = datetime.now()
-        logger.info("支付成功 order_no=%s user_id=%s paid_at=%s", order_no, user_id, paid_at)
+        logger.info("Payment succeeded order_no=%s user_id=%s paid_at=%s", order_no, user_id, paid_at)
         return {"order_no": order_no, "status": ORDER_STATUS_PAID, "paid_at": paid_at}
 
     def cancel_order(self, user_id: int, order_no: str) -> None:
@@ -139,9 +139,9 @@ class BookingService:
             order = self.order_svc.lock_for_update(order_no)
             self._ensure_order_owner(order, user_id)
             if order.status != ORDER_STATUS_PENDING:
-                raise OrderNotCancelableError("订单状态不允许取消")
+                raise OrderNotCancelableError("Order status does not allow cancellation.")
             self._release_pending_order(order)
-        logger.info("订单取消成功 order_no=%s user_id=%s", order_no, user_id)
+        logger.info("Order cancellation succeeded order_no=%s user_id=%s", order_no, user_id)
 
     def expire_order(self, order_no: str) -> bool:
         with transaction(self.db):
@@ -149,7 +149,7 @@ class BookingService:
             if order.status != ORDER_STATUS_PENDING:
                 return False
             self._release_pending_order(order)
-        logger.info("订单超时取消成功 order_no=%s", order_no)
+        logger.info("Order expired and was canceled order_no=%s", order_no)
         return True
 
     def _release_pending_order(self, order: AptOrder) -> None:
@@ -169,7 +169,7 @@ class BookingService:
     @staticmethod
     def _ensure_order_owner(order: AptOrder, user_id: int) -> None:
         if int(order.user_id) != user_id:
-            raise ResourceNotFoundError(f"订单 {order.order_no} 不存在")
+            raise ResourceNotFoundError(f"Order {order.order_no} does not exist")
 
     @staticmethod
     def _is_expired(order: AptOrder) -> bool:
@@ -234,13 +234,13 @@ def _money(value: object) -> Decimal:
 def _ensure_unique_payload_passengers(payload: BookingRequest) -> None:
     passenger_ids = [passenger.id_no for passenger in payload.passengers]
     if len(passenger_ids) != len(set(passenger_ids)):
-        raise PassengerDuplicateError("同一订单内乘机人不能重复")
+        raise PassengerDuplicateError("Passengers in the same order cannot be duplicated.")
 
 
 def _ensure_unique_payload_segments(segments: list[BookingSegment]) -> None:
     instance_ids = [segment.instance_id for segment in segments]
     if len(instance_ids) != len(set(instance_ids)):
-        raise PassengerDuplicateError("同一订单内不能重复选择同一航班实例")
+        raise PassengerDuplicateError("The same flight instance cannot be selected more than once in one order.")
 
 
 def _booking_segments(payload: BookingRequest) -> list[BookingSegment]:
