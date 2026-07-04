@@ -50,11 +50,11 @@ client.interceptors.response.use(
         })
       }
     } else if (status === 403) {
-      ElMessage.error(data?.message || '无权限')
+      ElMessage.error(data?.message || 'Permission denied')
     } else if (status && status >= 400 && status < 500) {
-      ElMessage.error(data?.message || '请求参数有误')
+      ElMessage.error(data?.message || 'Invalid request parameters')
     } else {
-      ElMessage.error('系统繁忙,请稍后重试')
+      ElMessage.error('System is busy. Please try again later')
     }
 
     return Promise.reject(error)
