@@ -28,9 +28,9 @@ def _assert_login_validation_message(payload: dict[str, str], expected: str) -> 
 @pytest.mark.parametrize(
     ("payload", "expected"),
     [
-        ({"phone": "", "password": "abc123"}, "请输入手机号"),
-        ({"phone": "13800138000", "password": ""}, "请输入密码"),
-        ({"phone": "", "password": ""}, "请输入手机号,密码"),
+        ({"phone": "", "password": "abc123"}, "Please enter phone number"),
+        ({"phone": "13800138000", "password": ""}, "Please enter password"),
+        ({"phone": "", "password": ""}, "Please enter phone number, password"),
     ],
 )
 def test_login_validation_reports_missing_fields(
@@ -49,7 +49,7 @@ def test_login_api_reports_invalid_phone_format() -> None:
     assert response.status_code == 400
     assert response.json() == {
         "code": "INVALID_PHONE_FORMAT",
-        "message": "手机号格式错误",
+        "message": "Invalid phone number format.",
     }
 
 
@@ -57,7 +57,7 @@ def test_login_rejects_invalid_phone_format() -> None:
     service = AuthService.__new__(AuthService)
     payload = LoginRequest(phone="1234567890", password="abc123")
 
-    with pytest.raises(InvalidPhoneFormatError, match="手机号格式错误"):
+    with pytest.raises(InvalidPhoneFormatError, match="Invalid phone number format."):
         service.login(payload)
 
 
@@ -66,7 +66,7 @@ def test_login_reports_unregistered_user() -> None:
     service._get_user_by_phone = lambda _phone: None
     payload = LoginRequest(phone="13800138000", password="abc123")
 
-    with pytest.raises(AuthenticationError, match="用户暂未注册"):
+    with pytest.raises(AuthenticationError, match="This user is not registered."):
         service.login(payload)
 
 
@@ -76,5 +76,5 @@ def test_login_reports_wrong_password() -> None:
     service._get_user_by_phone = lambda _phone: user
     payload = LoginRequest(phone="13800138000", password="wrongpass")
 
-    with pytest.raises(AuthenticationError, match="密码错误，请重试"):
+    with pytest.raises(AuthenticationError, match="Incorrect password. Please try again."):
         service.login(payload)

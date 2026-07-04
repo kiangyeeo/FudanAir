@@ -67,7 +67,7 @@ class FakeFlightService:
         detail = self.details[instance_id]
         departure_at = datetime.combine(detail["flight_date"], detail["scheduled_departure"])
         if departure_at <= datetime.now():
-            raise InstanceNotBookableError(f"航班实例 {instance_id} 已起飞,不可订")
+            raise InstanceNotBookableError(f"Flight instance {instance_id} has departed and cannot be booked")
 
     def restore_seat(
         self,
@@ -219,7 +219,7 @@ def test_quote_uses_refund_fee_tiers_for_refund_and_change() -> None:
     assert refund_quote["fee_rate"] == Decimal(str(REFUND_FEE_TIERS[1][1]))
     assert refund_quote["fee"] == Decimal("170.00")
     assert refund_quote["refund_amount"] == Decimal("680.00")
-    assert refund_quote["tier"] == "7-30天"
+    assert refund_quote["tier"] == "7-30 days"
     assert change_quote["fee_rate"] == Decimal(str(REFUND_FEE_TIERS[1][2]))
     assert change_quote["new_actual_price"] == Decimal("1050.00")
     assert change_quote["price_diff"] == Decimal("200.00")
