@@ -4,6 +4,7 @@ import { Tickets } from '@element-plus/icons-vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
 import { formatCurrency, formatDuration, formatTime, withTerminal } from '@/utils/format'
+import { cabinClassLabel, fareTypeLabel } from '@/utils/labels'
 import { useAirportStore } from '@/stores/airport'
 import { useFlightMetaStore } from '@/stores/flightMeta'
 import type { TransitCandidate } from '@/types/search'
@@ -32,15 +33,15 @@ const firstLow = computed(() => firstLeft.value > 0 && firstLeft.value <= 3)
 const scarce = computed(() => economyLow.value && economyLeft.value <= 3)
 
 function transitLabel(item: TransitCandidate) {
-  return `中转 ${airportStore.display(item.transit_airport)} · ${formatDuration(item.transit_minutes)}`
+  return `Transfer ${airportStore.display(item.transit_airport)} · ${formatDuration(item.transit_minutes)}`
 }
 </script>
 
 <template>
   <article class="transit-card is-hover-lift" :class="{ 'is-lowest': lowest }">
     <div class="ribbons">
-      <span v-if="lowest" class="ribbon lowest">最低价</span>
-      <span class="ribbon transit">中转</span>
+      <span v-if="lowest" class="ribbon lowest">Lowest Fare</span>
+      <span class="ribbon transit">Transfer</span>
     </div>
 
     <div class="airline">
@@ -72,17 +73,17 @@ function transitLabel(item: TransitCandidate) {
     </div>
 
     <div class="seats">
-      <span class="seat-chip" :class="{ urgent: economyLow }">经济 {{ economyLeft }}</span>
-      <span class="seat-chip first" :class="{ urgent: firstLow }">头等 {{ firstLeft }}</span>
-      <span v-if="scarce" class="seat-chip danger">仅剩 {{ economyLeft }} 张</span>
+      <span class="seat-chip" :class="{ urgent: economyLow }">Economy {{ economyLeft }}</span>
+      <span class="seat-chip first" :class="{ urgent: firstLow }">First {{ firstLeft }}</span>
+      <span v-if="scarce" class="seat-chip danger">Only {{ economyLeft }} left</span>
     </div>
 
     <div class="price-block">
       <div class="price mono-num"><span class="cny">¥</span>{{ candidate.total_min_price.toFixed(0) }}</div>
       <div class="price-detail mono-num">
-        {{ candidate.leg1.min_cabin_class }} / {{ candidate.leg1.min_fare_type }} / 机票 {{ formatCurrency(candidate.total_ticket_price) }} + 燃油基建 {{ formatCurrency(candidate.total_fuel_infra_fee) }}
+        {{ cabinClassLabel(candidate.leg1.min_cabin_class) }} / {{ fareTypeLabel(candidate.leg1.min_fare_type) }} / Ticket {{ formatCurrency(candidate.total_ticket_price) }} + Fuel & airport fee {{ formatCurrency(candidate.total_fuel_infra_fee) }}
       </div>
-      <el-button type="primary" round :icon="Tickets" @click="emit('select', candidate)">预订</el-button>
+      <el-button type="primary" round :icon="Tickets" @click="emit('select', candidate)">Book</el-button>
     </div>
   </article>
 </template>

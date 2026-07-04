@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
       />
     </svg>
     <div class="text">
-      <span class="label">支付剩余时间</span>
+      <span class="label">Payment Time Left</span>
       <strong class="value mono-num">{{ display }}</strong>
     </div>
   </div>

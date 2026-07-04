@@ -4,6 +4,7 @@ import { Tickets } from '@element-plus/icons-vue'
 import AirlineLogo from './AirlineLogo.vue'
 import FlightPath from './FlightPath.vue'
 import { formatCurrency, formatTime, minutesBetween, withTerminal } from '@/utils/format'
+import { cabinClassLabel, fareTypeLabel } from '@/utils/labels'
 import { useAirportStore } from '@/stores/airport'
 import { useFlightMetaStore } from '@/stores/flightMeta'
 import type { DirectFlightCandidate, NearbyFlightCandidate } from '@/types/search'
@@ -40,7 +41,7 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
 <template>
   <article class="flight-card is-hover-lift" :class="{ 'is-lowest': lowest }">
     <div class="ribbons">
-      <span v-if="lowest" class="ribbon lowest">最低价</span>
+      <span v-if="lowest" class="ribbon lowest">Lowest Fare</span>
       <span v-if="nearbyTag" class="ribbon nearby">{{ nearbyTag }}</span>
     </div>
 
@@ -68,17 +69,17 @@ const scarce = computed(() => economyLow.value && props.candidate.economy_left <
     </div>
 
     <div class="seats">
-      <span class="seat-chip" :class="{ urgent: economyLow }">经济 {{ candidate.economy_left }}</span>
-      <span class="seat-chip first" :class="{ urgent: firstLow }">头等 {{ candidate.first_left }}</span>
-      <span v-if="scarce" class="seat-chip danger">仅剩 {{ candidate.economy_left }} 张</span>
+      <span class="seat-chip" :class="{ urgent: economyLow }">Economy {{ candidate.economy_left }}</span>
+      <span class="seat-chip first" :class="{ urgent: firstLow }">First {{ candidate.first_left }}</span>
+      <span v-if="scarce" class="seat-chip danger">Only {{ candidate.economy_left }} left</span>
     </div>
 
     <div class="price-block">
       <div class="price mono-num"><span class="cny">¥</span>{{ candidate.min_price.toFixed(0) }}</div>
       <div class="price-detail mono-num">
-        {{ candidate.min_cabin_class }} / {{ candidate.min_fare_type }} / 机票 {{ formatCurrency(candidate.min_ticket_price) }} + 燃油基建 {{ formatCurrency(candidate.fuel_infra_fee) }}
+        {{ cabinClassLabel(candidate.min_cabin_class) }} / {{ fareTypeLabel(candidate.min_fare_type) }} / Ticket {{ formatCurrency(candidate.min_ticket_price) }} + Fuel & airport fee {{ formatCurrency(candidate.fuel_infra_fee) }}
       </div>
-      <el-button type="primary" round :icon="Tickets" @click="emit('select', candidate)">预订</el-button>
+      <el-button type="primary" round :icon="Tickets" @click="emit('select', candidate)">Book</el-button>
     </div>
   </article>
 </template>

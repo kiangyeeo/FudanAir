@@ -25,7 +25,7 @@ const stopText = computed(() => {
   if (props.stopLabel) {
     return props.stopLabel
   }
-  return props.stops > 0 ? `经停 ${props.stops} 次` : '直飞'
+  return props.stops > 0 ? `${props.stops} stop${props.stops > 1 ? 's' : ''}` : 'Nonstop'
 })
 const isDirect = computed(() => props.stops === 0 && !props.stopLabel)
 </script>

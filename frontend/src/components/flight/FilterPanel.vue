@@ -4,6 +4,7 @@ import CityAutocomplete from '@/components/flight/CityAutocomplete.vue'
 import type { Airline } from '@/types/flight'
 import type { FlightSearchRequest, SearchFilters, SearchSort } from '@/types/search'
 import { buildAirlineFilter, normalizeAirlineCodes } from '@/utils/searchFilters'
+import { cabinClassOptions } from '@/utils/labels'
 import { Switch as SwitchIcon } from '@element-plus/icons-vue'
 
 
@@ -154,44 +155,43 @@ function swapCities() {
 
 <template>
   <el-form class="filter-panel" :model="form" label-position="top">
-    <el-form-item label="航线">
+    <el-form-item label="Route">
       <div class="route-fields">
-        <CityAutocomplete v-model="form.dep_city" :cities="cities" :teleported="true" placeholder="出发城市" />
-        <button type="button" class="swap-button" title="交换出发/到达" @click="swapCities">
+        <CityAutocomplete v-model="form.dep_city" :cities="cities" :teleported="true" placeholder="Departure city" />
+        <button type="button" class="swap-button" title="Swap departure and arrival" @click="swapCities">
           <el-icon>
             <SwitchIcon />
           </el-icon>
         </button>
-        <CityAutocomplete v-model="form.arr_city" :cities="cities" :teleported="true" placeholder="到达城市" />
+        <CityAutocomplete v-model="form.arr_city" :cities="cities" :teleported="true" placeholder="Arrival city" />
       </div>
     </el-form-item>
-    <el-form-item label="出行日期">
+    <el-form-item label="Travel Date">
       <el-date-picker v-model="form.flight_date" v-bind="pickerPanelProps" type="date" value-format="YYYY-MM-DD" class="full-width" />
     </el-form-item>
-    <el-form-item label="航司">
+    <el-form-item label="Airline">
       <el-select v-model="form.filters.airline_codes" v-bind="selectPanelProps" multiple collapse-tags collapse-tags-tooltip clearable filterable>
         <el-option v-for="airline in airlines" :key="airline.iata_code" :label="`${airline.iata_code} ${airline.airline_name}`" :value="airline.iata_code" />
       </el-select>
     </el-form-item>
-    <el-form-item label="舱位">
+    <el-form-item label="Cabin">
       <el-select v-model="form.filters.cabin_class" v-bind="selectPanelProps" clearable>
-        <el-option label="经济舱" value="经济舱" />
-        <el-option label="头等舱" value="头等舱" />
+        <el-option v-for="item in cabinClassOptions" :key="item.value" :label="item.label" :value="item.value" />
       </el-select>
     </el-form-item>
-    <el-form-item label="起飞时间">
+    <el-form-item label="Departure Time">
       <el-time-picker
         v-model="form.filters.departure_time_range"
         v-bind="pickerPanelProps"
         is-range
         clearable
         value-format="HH:mm:ss"
-        start-placeholder="开始"
-        end-placeholder="结束"
+        start-placeholder="Start"
+        end-placeholder="End"
         class="full-width"
       />
     </el-form-item>
-    <el-form-item label="价格区间">
+    <el-form-item label="Price Range">
       <div class="price-range">
         <el-input-number
           v-model="form.filters.price_min"
@@ -199,39 +199,39 @@ function swapCities() {
           :precision="0"
           :step="100"
           :controls="false"
-          placeholder="最低价"
+          placeholder="Min"
           class="price-input"
         />
-        <span class="range-separator">至</span>
+        <span class="range-separator">to</span>
         <el-input-number
           v-model="form.filters.price_max"
           :min="0"
           :precision="0"
           :step="100"
           :controls="false"
-          placeholder="最高价"
+          placeholder="Max"
           class="price-input"
         />
       </div>
     </el-form-item>
-    <el-form-item label="排序">
+    <el-form-item label="Sort By">
       <el-select v-model="form.sort.field" v-bind="selectPanelProps">
-        <el-option label="价格" value="price" />
-        <el-option label="总时长" value="duration" />
-        <el-option label="起飞时间" value="departure" />
+        <el-option label="Price" value="price" />
+        <el-option label="Duration" value="duration" />
+        <el-option label="Departure Time" value="departure" />
       </el-select>
     </el-form-item>
-    <el-form-item label="顺序">
-      <el-segmented v-model="form.sort.order" :options="[{ label: '升序', value: 'asc' }, { label: '降序', value: 'desc' }]" />
+    <el-form-item label="Order">
+      <el-segmented v-model="form.sort.order" :options="[{ label: 'Ascending', value: 'asc' }, { label: 'Descending', value: 'desc' }]" />
     </el-form-item>
     <div class="include-toggles">
-      <el-checkbox v-model="form.filters.include_stopover">包含经停航班</el-checkbox>
-      <el-checkbox v-model="form.filters.include_transit">包含中转方案</el-checkbox>
-      <el-checkbox v-model="form.filters.include_nearby">包含临近机场方案</el-checkbox>
+      <el-checkbox v-model="form.filters.include_stopover">Include stopover flights</el-checkbox>
+      <el-checkbox v-model="form.filters.include_transit">Include transfer options</el-checkbox>
+      <el-checkbox v-model="form.filters.include_nearby">Include nearby airport options</el-checkbox>
     </div>
     <div class="actions">
-      <el-button type="primary" :loading="loading" @click="submit">搜索</el-button>
-      <el-button @click="reset">重置</el-button>
+      <el-button type="primary" :loading="loading" @click="submit">Search</el-button>
+      <el-button @click="reset">Reset</el-button>
     </div>
   </el-form>
 </template>
