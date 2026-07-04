@@ -22,23 +22,23 @@ def _assert_register_message(payload: dict[str, str], expected: str) -> None:
 def test_register_validation_reports_missing_name() -> None:
     _assert_register_message(
         {"name": "", "password": "abc123", "phone": "13800138000"},
-        "请输入姓名",
+        "Please enter your name",
     )
 
 
 def test_register_validation_reports_short_password() -> None:
     _assert_register_message(
         {"name": "张三", "password": "12345", "phone": "13800138000"},
-        "请输入至少六位的密码",
+        "Password must be at least six characters.",
     )
 
 
 @pytest.mark.parametrize(
     ("payload", "expected"),
     [
-        ({"name": "", "password": "", "phone": "13800138000"}, "请输入姓名,密码"),
-        ({"name": "", "password": "abc123", "phone": ""}, "请输入姓名,手机号"),
-        ({"name": "张三", "password": "", "phone": ""}, "请输入密码,手机号"),
+        ({"name": "", "password": "", "phone": "13800138000"}, "Please enter name, password"),
+        ({"name": "", "password": "abc123", "phone": ""}, "Please enter name, phone number"),
+        ({"name": "张三", "password": "", "phone": ""}, "Please enter password, phone number"),
     ],
 )
 def test_register_validation_reports_multiple_missing_fields(
