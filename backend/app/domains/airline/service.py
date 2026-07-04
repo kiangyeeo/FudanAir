@@ -27,7 +27,7 @@ class AirlineService:
         code = _airline_code(iata_code)
         airline = self.repo.get(code)
         if not airline:
-            raise ResourceNotFoundError(f"航司 {code} 不存在")
+            raise ResourceNotFoundError(f"Airline {code} does not exist")
         return airline
 
     def create(self, payload: AirlineCreate) -> Airline:
@@ -35,10 +35,10 @@ class AirlineService:
         try:
             with transaction(self.db):
                 if self.repo.get(code):
-                    raise AppException(f"航司代码 {code} 已存在")
+                    raise AppException(f"Airline code {code} already exists")
                 return self.repo.create(code, payload.airline_name)
         except IntegrityError as exc:
-            raise AppException(f"航司 {code} 创建失败") from exc
+            raise AppException(f"Failed to create airline {code}") from exc
 
     def update(self, iata_code: str, payload: AirlineUpdate) -> Airline:
         code = _airline_code(iata_code)
@@ -47,10 +47,10 @@ class AirlineService:
             with transaction(self.db):
                 airline = self.repo.get(code)
                 if not airline:
-                    raise ResourceNotFoundError(f"航司 {code} 不存在")
+                    raise ResourceNotFoundError(f"Airline {code} does not exist")
                 return self._save_update(airline, code, new_code, payload)
         except IntegrityError as exc:
-            raise AppException(f"航司 {code} 更新失败") from exc
+            raise AppException(f"Failed to update airline {code}") from exc
 
     def delete(self, iata_code: str) -> None:
         code = _airline_code(iata_code)
@@ -58,12 +58,12 @@ class AirlineService:
             with transaction(self.db):
                 airline = self.repo.get(code)
                 if not airline:
-                    raise ResourceNotFoundError(f"航司 {code} 不存在")
+                    raise ResourceNotFoundError(f"Airline {code} does not exist")
                 if self.repo.is_referenced(code):
-                    raise ResourceInUseError(f"航司 {code} 被航班引用,无法删除")
+                    raise ResourceInUseError(f"Airline {code} is referenced by flights and cannot be deleted")
                 self.repo.delete(airline)
         except IntegrityError as exc:
-            raise ResourceInUseError(f"航司 {code} 被引用,无法删除") from exc
+            raise ResourceInUseError(f"Airline {code} is in use and cannot be deleted") from exc
 
     def _save_update(
         self,
@@ -76,7 +76,7 @@ class AirlineService:
         if new_code == old_code:
             return self.repo.update(airline, payload.airline_name)
         if self.repo.get(new_code):
-            raise AppException(f"航司代码 {new_code} 已存在")
+            raise AppException(f"Airline code {new_code} already exists")
         return self.repo.rename_code(airline, new_code, payload.airline_name)
 
     def _ensure_identity_editable(
@@ -88,7 +88,7 @@ class AirlineService:
     ) -> None:
         identity_changed = new_code != old_code or airline.airline_name != payload.airline_name
         if identity_changed and self.repo.is_referenced(old_code):
-            raise ResourceInUseError(f"航司 {old_code} 被航班引用,无法修改代码或名称")
+            raise ResourceInUseError(f"Airline {old_code} is referenced by flights and its code or name cannot be changed")
 
 
 class AircraftTypeService:
@@ -103,7 +103,7 @@ class AircraftTypeService:
         aircraft_model = _aircraft_model(model)
         aircraft_type = self.repo.get(aircraft_model)
         if not aircraft_type:
-            raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")
+            raise ResourceNotFoundError(f"Aircraft type {aircraft_model} does not exist")
         return aircraft_type
 
     def create(self, payload: AircraftTypeCreate) -> AircraftType:
@@ -112,14 +112,14 @@ class AircraftTypeService:
         try:
             with transaction(self.db):
                 if self.repo.get(aircraft_model):
-                    raise AppException(f"机型 {aircraft_model} 已存在")
+                    raise AppException(f"Aircraft type {aircraft_model} already exists")
                 return self.repo.create(
                     aircraft_model,
                     payload.economy_seats,
                     payload.first_seats,
                 )
         except IntegrityError as exc:
-            raise AppException(f"机型 {aircraft_model} 创建失败") from exc
+            raise AppException(f"Failed to create aircraft type {aircraft_model}") from exc
 
     def update(self, model: str, payload: AircraftTypeUpdate) -> AircraftType:
         aircraft_model = _aircraft_model(model)
@@ -129,10 +129,10 @@ class AircraftTypeService:
             with transaction(self.db):
                 aircraft_type = self.repo.get(aircraft_model)
                 if not aircraft_type:
-                    raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")
+                    raise ResourceNotFoundError(f"Aircraft type {aircraft_model} does not exist")
                 return self._save_update(aircraft_type, aircraft_model, new_model, payload)
         except IntegrityError as exc:
-            raise AppException(f"机型 {aircraft_model} 更新失败") from exc
+            raise AppException(f"Failed to update aircraft type {aircraft_model}") from exc
 
     def delete(self, model: str) -> None:
         aircraft_model = _aircraft_model(model)
@@ -140,12 +140,12 @@ class AircraftTypeService:
             with transaction(self.db):
                 aircraft_type = self.repo.get(aircraft_model)
                 if not aircraft_type:
-                    raise ResourceNotFoundError(f"机型 {aircraft_model} 不存在")
+                    raise ResourceNotFoundError(f"Aircraft type {aircraft_model} does not exist")
                 if self.repo.is_referenced(aircraft_model):
-                    raise ResourceInUseError(f"机型 {aircraft_model} 被航班引用,无法删除")
+                    raise ResourceInUseError(f"Aircraft type {aircraft_model} is referenced by flights and cannot be deleted")
                 self.repo.delete(aircraft_type)
         except IntegrityError as exc:
-            raise ResourceInUseError(f"机型 {aircraft_model} 被引用,无法删除") from exc
+            raise ResourceInUseError(f"Aircraft type {aircraft_model} is in use and cannot be deleted") from exc
 
     def _save_update(
         self,
@@ -161,9 +161,9 @@ class AircraftTypeService:
                 payload.first_seats,
             )
         if self.repo.is_referenced(old_model):
-            raise ResourceInUseError(f"机型 {old_model} 被航班引用,无法修改名称")
+            raise ResourceInUseError(f"Aircraft type {old_model} is referenced by flights and cannot be renamed")
         if self.repo.get(new_model):
-            raise AppException(f"机型 {new_model} 已存在")
+            raise AppException(f"Aircraft type {new_model} already exists")
         return self.repo.rename_model(
             aircraft_type,
             new_model,
@@ -182,4 +182,4 @@ def _aircraft_model(model: str) -> str:
 
 def _ensure_positive_seats(economy_seats: int, first_seats: int) -> None:
     if economy_seats + first_seats <= 0:
-        raise AppException("机型座位总数必须大于0")
+        raise AppException("Aircraft type seat total must be greater than 0.")
