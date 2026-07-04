@@ -14,18 +14,18 @@ const form = reactive<AdminLoginRequest>({ admin_id: '', password: '' })
 
 async function submit() {
   await auth.adminLogin(form)
-  ElMessage.success('管理员登录成功')
+  ElMessage.success('Admin signed in')
   router.push(String(route.query.redirect || '/admin'))
 }
 </script>
 
 <template>
-  <AuthShell title="管理员登录" subtitle="进入 FudanAir 运营管理后台">
+  <AuthShell title="Admin Login" subtitle="Access the FudanAir operations console">
     <el-form :model="form" label-position="top" class="auth-form" @submit.prevent>
-      <el-form-item label="管理员编号">
-        <el-input v-model="form.admin_id" size="large" :prefix-icon="UserFilled" autocomplete="username" placeholder="请输入管理员编号" />
+      <el-form-item label="Admin ID">
+        <el-input v-model="form.admin_id" size="large" :prefix-icon="UserFilled" autocomplete="username" placeholder="Enter admin ID" />
       </el-form-item>
-      <el-form-item label="密码">
+      <el-form-item label="Password">
         <el-input
           v-model="form.password"
           size="large"
@@ -33,13 +33,13 @@ async function submit() {
           :prefix-icon="Lock"
           autocomplete="current-password"
           show-password
-          placeholder="请输入密码"
+          placeholder="Enter password"
           @keyup.enter="submit"
         />
       </el-form-item>
-      <el-button type="primary" size="large" class="full-button" @click="submit">登录管理端</el-button>
+      <el-button type="primary" size="large" class="full-button" @click="submit">Log In to Admin</el-button>
     </el-form>
-    <RouterLink class="back-link" to="/login">返回用户登录</RouterLink>
+    <RouterLink class="back-link" to="/login">Back to User Login</RouterLink>
   </AuthShell>
 </template>
 

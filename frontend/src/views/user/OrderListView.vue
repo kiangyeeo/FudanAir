@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { orderApi } from '@/api/order'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { orderStatusLabel, orderStatusOptions } from '@/utils/labels'
 import type { OrderListItem, OrderQuery, OrderStatus } from '@/types/order'
 
 const router = useRouter()
@@ -15,15 +16,6 @@ const query = reactive({
   page_size: 10,
   status: '' as OrderStatus | '',
 })
-const statusOptions: Array<{ label: string; value: OrderStatus | '' }> = [
-  { label: '全部状态', value: '' },
-  { label: '待支付', value: '待支付' },
-  { label: '已支付', value: '已支付' },
-  { label: '已取消', value: '已取消' },
-  { label: '已完成', value: '已完成' },
-  { label: '部分退款', value: '部分退款' },
-  { label: '已完成退款', value: '已完成退款' },
-]
 
 async function loadOrders() {
   loading.value = true
@@ -86,43 +78,43 @@ onMounted(() => {
   <div class="page-shell order-list">
     <section class="page-section">
       <div class="toolbar">
-        <h1 class="page-title">我的订单</h1>
+        <h1 class="page-title">My Orders</h1>
         <el-select v-model="query.status" class="status-select" @change="handleStatusChange">
-          <el-option v-for="item in statusOptions" :key="item.value || 'all'" :label="item.label" :value="item.value" />
+          <el-option v-for="item in orderStatusOptions" :key="item.value || 'all'" :label="item.label" :value="item.value" />
         </el-select>
-        <el-button @click="loadOrders">刷新</el-button>
+        <el-button @click="loadOrders">Refresh</el-button>
       </div>
       <el-table v-loading="loading" :data="rows" border row-key="order_no">
         <template #empty>
-          <EmptyState title="暂无订单" description="完成购票后，你的订单会显示在这里。" />
+          <EmptyState title="No Orders" description="Your orders will appear here after booking." />
         </template>
-        <el-table-column prop="order_no" label="订单号" min-width="210" />
-        <el-table-column label="状态" width="120">
+        <el-table-column prop="order_no" label="Order No." min-width="210" />
+        <el-table-column label="Status" width="120">
           <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)">{{ row.status }}</el-tag>
+            <el-tag :type="statusTagType(row.status)">{{ orderStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="金额" width="140">
+        <el-table-column label="Amount" width="140">
           <template #default="{ row }">{{ formatCurrency(row.total_amount) }}</template>
         </el-table-column>
-        <el-table-column label="创建时间" width="180">
+        <el-table-column label="Created At" width="180">
           <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
         </el-table-column>
-        <el-table-column label="数量" width="110">
+        <el-table-column label="Quantity" width="110">
           <template #default="{ row }">
-            {{ hasIssuedTickets(row.status) ? `客票 ${row.ticket_count}` : `锁座 ${row.ticket_count}` }}
+            {{ hasIssuedTickets(row.status) ? `Tickets ${row.ticket_count}` : `Reserved ${row.ticket_count}` }}
           </template>
         </el-table-column>
-        <el-table-column label="有效票" width="90">
+        <el-table-column label="Active" width="90">
           <template #default="{ row }">{{ hasIssuedTickets(row.status) ? row.active_count : '--' }}</template>
         </el-table-column>
-        <el-table-column label="已退票" width="90">
+        <el-table-column label="Refunded" width="90">
           <template #default="{ row }">{{ hasIssuedTickets(row.status) ? row.refunded_count : '--' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="Actions" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button v-if="row.status === '待支付'" link type="primary" @click="router.push(`/payment/${row.order_no}`)">支付</el-button>
-            <el-button link type="primary" @click="router.push(`/orders/${row.order_no}`)">详情</el-button>
+            <el-button v-if="row.status === '待支付'" link type="primary" @click="router.push(`/payment/${row.order_no}`)">Pay</el-button>
+            <el-button link type="primary" @click="router.push(`/orders/${row.order_no}`)">Details</el-button>
           </template>
         </el-table-column>
       </el-table>
