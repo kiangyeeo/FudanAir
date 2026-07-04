@@ -16,10 +16,10 @@ from app.domains.order.repository import OrderRepository
 
 ALLOWED_ORDER_STATUSES = {"待支付", "已支付", "已取消", "已完成", "部分退款", "已完成退款"}
 ADJUSTMENT_LABELS = (
-    ("scheduled_departure_adjusted_at", "起飞时间已调整"),
-    ("scheduled_arrival_adjusted_at", "降落时间已调整"),
-    ("dep_airport_adjusted_at", "起飞机场已调整"),
-    ("arr_airport_adjusted_at", "降落机场已调整"),
+    ("scheduled_departure_adjusted_at", "Departure Time Changed"),
+    ("scheduled_arrival_adjusted_at", "Arrival Time Changed"),
+    ("dep_airport_adjusted_at", "Departure Airport Changed"),
+    ("arr_airport_adjusted_at", "Arrival Airport Changed"),
 )
 
 
@@ -39,12 +39,12 @@ class OrderService:
                     created_at=datetime.now(),
                 )
         except IntegrityError as exc:
-            raise AppException("订单创建失败") from exc
+            raise AppException("Failed to create order.") from exc
 
     def lock_for_update(self, order_no: str) -> AptOrder:
         order = self.repo.lock_for_update(order_no)
         if not order:
-            raise ResourceNotFoundError(f"订单 {order_no} 不存在")
+            raise ResourceNotFoundError(f"Order {order_no} does not exist")
         return order
 
     def update_status(self, order: AptOrder, status: str) -> AptOrder:
@@ -53,7 +53,7 @@ class OrderService:
             with transaction(self.db):
                 return self.repo.update_status(order, normalized_status)
         except IntegrityError as exc:
-            raise AppException(f"订单 {order.order_no} 状态更新失败") from exc
+            raise AppException(f"Failed to update status for order {order.order_no}") from exc
 
     def list_by_user(
         self,
@@ -73,10 +73,10 @@ class OrderService:
     def get_detail(self, order_no: str, user_id: int | None = None) -> dict[str, Any]:
         rows = self.repo.detail_rows(order_no)
         if not rows:
-            raise ResourceNotFoundError(f"订单 {order_no} 不存在")
+            raise ResourceNotFoundError(f"Order {order_no} does not exist")
         order_user_id = int(rows[0]["user_id"])
         if user_id is not None and order_user_id != user_id:
-            raise ResourceNotFoundError(f"订单 {order_no} 不存在")
+            raise ResourceNotFoundError(f"Order {order_no} does not exist")
         tickets = [_ticket_detail(row) for row in rows if row.get("ticket_no")]
         return {
             "order_no": rows[0]["order_no"],
@@ -157,7 +157,7 @@ def _adjusted_after_order(adjusted_at: Any, created_at: Any) -> bool:
 def _order_status(value: str) -> str:
     normalized = value.strip()
     if normalized not in ALLOWED_ORDER_STATUSES:
-        raise AppException("订单状态不合法")
+        raise AppException("Invalid order status.")
     return normalized
 
 

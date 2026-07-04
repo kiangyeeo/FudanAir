@@ -75,7 +75,7 @@ class FlightService:
         number = _flight_no(flight_no)
         flight = self.flight_repo.get(number)
         if not flight:
-            raise ResourceNotFoundError(f"航班 {number} 不存在")
+            raise ResourceNotFoundError(f"Flight {number} does not exist")
         return flight
 
     def create_flight(self, payload: FlightCreate) -> Flight:
@@ -91,14 +91,14 @@ class FlightService:
         try:
             with transaction(self.db):
                 if self.flight_repo.get(data["flight_no"]):
-                    raise AppException(f"航班 {data['flight_no']} 已存在")
+                    raise AppException(f"Flight {data['flight_no']} already exists")
                 self._ensure_reference_data(data, stopovers)
                 flight = self.flight_repo.create(**data)
                 self.flight_repo.replace_weekdays(flight.flight_no, weekdays)
                 self.flight_repo.replace_stopovers(flight.flight_no, stopovers)
                 return flight
         except IntegrityError as exc:
-            raise AppException(f"航班 {data['flight_no']} 创建失败") from exc
+            raise AppException(f"Failed to create flight {data['flight_no']}") from exc
 
     def update_flight(self, flight_no: str, payload: FlightUpdate) -> Flight:
         number = _flight_no(flight_no)
@@ -115,7 +115,7 @@ class FlightService:
             with transaction(self.db):
                 flight = self.flight_repo.get(number)
                 if not flight:
-                    raise ResourceNotFoundError(f"航班 {number} 不存在")
+                    raise ResourceNotFoundError(f"Flight {number} does not exist")
                 self._ensure_reference_data(data, stopovers)
                 old_route = {
                     "dep_airport_code": flight.dep_airport_code,
@@ -130,7 +130,7 @@ class FlightService:
                 self.instance_repo.mark_route_adjustments(number, route_adjustments)
                 return flight
         except IntegrityError as exc:
-            raise AppException(f"航班 {number} 更新失败") from exc
+            raise AppException(f"Failed to update flight {number}") from exc
 
     def delete_flight(self, flight_no: str) -> None:
         number = _flight_no(flight_no)
@@ -138,12 +138,12 @@ class FlightService:
             with transaction(self.db):
                 flight = self.flight_repo.get(number)
                 if not flight:
-                    raise ResourceNotFoundError(f"航班 {number} 不存在")
+                    raise ResourceNotFoundError(f"Flight {number} does not exist")
                 if self.flight_repo.has_instances(number):
-                    raise ResourceInUseError(f"航班 {number} 已生成实例,无法删除")
+                    raise ResourceInUseError(f"Flight {number} already has instances and cannot be deleted")
                 self.flight_repo.delete(flight)
         except IntegrityError as exc:
-            raise ResourceInUseError(f"航班 {number} 被引用,无法删除") from exc
+            raise ResourceInUseError(f"Flight {number} is in use and cannot be deleted") from exc
 
     def list_instances(
         self,
@@ -170,7 +170,7 @@ class FlightService:
     def get_instance_or_404(self, instance_id: str) -> FlightInstance:
         instance = self.instance_repo.get(instance_id)
         if not instance:
-            raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+            raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
         return instance
 
     def ensure_instance_bookable(self, instance_id: str) -> FlightInstance:
@@ -190,7 +190,7 @@ class FlightService:
         else:
             number = _flight_no(flight_no)
             if flight_date is None:
-                raise AppException("航班日期不能为空")
+                raise AppException("Flight date is required.")
             instance_date = flight_date
 
         try:
@@ -200,11 +200,11 @@ class FlightService:
                     return existing
                 flight = self.flight_repo.get(number)
                 if not flight:
-                    raise ResourceNotFoundError(f"航班 {number} 不存在")
+                    raise ResourceNotFoundError(f"Flight {number} does not exist")
                 self._ensure_date_in_weekday(number, instance_date)
                 seats = self.flight_repo.get_aircraft_seats(number)
                 if not seats:
-                    raise ResourceNotFoundError(f"机型 {flight.aircraft_model} 不存在")
+                    raise ResourceNotFoundError(f"Aircraft type {flight.aircraft_model} does not exist")
                 economy_seats, first_seats = seats
                 instance = self.instance_repo.create(
                     gen_instance_id(number, instance_date),
@@ -236,7 +236,7 @@ class FlightService:
             existing = self.instance_repo.get_by_flight_date(number, instance_date)
             if existing:
                 return existing
-            raise AppException(f"航班 {number} 实例创建失败") from exc
+            raise AppException(f"Failed to create instance for flight {number}") from exc
 
     def batch_generate_instances(
         self,
@@ -252,11 +252,11 @@ class FlightService:
         else:
             number = _flight_no(flight_no)
             if start is None or end is None:
-                raise AppException("开始日期和结束日期不能为空")
+                raise AppException("Start date and end date are required.")
             start_date = start
             end_date = end
         if end_date < start_date:
-            raise AppException("结束日期不能早于开始日期")
+            raise AppException("End date cannot be earlier than start date.")
 
         self.get_flight_or_404(number)
         weekdays = set(self.flight_repo.get_weekdays(number))
@@ -277,7 +277,7 @@ class FlightService:
             with transaction(self.db):
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 old_route = self.flight_repo.route_snapshot(instance.flight_no)
                 data = self._instance_update_data(instance, payload)
                 if not data:
@@ -285,7 +285,7 @@ class FlightService:
                 adjustment_fields = self._instance_adjustment_fields(instance, data, old_route)
                 return self.instance_repo.update_instance(instance, data, adjustment_fields)
         except IntegrityError as exc:
-            raise AppException(f"航班实例 {instance_id} 更新失败") from exc
+            raise AppException(f"Failed to update flight instance {instance_id}") from exc
 
     def update_instance_status(
         self,
@@ -298,10 +298,10 @@ class FlightService:
             with transaction(self.db):
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 return self.instance_repo.update_status(instance, normalized_status)
         except IntegrityError as exc:
-            raise AppException(f"航班实例 {instance_id} 状态更新失败") from exc
+            raise AppException(f"Failed to update status for flight instance {instance_id}") from exc
 
     def sync_time_statuses(self, now: datetime | None = None) -> tuple[int, int]:
         with transaction(self.db):
@@ -312,12 +312,12 @@ class FlightService:
             with transaction(self.db):
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 if self.instance_repo.has_tickets(instance_id):
-                    raise ResourceInUseError(f"航班实例 {instance_id} 已有关联客票")
+                    raise ResourceInUseError(f"Flight instance {instance_id} already has linked tickets")
                 self.instance_repo.delete(instance)
         except IntegrityError as exc:
-            raise ResourceInUseError(f"航班实例 {instance_id} 被引用,无法删除") from exc
+            raise ResourceInUseError(f"Flight instance {instance_id} is in use and cannot be deleted") from exc
 
     def list_cabin_prices(self, instance_id: str) -> list[CabinPrice]:
         self.get_instance_or_404(instance_id)
@@ -333,7 +333,7 @@ class FlightService:
         try:
             with transaction(self.db):
                 if not self.instance_repo.get(instance_id):
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 cabin_prices = self.cabin_repo.replace_all(instance_id, rows)
                 totals = self.cabin_repo.sum_by_cabin(instance_id)
                 self.instance_repo.set_seat_summary(
@@ -343,7 +343,7 @@ class FlightService:
                 )
                 return cabin_prices
         except IntegrityError as exc:
-            raise ResourceInUseError(f"航班实例 {instance_id} 的部分票价档位已有客票引用,无法删除") from exc
+            raise ResourceInUseError(f"Some fare tiers for flight instance {instance_id} are referenced by tickets and cannot be deleted") from exc
 
     def deduct_seat(
         self,
@@ -359,20 +359,20 @@ class FlightService:
             with transaction(self.db):
                 instance = self.instance_repo.get(instance_id)
                 if not instance:
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 self._ensure_instance_bookable(instance)
                 cabin_price = self.cabin_repo.lock(instance_id, cabin, fare)
                 if not cabin_price:
-                    raise ResourceNotFoundError("舱位价格档位不存在")
+                    raise ResourceNotFoundError("Cabin fare tier does not exist.")
                 available = int(cabin_price.available_seats)
                 if available < quantity:
-                    raise InsufficientStockError(f"剩余 {available},申请 {quantity}")
+                    raise InsufficientStockError(f"Only {available} seats left; requested {quantity}.")
                 self.cabin_repo.update_available(cabin_price, -quantity)
                 if not self.instance_repo.adjust_seats(instance_id, cabin, -quantity):
-                    raise InsufficientStockError("汇总库存不足")
+                    raise InsufficientStockError("Insufficient summary inventory.")
                 return cabin_price
         except IntegrityError as exc:
-            raise InsufficientStockError("库存扣减失败") from exc
+            raise InsufficientStockError("Failed to deduct inventory.") from exc
 
     def restore_seat(
         self,
@@ -387,16 +387,16 @@ class FlightService:
         try:
             with transaction(self.db):
                 if not self.instance_repo.get(instance_id):
-                    raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+                    raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
                 cabin_price = self.cabin_repo.lock(instance_id, cabin, fare)
                 if not cabin_price:
-                    raise ResourceNotFoundError("舱位价格档位不存在")
+                    raise ResourceNotFoundError("Cabin fare tier does not exist.")
                 self.cabin_repo.update_available(cabin_price, quantity)
                 if not self.instance_repo.adjust_seats(instance_id, cabin, quantity):
-                    raise AppException("汇总库存回补失败")
+                    raise AppException("Failed to restore summary inventory.")
                 return cabin_price
         except IntegrityError as exc:
-            raise AppException("库存回补失败") from exc
+            raise AppException("Failed to restore inventory.") from exc
 
     def lock_and_deduct_cabin(
         self,
@@ -437,7 +437,7 @@ class FlightService:
     def _instance_detail(self, instance_id: str) -> dict[str, object]:
         context = self.instance_repo.detail_context(instance_id)
         if not context:
-            raise ResourceNotFoundError(f"航班实例 {instance_id} 不存在")
+            raise ResourceNotFoundError(f"Flight instance {instance_id} does not exist")
         context["fuel_infra_fee"] = float(context["fuel_infra_fee"])
         context["cabin_prices"] = self.cabin_repo.list_by_instance(instance_id)
         return context
@@ -523,21 +523,21 @@ class FlightService:
             if not self.flight_repo.exists_airport(code)
         ]
         if missing_airports:
-            raise ResourceNotFoundError(f"机场 {missing_airports[0]} 不存在")
+            raise ResourceNotFoundError(f"Airport {missing_airports[0]} does not exist")
         if not self.flight_repo.exists_airline(airline):
-            raise ResourceNotFoundError(f"航司 {airline} 不存在")
+            raise ResourceNotFoundError(f"Airline {airline} does not exist")
         if not self.flight_repo.exists_aircraft_type(aircraft):
-            raise ResourceNotFoundError(f"机型 {aircraft} 不存在")
+            raise ResourceNotFoundError(f"Aircraft type {aircraft} does not exist")
 
     def _ensure_date_in_weekday(self, flight_no: str, flight_date: date) -> None:
         weekdays = self.flight_repo.get_weekdays(flight_no)
         if flight_date.isoweekday() not in weekdays:
-            raise AppException("日期不在飞行日内")
+            raise AppException("The date is not on a scheduled operating day.")
 
     @staticmethod
     def _validate_time_order(departure: Any, arrival: Any) -> None:
         if _time_of_day(departure) > _time_of_day(arrival):
-            raise AppException("起飞时间不得晚于到达时间")
+            raise AppException("Departure time cannot be later than arrival time.")
 
     @staticmethod
     def _instance_value_equal(left: Any, right: Any) -> bool:
@@ -547,7 +547,7 @@ class FlightService:
     @staticmethod
     def _validate_route(dep_airport_code: str, arr_airport_code: str) -> None:
         if dep_airport_code == arr_airport_code:
-            raise AppException("起降不能同机场")
+            raise AppException("Departure and arrival airports cannot be the same.")
 
     @staticmethod
     def _validate_stopovers(
@@ -556,29 +556,29 @@ class FlightService:
         stopovers: list[str],
     ) -> None:
         if len(stopovers) != len(set(stopovers)):
-            raise AppException("经停机场不能重复")
+            raise AppException("Stopover airports cannot be duplicated.")
         if dep_airport_code in stopovers or arr_airport_code in stopovers:
-            raise AppException("经停机场冲突")
+            raise AppException("Stopover airports cannot match the departure or arrival airport.")
 
     @staticmethod
     def _validate_quantity(quantity: int) -> None:
         if quantity <= 0:
-            raise AppException("座位数量必须大于0")
+            raise AppException("Seat quantity must be greater than 0.")
 
     def _ensure_instance_bookable(self, instance: FlightInstance) -> None:
         if instance.status not in BOOKABLE_INSTANCE_STATUSES:
-            raise InstanceNotBookableError(f"航班实例 {instance.instance_id} 当前不可订")
+            raise InstanceNotBookableError(f"Flight instance {instance.instance_id} is not currently bookable")
         flight = self.flight_repo.get(instance.flight_no)
         if not flight:
-            raise ResourceNotFoundError(f"航班 {instance.flight_no} 不存在")
+            raise ResourceNotFoundError(f"Flight {instance.flight_no} does not exist")
         if _departure_at(instance.flight_date, instance.scheduled_departure) <= datetime.now():
-            raise InstanceNotBookableError(f"航班实例 {instance.instance_id} 已起飞,不可订")
+            raise InstanceNotBookableError(f"Flight instance {instance.instance_id} has departed and cannot be booked")
 
     @staticmethod
     def _validate_cabin_price_rows(rows: list[dict[str, Any]]) -> None:
         keys = [(row["cabin_class"], row["fare_type"]) for row in rows]
         if len(keys) != len(set(keys)):
-            raise AppException("舱位定价档位不能重复")
+            raise AppException("Cabin fare tiers cannot be duplicated.")
 
 
 def _flight_no(value: str) -> str:
@@ -622,16 +622,16 @@ def _airport_codes(values: list[str]) -> list[str]:
 
 def _unique_weekdays(values: list[int]) -> list[int]:
     if len(values) != len(set(values)):
-        raise AppException("飞行日不能重复")
+        raise AppException("Operating weekdays cannot be duplicated.")
     return sorted(values)
 
 
 def _status(value: str) -> str:
     normalized = value.strip()
     if normalized == "延误":
-        raise AppException("航班实例状态不允许为延误")
+        raise AppException("Flight instance status cannot be Delayed.")
     if normalized not in ALLOWED_INSTANCE_STATUSES:
-        raise AppException("航班实例状态不合法")
+        raise AppException("Invalid flight instance status.")
     return normalized
 
 
@@ -660,12 +660,12 @@ def _departure_at(flight_date: date, scheduled_departure: Any) -> datetime:
 def _cabin_class(value: str) -> str:
     normalized = value.strip()
     if normalized not in {CABIN_CLASS_ECONOMY, CABIN_CLASS_FIRST}:
-        raise AppException("舱位不合法")
+        raise AppException("Invalid cabin class.")
     return normalized
 
 
 def _fare_type(value: str) -> str:
     normalized = value.strip()
     if normalized not in {"标准", "特价"}:
-        raise AppException("票价类型不合法")
+        raise AppException("Invalid fare type.")
     return normalized

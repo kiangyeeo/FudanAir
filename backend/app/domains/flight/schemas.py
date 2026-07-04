@@ -40,9 +40,9 @@ class FlightBase(BaseModel):
     @model_validator(mode="after")
     def validate_weekdays(self) -> FlightBase:
         if any(day < 1 or day > 7 for day in self.weekdays):
-            raise ValueError("飞行日必须在1到7之间")
+            raise ValueError("Operating weekdays must be between 1 and 7.")
         if self.scheduled_departure > self.scheduled_arrival:
-            raise ValueError("起飞时间不得晚于到达时间")
+            raise ValueError("Departure time cannot be later than arrival time.")
         return self
 
 
@@ -105,7 +105,7 @@ class FlightInstanceBatchCreate(BaseModel):
     @model_validator(mode="after")
     def validate_date_range(self) -> FlightInstanceBatchCreate:
         if self.end_date < self.start_date:
-            raise ValueError("结束日期不能早于开始日期")
+            raise ValueError("End date cannot be earlier than start date.")
         return self
 
 
@@ -123,7 +123,7 @@ class FlightInstanceUpdate(BaseModel):
             and self.scheduled_arrival is not None
             and self.scheduled_departure > self.scheduled_arrival
         ):
-            raise ValueError("起飞时间不得晚于到达时间")
+            raise ValueError("Departure time cannot be later than arrival time.")
         return self
 
 class FlightInstanceStatusUpdate(BaseModel):
