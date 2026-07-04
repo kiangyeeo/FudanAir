@@ -49,7 +49,7 @@ def login(
     service = AuthService(db)
     user = service.login(payload)
     _set_auth_cookie(response, service.create_token(user.user_id, "user"))
-    logger.info("用户登录成功 user_id=%s", user.user_id)
+    logger.info("User login succeeded user_id=%s", user.user_id)
     return _user_session(user)
 
 
@@ -62,7 +62,7 @@ def admin_login(
     service = AuthService(db)
     admin = service.admin_login(payload)
     _set_auth_cookie(response, service.create_token(admin.admin_id, "admin"))
-    logger.info("管理员登录成功 admin_id=%s", admin.admin_id)
+    logger.info("Admin login succeeded admin_id=%s", admin.admin_id)
     return _admin_session(admin)
 
 

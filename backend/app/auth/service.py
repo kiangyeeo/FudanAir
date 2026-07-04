@@ -47,15 +47,15 @@ class AuthService:
         self._validate_phone(payload.phone)
         user = self._get_user_by_phone(payload.phone)
         if not user:
-            raise AuthenticationError("用户暂未注册")
+            raise AuthenticationError("This user is not registered.")
         if not verify_password(payload.password, user.user_password):
-            raise AuthenticationError("密码错误，请重试")
+            raise AuthenticationError("Incorrect password. Please try again.")
         return user
 
     def admin_login(self, payload: AdminLoginRequest) -> Admin:
         admin = self.db.get(Admin, payload.admin_id)
         if not admin or not verify_password(payload.password, admin.admin_password):
-            raise AuthenticationError("管理员账号或密码错误")
+            raise AuthenticationError("Incorrect admin account or password.")
         return admin
 
     def authenticate_user(self, payload: LoginRequest) -> User:
@@ -74,16 +74,16 @@ class AuthService:
             admin = self.db.get(Admin, subject)
             if admin:
                 return admin
-        raise UnauthorizedError("未登录或登录已失效")
+        raise UnauthorizedError("You are not signed in or your session has expired.")
 
     def _get_current_user(self, subject: str) -> User:
         try:
             user_id = int(subject)
         except ValueError as exc:
-            raise UnauthorizedError("登录凭证无效") from exc
+            raise UnauthorizedError("Invalid login credentials.") from exc
         user = self.db.get(User, user_id)
         if not user:
-            raise UnauthorizedError("未登录或登录已失效")
+            raise UnauthorizedError("You are not signed in or your session has expired.")
         return user
 
     def _get_user_by_phone(self, phone: str) -> User | None:

@@ -27,7 +27,7 @@ def get_current_identity(
     db: Session = Depends(get_auth_db),
 ) -> User | Admin:
     if not access_token:
-        raise UnauthorizedError("未登录或登录已失效")
+        raise UnauthorizedError("You are not signed in or your session has expired.")
     payload = decode_access_token(access_token)
     return AuthService(db).get_identity(payload["sub"], payload["role"])
 
@@ -36,7 +36,7 @@ def get_current_user(
     identity: User | Admin = Depends(get_current_identity),
 ) -> User:
     if not isinstance(identity, User):
-        raise PermissionDeniedError("需要用户权限")
+        raise PermissionDeniedError("User access is required.")
     return identity
 
 
@@ -48,7 +48,7 @@ def get_current_admin(
     identity: User | Admin = Depends(get_current_identity),
 ) -> Admin:
     if not isinstance(identity, Admin):
-        raise PermissionDeniedError("需要管理员权限")
+        raise PermissionDeniedError("Admin access is required.")
     return identity
 
 
