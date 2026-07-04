@@ -7,11 +7,10 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
 import { formatCurrency, formatDate, formatTime } from '@/utils/format'
+import { cabinClassOptions, fareTypeOptions, instanceStatusLabel } from '@/utils/labels'
 import type { CabinClass, FareType } from '@/types/common'
 import type { CabinPricePayload, FlightInstance, FlightInstanceListParams } from '@/types/flight'
 
-const cabinClassOptions: CabinClass[] = ['经济舱', '头等舱']
-const fareTypeOptions: FareType[] = ['标准', '特价']
 const route = useRoute()
 
 const instanceLoading = ref(false)
@@ -156,8 +155,8 @@ async function loadPrices() {
 
 function addPriceRow() {
   prices.value.push({
-    cabin_class: cabinClassOptions[0],
-    fare_type: fareTypeOptions[0],
+    cabin_class: cabinClassOptions[0].value,
+    fare_type: fareTypeOptions[0].value,
     price: 0,
     available_seats: 0,
   })
@@ -165,7 +164,7 @@ function addPriceRow() {
 
 async function removePriceRow(index: number) {
   try {
-    await ElMessageBox.confirm('确认删除该票价档位？如果已有客票引用，保存时会被后端拒绝。', '删除档位', { type: 'warning' })
+    await ElMessageBox.confirm('Delete this fare tier? The backend will reject the save if existing tickets reference it.', 'Delete Fare Tier', { type: 'warning' })
     prices.value.splice(index, 1)
   } catch {
     // 用户取消删除
@@ -174,18 +173,18 @@ async function removePriceRow(index: number) {
 
 function validatePrices() {
   if (!prices.value.length) {
-    ElMessage.error('请至少保留一个票价档位')
+    ElMessage.error('Keep at least one fare tier')
     return false
   }
   const keys = new Set<string>()
   for (const row of prices.value) {
     if (row.price < 0 || row.available_seats < 0) {
-      ElMessage.error('价格和剩余数量不能为负')
+      ElMessage.error('Price and remaining seats cannot be negative')
       return false
     }
     const key = `${row.cabin_class}-${row.fare_type}`
     if (keys.has(key)) {
-      ElMessage.error('舱位和票价类型不能重复')
+      ElMessage.error('Cabin and fare type cannot be duplicated')
       return false
     }
     keys.add(key)
@@ -196,7 +195,7 @@ function validatePrices() {
 async function savePrices() {
   const instanceId = selectedInstanceId.value.trim()
   if (!instanceId) {
-    ElMessage.error('请选择航班实例')
+    ElMessage.error('Select a flight instance')
     return
   }
   if (!validatePrices()) {
@@ -220,7 +219,7 @@ async function savePrices() {
     }))
     selectedInstance.value = await flightApi.getInstance(instanceId)
     await loadInstances()
-    ElMessage.success('票价和余票已保存')
+    ElMessage.success('Fares and seats saved')
   } finally {
     saving.value = false
   }
@@ -231,14 +230,14 @@ async function savePrices() {
   <div class="price-page">
     <section class="page-section">
       <div class="toolbar">
-        <h1 class="page-title">票价管理</h1>
+        <h1 class="page-title">Pricing</h1>
         <div class="toolbar-actions">
           <el-input
             v-model="filters.flight_no"
             clearable
             :prefix-icon="Search"
             maxlength="8"
-            placeholder="航班号"
+            placeholder="Flight no."
             class="flight-filter"
             @keyup.enter="applyFilters"
           />
@@ -246,12 +245,12 @@ async function savePrices() {
             v-model="filters.flight_date"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="运行日期"
+            placeholder="Operating date"
             class="date-filter"
           />
-          <el-button :icon="Search" @click="applyFilters">查询实例</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-          <el-button :icon="Refresh" @click="loadInstances">刷新</el-button>
+          <el-button :icon="Search" @click="applyFilters">Search Instances</el-button>
+          <el-button @click="resetFilters">Reset</el-button>
+          <el-button :icon="Refresh" @click="loadInstances">Refresh</el-button>
         </div>
       </div>
 
@@ -264,23 +263,25 @@ async function savePrices() {
         class="instance-table"
         @row-dblclick="selectInstance"
       >
-        <el-table-column prop="instance_id" label="实例 ID" min-width="180" />
-        <el-table-column prop="flight_no" label="航班号" width="110" />
-        <el-table-column label="运行日期" width="130">
+        <el-table-column prop="instance_id" label="Instance ID" min-width="180" />
+        <el-table-column prop="flight_no" label="Flight No." width="110" />
+        <el-table-column label="Operating Date" width="130">
           <template #default="{ row }">{{ formatDate(row.flight_date) }}</template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" />
-        <el-table-column prop="economy_left" label="经济舱余票" width="120" />
-        <el-table-column prop="first_left" label="头等舱余票" width="120" />
-        <el-table-column label="操作" width="110" fixed="right">
+        <el-table-column label="Status" width="120">
+          <template #default="{ row }">{{ instanceStatusLabel(row.status) }}</template>
+        </el-table-column>
+        <el-table-column prop="economy_left" label="Economy Left" width="120" />
+        <el-table-column prop="first_left" label="First Left" width="120" />
+        <el-table-column label="Actions" width="110" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" :disabled="selectedInstanceId === row.instance_id" @click="selectInstance(row)">
-              调整
+              Adjust
             </el-button>
           </template>
         </el-table-column>
       </el-table>
-      <EmptyState v-else title="暂无航班实例" description="按航班号和运行日期查询要调整的航班实例。" />
+      <EmptyState v-else title="No Flight Instances" description="Search by flight number and operating date to adjust an instance." />
 
       <el-pagination
         v-if="instanceTotal > 0"
@@ -295,70 +296,70 @@ async function savePrices() {
       />
 
       <el-descriptions v-if="selectedInstance" :column="4" border class="instance-summary">
-        <el-descriptions-item label="航班号">{{ selectedInstance.flight_no }}</el-descriptions-item>
-        <el-descriptions-item label="运行日期">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
-        <el-descriptions-item label="状态">{{ selectedInstance.status }}</el-descriptions-item>
-        <el-descriptions-item label="燃油基建费">
+        <el-descriptions-item label="Flight No.">{{ selectedInstance.flight_no }}</el-descriptions-item>
+        <el-descriptions-item label="Operating Date">{{ formatDate(selectedInstance.flight_date) }}</el-descriptions-item>
+        <el-descriptions-item label="Status">{{ instanceStatusLabel(selectedInstance.status) }}</el-descriptions-item>
+        <el-descriptions-item label="Fuel & Airport Fee">
           {{ formatCurrency(selectedInstance.fuel_infra_fee ?? null) }}
         </el-descriptions-item>
-        <el-descriptions-item label="航线">
+        <el-descriptions-item label="Route">
           {{ selectedInstance.dep_airport_code }} -> {{ selectedInstance.arr_airport_code }}
         </el-descriptions-item>
-        <el-descriptions-item label="起飞">{{ formatTime(selectedInstance.scheduled_departure) }}</el-descriptions-item>
-        <el-descriptions-item label="到达">{{ formatTime(selectedInstance.scheduled_arrival) }}</el-descriptions-item>
-        <el-descriptions-item label="汇总余票">
-          经济舱 {{ selectedInstance.economy_left }} / 头等舱 {{ selectedInstance.first_left }}
+        <el-descriptions-item label="Departure">{{ formatTime(selectedInstance.scheduled_departure) }}</el-descriptions-item>
+        <el-descriptions-item label="Arrival">{{ formatTime(selectedInstance.scheduled_arrival) }}</el-descriptions-item>
+        <el-descriptions-item label="Seat Summary">
+          Economy {{ selectedInstance.economy_left }} / First {{ selectedInstance.first_left }}
         </el-descriptions-item>
       </el-descriptions>
     </section>
 
     <section class="page-section admin-crud-page">
       <div class="toolbar">
-        <h2 class="section-title">舱位定价档位</h2>
+        <h2 class="section-title">Cabin Fare Tiers</h2>
         <div class="toolbar-actions">
-          <el-button type="primary" :icon="Plus" :disabled="!selectedInstanceId" @click="addPriceRow">新增档位</el-button>
-          <el-button :icon="Refresh" :disabled="!selectedInstanceId" @click="loadPrices">刷新</el-button>
+          <el-button type="primary" :icon="Plus" :disabled="!selectedInstanceId" @click="addPriceRow">Add Tier</el-button>
+          <el-button :icon="Refresh" :disabled="!selectedInstanceId" @click="loadPrices">Refresh</el-button>
           <el-button type="primary" :loading="saving" :disabled="!selectedInstanceId || !prices.length" @click="savePrices">
-            保存
+            Save
           </el-button>
         </div>
       </div>
 
       <el-table v-if="prices.length || priceLoading" v-loading="priceLoading" :data="prices" border>
-        <el-table-column label="舱位" width="150">
+        <el-table-column label="Cabin" width="150">
           <template #default="{ row }">
             <el-select v-model="row.cabin_class" class="full-width">
-              <el-option v-for="cabinClass in cabinClassOptions" :key="cabinClass" :label="cabinClass" :value="cabinClass" />
+              <el-option v-for="item in cabinClassOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="票价类型" width="150">
+        <el-table-column label="Fare Type" width="150">
           <template #default="{ row }">
             <el-select v-model="row.fare_type" class="full-width">
-              <el-option v-for="fareType in fareTypeOptions" :key="fareType" :label="fareType" :value="fareType" />
+              <el-option v-for="item in fareTypeOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
           </template>
         </el-table-column>
-        <el-table-column label="价格" width="180">
+        <el-table-column label="Price" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.price" :min="0" :precision="2" :step="50" class="full-width" />
           </template>
         </el-table-column>
-        <el-table-column label="剩余数量" width="180">
+        <el-table-column label="Seats Left" width="180">
           <template #default="{ row }">
             <el-input-number v-model="row.available_seats" :min="0" :precision="0" :step="1" class="full-width" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right">
+        <el-table-column label="Actions" width="110" fixed="right">
           <template #default="{ $index }">
-            <el-button link type="danger" :icon="Delete" @click="removePriceRow($index)">删除</el-button>
+            <el-button link type="danger" :icon="Delete" @click="removePriceRow($index)">Delete</el-button>
           </template>
         </el-table-column>
       </el-table>
       <EmptyState
         v-else
-        :title="selectedInstanceId ? '暂无票价档位' : '未选择航班实例'"
-        :description="selectedInstanceId ? '当前实例还没有舱位定价档位。' : '先按航班号和运行日期选择航班实例。'"
+        :title="selectedInstanceId ? 'No Fare Tiers' : 'No Flight Instance Selected'"
+        :description="selectedInstanceId ? 'This instance has no cabin fare tiers.' : 'Select a flight instance by flight number and operating date first.'"
       />
     </section>
   </div>

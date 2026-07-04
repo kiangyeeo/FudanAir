@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { orderApi } from '@/api/order'
 import { formatCurrency, formatDate } from '@/utils/format'
+import { orderStatusLabel, orderStatusOptions } from '@/utils/labels'
 import type { AdminOrderQuery, OrderListItem, OrderStatus } from '@/types/order'
 
 const rows = ref<OrderListItem[]>([])
@@ -16,15 +17,6 @@ const query = reactive({
   status: '' as OrderStatus | '',
 })
 
-const statusOptions: Array<{ label: string; value: OrderStatus | '' }> = [
-  { label: '全部状态', value: '' },
-  { label: '待支付', value: '待支付' },
-  { label: '已支付', value: '已支付' },
-  { label: '已取消', value: '已取消' },
-  { label: '已完成', value: '已完成' },
-  { label: '部分退款', value: '部分退款' },
-  { label: '已完成退款', value: '已完成退款' },
-]
 
 async function loadOrders() {
   loading.value = true
@@ -103,61 +95,61 @@ onMounted(() => {
 <template>
   <section class="page-section admin-orders">
     <div class="page-heading">
-      <h1 class="page-title">订单查询</h1>
-      <span class="subtle">管理员只读查看全部订单</span>
+      <h1 class="page-title">Orders</h1>
+      <span class="subtle">Read-only access to all orders</span>
     </div>
 
     <el-form class="filter-bar" inline @submit.prevent>
-      <el-form-item label="状态">
+      <el-form-item label="Status">
         <el-select v-model="query.status" class="status-select" @change="submitFilters">
-          <el-option v-for="item in statusOptions" :key="item.value || 'all'" :label="item.label" :value="item.value" />
+          <el-option v-for="item in orderStatusOptions" :key="item.value || 'all'" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
-      <el-form-item label="用户 ID">
-        <el-input-number v-model="userId" :min="1" :controls="false" placeholder="全部用户" class="user-id-input" />
+      <el-form-item label="User ID">
+        <el-input-number v-model="userId" :min="1" :controls="false" placeholder="All users" class="user-id-input" />
       </el-form-item>
-      <el-form-item label="创建日期">
+      <el-form-item label="Created Date">
         <el-date-picker
           v-model="dateRange"
           type="daterange"
           value-format="YYYY-MM-DD"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          range-separator="至"
+          start-placeholder="Start date"
+          end-placeholder="End date"
+          range-separator="to"
           class="date-range"
         />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" :icon="Search" @click="submitFilters">查询</el-button>
-        <el-button :icon="Refresh" @click="resetFilters">重置</el-button>
+        <el-button type="primary" :icon="Search" @click="submitFilters">Search</el-button>
+        <el-button :icon="Refresh" @click="resetFilters">Reset</el-button>
       </el-form-item>
     </el-form>
 
     <el-table v-loading="loading" :data="rows" border row-key="order_no">
       <template #empty>
-        <span>暂无订单</span>
+        <span>No Orders</span>
       </template>
-      <el-table-column prop="order_no" label="订单号" min-width="220" />
-      <el-table-column label="用户" min-width="150">
+      <el-table-column prop="order_no" label="Order No." min-width="220" />
+      <el-table-column label="User" min-width="150">
         <template #default="{ row }">
           <div>{{ row.user_name || '--' }}</div>
           <span class="subtle">ID {{ row.user_id }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="状态" width="120">
+      <el-table-column label="Status" width="120">
         <template #default="{ row }">
-          <el-tag :type="statusTagType(row.status)">{{ row.status }}</el-tag>
+          <el-tag :type="statusTagType(row.status)">{{ orderStatusLabel(row.status) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="订单金额" width="140">
+      <el-table-column label="Amount" width="140">
         <template #default="{ row }">{{ formatCurrency(row.total_amount) }}</template>
       </el-table-column>
-      <el-table-column label="创建时间" min-width="180">
+      <el-table-column label="Created At" min-width="180">
         <template #default="{ row }">{{ formatDate(row.created_at) }}</template>
       </el-table-column>
-      <el-table-column prop="ticket_count" label="客票数" width="100" />
-      <el-table-column prop="active_count" label="有效票" width="100" />
-      <el-table-column prop="refunded_count" label="已退票" width="100" />
+      <el-table-column prop="ticket_count" label="Tickets" width="100" />
+      <el-table-column prop="active_count" label="Active" width="100" />
+      <el-table-column prop="refunded_count" label="Refunded" width="100" />
     </el-table>
 
     <div class="pagination">

@@ -11,10 +11,10 @@ const loading = ref(false)
 const airportStore = useAirportStore()
 
 const statCards = [
-  { key: 'total_orders', title: '总订单数', icon: Tickets, color: '#2563eb', bg: '#eaf2ff' },
-  { key: 'today_orders', title: '今日新增订单', icon: Calendar, color: '#0f9f6e', bg: '#e9f8f1' },
-  { key: 'total_users', title: '总用户数', icon: User, color: '#7c3aed', bg: '#f1ecff' },
-  { key: 'active_users_30d', title: '活跃用户数', icon: TrendCharts, color: '#c27803', bg: '#fff6dd' },
+  { key: 'total_orders', title: 'Total Orders', icon: Tickets, color: '#2563eb', bg: '#eaf2ff' },
+  { key: 'today_orders', title: 'New Orders Today', icon: Calendar, color: '#0f9f6e', bg: '#e9f8f1' },
+  { key: 'total_users', title: 'Total Users', icon: User, color: '#7c3aed', bg: '#f1ecff' },
+  { key: 'active_users_30d', title: 'Active Users', icon: TrendCharts, color: '#c27803', bg: '#fff6dd' },
 ] as const
 
 function statValue(key: (typeof statCards)[number]['key']) {
@@ -75,28 +75,28 @@ onMounted(() => {
     <section class="content-grid">
       <div class="revenue-card">
         <div class="revenue-topline">
-          <span class="revenue-label">今日成交额</span>
-          <span class="revenue-chip">已支付</span>
+          <span class="revenue-label">Revenue Today</span>
+          <span class="revenue-chip">Paid</span>
         </div>
         <div class="revenue-value">
           <span class="cny">¥</span><CountUp :value="dashboard?.today_revenue ?? 0" :decimals="2" />
         </div>
-        <span class="revenue-foot">实时统计当日已支付订单总额</span>
+        <span class="revenue-foot">Real-time total from paid orders today</span>
       </div>
 
       <el-card shadow="never" class="route-card">
         <template #header>
-          <span>今日热门航线 Top 5</span>
+          <span>Top 5 Routes Today</span>
         </template>
 
-        <el-table :data="topRoutes" empty-text="暂无今日成交航线" border class="route-table">
-          <el-table-column label="排名" type="index" width="80">
+        <el-table :data="topRoutes" empty-text="No paid routes today" border class="route-table">
+          <el-table-column label="Rank" type="index" width="80">
             <template #default="{ $index }">
               <span class="rank-badge">{{ $index + 1 }}</span>
             </template>
           </el-table-column>
 
-          <el-table-column label="出发机场" prop="dep_airport_code" min-width="120">
+          <el-table-column label="Departure Airport" prop="dep_airport_code" min-width="120">
             <template #default="{ row }">
               <div class="airport-cell">
                 <span class="airport-code">{{ row.dep_airport_code }}</span>
@@ -105,7 +105,7 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column label="到达机场" prop="arr_airport_code" min-width="120">
+          <el-table-column label="Arrival Airport" prop="arr_airport_code" min-width="120">
             <template #default="{ row }">
               <div class="airport-cell">
                 <span class="airport-code">{{ row.arr_airport_code }}</span>
@@ -114,7 +114,7 @@ onMounted(() => {
             </template>
           </el-table-column>
 
-          <el-table-column label="订单数" prop="order_count" min-width="140">
+          <el-table-column label="Orders" prop="order_count" min-width="140">
             <template #default="{ row }">
               <div class="order-cell">
                 <span class="order-count mono-num">{{ row.order_count }}</span>
