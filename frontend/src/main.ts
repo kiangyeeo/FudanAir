@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
+import en from 'element-plus/es/locale/lang/en'
 import { MotionPlugin } from '@vueuse/motion'
 import 'element-plus/dist/index.css'
 
@@ -13,7 +14,7 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-app.use(ElementPlus)
+app.use(ElementPlus, { locale: en })
 app.use(MotionPlugin)
 
 const auth = useAuthStore(pinia)
