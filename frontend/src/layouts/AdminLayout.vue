@@ -25,23 +25,23 @@ const auth = useAuthStore()
 const collapsed = ref(false)
 
 const menus = [
-  { index: '/admin', label: '管理概览', icon: Odometer },
-  { index: '/admin/cities', label: '城市管理', icon: MapLocation },
-  { index: '/admin/airports', label: '机场管理', icon: Position },
-  { index: '/admin/airlines', label: '航司管理', icon: Promotion },
-  { index: '/admin/aircraft', label: '机型管理', icon: Box },
-  { index: '/admin/flights', label: '航班管理', icon: Calendar },
-  { index: '/admin/instances', label: '实例管理', icon: Document },
-  { index: '/admin/prices', label: '票价管理', icon: Money },
-  { index: '/admin/orders', label: '订单查询', icon: Tickets },
+  { index: '/admin', label: 'Dashboard', icon: Odometer },
+  { index: '/admin/cities', label: 'Cities', icon: MapLocation },
+  { index: '/admin/airports', label: 'Airports', icon: Position },
+  { index: '/admin/airlines', label: 'Airlines', icon: Promotion },
+  { index: '/admin/aircraft', label: 'Aircraft Types', icon: Box },
+  { index: '/admin/flights', label: 'Flights', icon: Calendar },
+  { index: '/admin/instances', label: 'Flight Instances', icon: Document },
+  { index: '/admin/prices', label: 'Pricing', icon: Money },
+  { index: '/admin/orders', label: 'Orders', icon: Tickets },
 ]
 
 const activeMenu = computed(() => route.path)
-const title = computed(() => route.meta.title || '管理后台')
+const title = computed(() => route.meta.title || 'Admin Console')
 
 async function logout() {
   await auth.logout()
-  ElMessage.success('已退出管理员登录')
+  ElMessage.success('Admin signed out')
   router.push('/admin/login')
 }
 </script>
@@ -67,14 +67,14 @@ async function logout() {
             <el-icon><component :is="collapsed ? Expand : Fold" /></el-icon>
           </el-button>
           <el-breadcrumb separator="/">
-            <el-breadcrumb-item>管理端</el-breadcrumb-item>
+            <el-breadcrumb-item>Admin</el-breadcrumb-item>
             <el-breadcrumb-item>{{ title }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
         <div class="admin-user">
           <span class="avatar">{{ (auth.displayName || 'A').charAt(0).toUpperCase() }}</span>
-          <span class="name">{{ auth.displayName || '管理员' }}</span>
-          <el-button :icon="SwitchButton" text @click="logout">退出</el-button>
+          <span class="name">{{ auth.displayName || 'Admin' }}</span>
+          <el-button :icon="SwitchButton" text @click="logout">Sign Out</el-button>
         </div>
       </el-header>
       <el-main class="admin-main">
