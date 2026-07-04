@@ -27,7 +27,7 @@ function onScroll() {
 async function handleCommand(command: string) {
   if (command === 'logout') {
     await auth.logout()
-    ElMessage.success('已退出登录')
+    ElMessage.success('Signed out')
     router.push('/')
     return
   }
@@ -51,10 +51,10 @@ onBeforeUnmount(() => {
     </RouterLink>
 
     <el-menu :default-active="activeMenu" mode="horizontal" router class="nav-menu" :ellipsis="false">
-      <el-menu-item index="/">航班搜索</el-menu-item>
-      <el-menu-item index="/trips">我的机票</el-menu-item>
-      <el-menu-item index="/orders">我的订单</el-menu-item>
-      <el-menu-item index="/profile">个人中心</el-menu-item>
+      <el-menu-item index="/">Flight Search</el-menu-item>
+      <el-menu-item index="/trips">My Tickets</el-menu-item>
+      <el-menu-item index="/orders">My Orders</el-menu-item>
+      <el-menu-item index="/profile">Profile</el-menu-item>
     </el-menu>
 
     <div class="header-actions">
@@ -67,17 +67,17 @@ onBeforeUnmount(() => {
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="/profile" :icon="User">个人中心</el-dropdown-item>
-              <el-dropdown-item command="/trips" :icon="Tickets">我的机票</el-dropdown-item>
-              <el-dropdown-item command="/orders" :icon="Document">我的订单</el-dropdown-item>
-              <el-dropdown-item command="logout" :icon="SwitchButton" divided>退出登录</el-dropdown-item>
+              <el-dropdown-item command="/profile" :icon="User">Profile</el-dropdown-item>
+              <el-dropdown-item command="/trips" :icon="Tickets">My Tickets</el-dropdown-item>
+              <el-dropdown-item command="/orders" :icon="Document">My Orders</el-dropdown-item>
+              <el-dropdown-item command="logout" :icon="SwitchButton" divided>Sign Out</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
       </template>
       <template v-else>
-        <el-button text @click="router.push('/login')">登录</el-button>
-        <el-button type="primary" round @click="router.push('/register')">注册</el-button>
+        <el-button text @click="router.push('/login')">Log In</el-button>
+        <el-button type="primary" round @click="router.push('/register')">Register</el-button>
       </template>
     </div>
   </header>

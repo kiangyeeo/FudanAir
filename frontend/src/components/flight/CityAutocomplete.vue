@@ -12,7 +12,7 @@ const props = withDefaults(defineProps<{
   disabled?: boolean
   teleported?: boolean
 }>(), {
-  placeholder: '输入城市名',
+  placeholder: 'Enter city name',
   disabled: false,
   teleported: false,
 })

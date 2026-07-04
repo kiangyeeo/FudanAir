@@ -14,7 +14,7 @@ withDefaults(
   <div class="auth-shell" v-motion :initial="{ opacity: 0, y: 24 }" :enter="{ opacity: 1, y: 0, transition: { duration: 450 } }">
     <aside class="brand-side">
       <div class="brand-medallion">
-        <img src="/images/brand-emblem.png" alt="FudanAir 航空票务数据库管理系统" />
+        <img src="/images/brand-emblem.png" alt="FudanAir airline ticketing database system" />
       </div>
     </aside>
 

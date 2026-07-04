@@ -7,9 +7,9 @@ const year = new Date().getFullYear()
 <template>
   <footer class="app-footer">
     <div class="footer-inner">
-      <BrandLogo :size="46" text="FudanAir 航空票务系统" />
+      <BrandLogo :size="46" text="FudanAir Airline Ticketing System" />
       <div class="footer-meta">
-        <span>© {{ year }} FudanAir · 《数据库及实现》课程项目</span>
+        <span>© {{ year }} FudanAir · Database Systems Course Project</span>
       </div>
     </div>
   </footer>
