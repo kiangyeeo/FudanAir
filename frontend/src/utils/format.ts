@@ -51,7 +51,10 @@ export function formatDuration(minutes?: number | null) {
   }
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return `${hours}小时${rest}分`
+  if (hours <= 0) {
+    return `${rest} min`
+  }
+  return rest > 0 ? `${hours}h ${rest}m` : `${hours}h`
 }
 
 /** 去除机场名末尾的"国际机场"/"机场"后缀，便于紧凑展示；新增机场自动适用 */
@@ -77,7 +80,8 @@ export function formatChineseDate(value?: string | null) {
   if (!matched) {
     return value
   }
-  return `${Number(matched[1])}年${Number(matched[2])}月${Number(matched[3])}日`
+  return new Date(`${matched[1]}-${matched[2].padStart(2, '0')}-${matched[3].padStart(2, '0')}T00:00:00`)
+    .toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 /** 证件号脱敏：保留前 4 位与后 4 位，中间打码（不足 8 位时仅露首尾各 1 位） */
@@ -111,19 +115,19 @@ export function formatCountdown(target: Date | null): string {
   }
   const diff = target.getTime() - Date.now()
   if (diff <= 0) {
-    return '即将出发'
+    return 'Departing soon'
   }
   const totalMinutes = Math.floor(diff / 60000)
   const days = Math.floor(totalMinutes / (60 * 24))
   const hours = Math.floor((totalMinutes % (60 * 24)) / 60)
   const minutes = totalMinutes % 60
   if (days > 0) {
-    return `${days}天${hours}小时`
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`
   }
   if (hours > 0) {
-    return `${hours}小时${minutes}分`
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
   }
-  return `${minutes}分钟`
+  return `${minutes}m`
 }
 
 /** 计算两个 HH:MM[:SS] 时刻之间的分钟差，跨天则按次日计算 */
