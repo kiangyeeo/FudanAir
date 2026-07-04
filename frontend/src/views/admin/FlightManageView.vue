@@ -25,13 +25,13 @@ interface FlightForm {
 }
 
 const weekdayOptions = [
-  { label: '周一', value: 1 },
-  { label: '周二', value: 2 },
-  { label: '周三', value: 3 },
-  { label: '周四', value: 4 },
-  { label: '周五', value: 5 },
-  { label: '周六', value: 6 },
-  { label: '周日', value: 7 },
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+  { label: 'Sun', value: 7 },
 ]
 
 const loading = ref(false)
@@ -73,18 +73,18 @@ const form = reactive<FlightForm>({
 
 const rules: FormRules<FlightForm> = {
   flight_no: [
-    { required: true, message: '请输入航班号', trigger: 'blur' },
-    { max: 8, message: '航班号不能超过8个字符', trigger: 'blur' },
+    { required: true, message: 'Enter flight number', trigger: 'blur' },
+    { max: 8, message: 'Flight number cannot exceed 8 characters', trigger: 'blur' },
   ],
-  airline_code: [{ required: true, message: '请选择航司', trigger: 'change' }],
-  aircraft_model: [{ required: true, message: '请选择机型', trigger: 'change' }],
-  dep_airport_code: [{ required: true, message: '请选择起飞机场', trigger: 'change' }],
-  arr_airport_code: [{ required: true, message: '请选择到达机场', trigger: 'change' }],
-  scheduled_departure: [{ required: true, message: '请选择起飞时间', trigger: 'change' }],
-  scheduled_arrival: [{ required: true, message: '请选择到达时间', trigger: 'change' }],
-  fuel_infra_fee: [{ required: true, message: '请输入燃油基建费', trigger: 'change' }],
-  base_price: [{ required: true, message: '请输入机票价格(裸价)', trigger: 'change' }],
-  weekdays: [{ type: 'array', required: true, min: 1, message: '请选择飞行日', trigger: 'change' }],
+  airline_code: [{ required: true, message: 'Select airline', trigger: 'change' }],
+  aircraft_model: [{ required: true, message: 'Select aircraft type', trigger: 'change' }],
+  dep_airport_code: [{ required: true, message: 'Select departure airport', trigger: 'change' }],
+  arr_airport_code: [{ required: true, message: 'Select arrival airport', trigger: 'change' }],
+  scheduled_departure: [{ required: true, message: 'Select departure time', trigger: 'change' }],
+  scheduled_arrival: [{ required: true, message: 'Select arrival time', trigger: 'change' }],
+  fuel_infra_fee: [{ required: true, message: 'Enter fuel & airport fee', trigger: 'change' }],
+  base_price: [{ required: true, message: 'Enter base ticket price', trigger: 'change' }],
+  weekdays: [{ type: 'array', required: true, min: 1, message: 'Select operating weekdays', trigger: 'change' }],
 }
 
 const stopoverOptions = computed(() =>
@@ -220,7 +220,7 @@ function removeStopover(index: number) {
 
 function validateTimeOrder() {
   if (form.scheduled_departure && form.scheduled_arrival && form.scheduled_departure > form.scheduled_arrival) {
-    ElMessage.error('起飞时间不得晚于到达时间')
+    ElMessage.error('Departure time cannot be later than arrival time')
     return false
   }
   return true
@@ -254,10 +254,10 @@ async function submit() {
       ...payload,
       flight_no: form.flight_no.trim().toUpperCase(),
     })
-    ElMessage.success('航班已新增')
+    ElMessage.success('Flight added')
   } else {
     await adminApi.updateFlight(form.flight_no, payload)
-    ElMessage.success('航班已更新')
+    ElMessage.success('Flight updated')
   }
   dialogVisible.value = false
   await loadFlights()
@@ -265,9 +265,9 @@ async function submit() {
 
 async function deleteFlight(row: Flight) {
   try {
-    await ElMessageBox.confirm(`确认删除航班 ${row.flight_no}？`, '删除航班', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete flight ${row.flight_no}?`, 'Delete Flight', { type: 'warning' })
     await adminApi.deleteFlight(row.flight_no)
-    ElMessage.success('航班已删除')
+    ElMessage.success('Flight deleted')
     await loadFlights()
   } catch {
     // 取消删除或后端已提示错误。
@@ -278,18 +278,18 @@ async function deleteFlight(row: Flight) {
 <template>
   <section class="page-section admin-crud-page">
     <div class="toolbar">
-      <h1 class="page-title">航班管理</h1>
+      <h1 class="page-title">Flights</h1>
       <div class="toolbar-actions">
         <el-input
           v-model="filters.flight_no"
           clearable
           :prefix-icon="Search"
           maxlength="8"
-          placeholder="航班号"
+          placeholder="Flight no."
           class="flight-no-filter"
           @keyup.enter="applyFilters"
         />
-        <el-select v-model="filters.airline_code" clearable filterable placeholder="航司" class="filter-select">
+        <el-select v-model="filters.airline_code" clearable filterable placeholder="Airline" class="filter-select">
           <el-option
             v-for="airline in airlines"
             :key="airline.iata_code"
@@ -297,7 +297,7 @@ async function deleteFlight(row: Flight) {
             :value="airline.iata_code"
           />
         </el-select>
-        <el-select v-model="filters.dep_airport_code" clearable filterable placeholder="起飞机场" class="filter-select">
+        <el-select v-model="filters.dep_airport_code" clearable filterable placeholder="Departure airport" class="filter-select">
           <el-option
             v-for="airport in airports"
             :key="airport.iata_code"
@@ -305,7 +305,7 @@ async function deleteFlight(row: Flight) {
             :value="airport.iata_code"
           />
         </el-select>
-        <el-select v-model="filters.arr_airport_code" clearable filterable placeholder="到达机场" class="filter-select">
+        <el-select v-model="filters.arr_airport_code" clearable filterable placeholder="Arrival airport" class="filter-select">
           <el-option
             v-for="airport in airports"
             :key="airport.iata_code"
@@ -313,10 +313,10 @@ async function deleteFlight(row: Flight) {
             :value="airport.iata_code"
           />
         </el-select>
-        <el-button :icon="Search" @click="applyFilters">筛选</el-button>
-        <el-button @click="resetFilters">重置</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-        <el-button :icon="Refresh" @click="loadFlights">刷新</el-button>
+        <el-button :icon="Search" @click="applyFilters">Filter</el-button>
+        <el-button @click="resetFilters">Reset</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Add</el-button>
+        <el-button :icon="Refresh" @click="loadFlights">Refresh</el-button>
       </div>
     </div>
 
@@ -328,31 +328,31 @@ async function deleteFlight(row: Flight) {
       border
       row-key="flight_no"
     >
-      <el-table-column prop="flight_no" label="航班号" min-width="120" />
-      <el-table-column prop="airline_code" label="航司" min-width="120" />
-      <el-table-column prop="dep_airport_code" label="起飞机场" min-width="160" />
-      <el-table-column prop="arr_airport_code" label="到达机场" min-width="160" />
-      <el-table-column label="起飞" min-width="120">
+      <el-table-column prop="flight_no" label="Flight No." min-width="120" />
+      <el-table-column prop="airline_code" label="Airline" min-width="120" />
+      <el-table-column prop="dep_airport_code" label="Departure Airport" min-width="160" />
+      <el-table-column prop="arr_airport_code" label="Arrival Airport" min-width="160" />
+      <el-table-column label="Departure" min-width="120">
         <template #default="{ row }">{{ formatTime(row.scheduled_departure) }}</template>
       </el-table-column>
-      <el-table-column label="到达" min-width="120">
+      <el-table-column label="Arrival" min-width="120">
         <template #default="{ row }">{{ formatTime(row.scheduled_arrival) }}</template>
       </el-table-column>
-      <el-table-column prop="aircraft_model" label="机型" min-width="140" />
-      <el-table-column label="机票价格" min-width="140">
+      <el-table-column prop="aircraft_model" label="Aircraft Type" min-width="140" />
+      <el-table-column label="Ticket Price" min-width="140">
         <template #default="{ row }">{{ formatCurrency(Number(row.base_price)) }}</template>
       </el-table-column>
-      <el-table-column label="燃油基建费" min-width="140">
+      <el-table-column label="Fuel & Airport Fee" min-width="140">
         <template #default="{ row }">{{ formatCurrency(Number(row.fuel_infra_fee)) }}</template>
       </el-table-column>
-      <el-table-column label="操作" min-width="180" align="center">
+      <el-table-column label="Actions" min-width="180" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" :icon="Delete" @click="deleteFlight(row)">删除</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">Edit</el-button>
+          <el-button link type="danger" :icon="Delete" @click="deleteFlight(row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <EmptyState v-else title="暂无航班" description="航班数据为空。" />
+    <EmptyState v-else title="No Flights" description="No flight data." />
 
     <el-pagination
       v-if="total > 0"
@@ -368,16 +368,16 @@ async function deleteFlight(row: Flight) {
 
     <el-dialog
       v-model="dialogVisible"
-      :title="mode === 'create' ? '新增航班' : '编辑航班'"
+      :title="mode === 'create' ? 'Add Flight' : 'Edit Flight'"
       width="760px"
       :close-on-click-modal="false"
     >
       <el-form ref="formRef" v-loading="dialogLoading" :model="form" :rules="rules" label-position="top">
         <div class="form-grid">
-          <el-form-item label="航班号" prop="flight_no">
+          <el-form-item label="Flight No." prop="flight_no">
             <el-input v-model="form.flight_no" maxlength="8" :disabled="mode === 'edit'" />
           </el-form-item>
-          <el-form-item label="航司" prop="airline_code">
+          <el-form-item label="Airline" prop="airline_code">
             <el-select v-model="form.airline_code" filterable class="full-width">
               <el-option
                 v-for="airline in airlines"
@@ -387,24 +387,24 @@ async function deleteFlight(row: Flight) {
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="机型" prop="aircraft_model">
+          <el-form-item label="Aircraft Type" prop="aircraft_model">
             <el-select v-model="form.aircraft_model" filterable class="full-width">
               <el-option
                 v-for="aircraft in aircraftTypes"
                 :key="aircraft.model"
-                :label="`${aircraft.model} 经济舱${aircraft.economy_seats} / 头等舱${aircraft.first_seats}`"
+                :label="`${aircraft.model} Economy ${aircraft.economy_seats} / First ${aircraft.first_seats}`"
                 :value="aircraft.model"
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="机票价格" prop="base_price">
+          <el-form-item label="Ticket Price" prop="base_price">
             <el-input-number v-model="form.base_price" :min="0" :precision="2" :step="10" class="full-width" />
-            <div class="form-tip">经济舱标准裸票价(不含燃油基建);特价、头等舱价按系数自动派生</div>
+            <div class="form-tip">Base economy standard fare before fuel & airport fee. Discount and first class fares are derived automatically.</div>
           </el-form-item>
-          <el-form-item label="燃油基建费" prop="fuel_infra_fee">
+          <el-form-item label="Fuel & Airport Fee" prop="fuel_infra_fee">
             <el-input-number v-model="form.fuel_infra_fee" :min="0" :precision="2" :step="10" class="full-width" />
           </el-form-item>
-          <el-form-item label="起飞机场" prop="dep_airport_code">
+          <el-form-item label="Departure Airport" prop="dep_airport_code">
             <el-select v-model="form.dep_airport_code" filterable class="full-width">
               <el-option
                 v-for="airport in airports"
@@ -414,10 +414,10 @@ async function deleteFlight(row: Flight) {
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="起飞航站楼" prop="dep_terminal">
+          <el-form-item label="Departure Terminal" prop="dep_terminal">
             <el-input v-model="form.dep_terminal" maxlength="8" />
           </el-form-item>
-          <el-form-item label="到达机场" prop="arr_airport_code">
+          <el-form-item label="Arrival Airport" prop="arr_airport_code">
             <el-select v-model="form.arr_airport_code" filterable class="full-width">
               <el-option
                 v-for="airport in airports"
@@ -427,30 +427,30 @@ async function deleteFlight(row: Flight) {
               />
             </el-select>
           </el-form-item>
-          <el-form-item label="到达航站楼" prop="arr_terminal">
+          <el-form-item label="Arrival Terminal" prop="arr_terminal">
             <el-input v-model="form.arr_terminal" maxlength="8" />
           </el-form-item>
-          <el-form-item label="计划起飞" prop="scheduled_departure">
+          <el-form-item label="Scheduled Departure" prop="scheduled_departure">
             <el-time-picker
               v-model="form.scheduled_departure"
               class="full-width"
               format="HH:mm"
               value-format="HH:mm:ss"
-              placeholder="选择时间"
+              placeholder="Select time"
             />
           </el-form-item>
-          <el-form-item label="计划到达" prop="scheduled_arrival">
+          <el-form-item label="Scheduled Arrival" prop="scheduled_arrival">
             <el-time-picker
               v-model="form.scheduled_arrival"
               class="full-width"
               format="HH:mm"
               value-format="HH:mm:ss"
-              placeholder="选择时间"
+              placeholder="Select time"
             />
           </el-form-item>
         </div>
 
-        <el-form-item label="飞行日" prop="weekdays">
+        <el-form-item label="Operating Days" prop="weekdays">
           <el-checkbox-group v-model="form.weekdays">
             <el-checkbox v-for="weekday in weekdayOptions" :key="weekday.value" :label="weekday.value">
               {{ weekday.label }}
@@ -458,10 +458,10 @@ async function deleteFlight(row: Flight) {
           </el-checkbox-group>
         </el-form-item>
 
-        <el-form-item label="经停机场">
+        <el-form-item label="Stopovers">
           <div class="stopover-list">
             <div v-for="(_stopover, index) in form.stopovers" :key="index" class="stopover-row">
-              <span class="stopover-index">第 {{ index + 1 }} 站</span>
+              <span class="stopover-index">Stop {{ index + 1 }}</span>
               <el-select v-model="form.stopovers[index]" filterable clearable class="stopover-select">
                 <el-option
                   v-for="airport in stopoverOptions"
@@ -470,15 +470,15 @@ async function deleteFlight(row: Flight) {
                   :value="airport.iata_code"
                 />
               </el-select>
-              <el-button :icon="Delete" @click="removeStopover(index)">删除</el-button>
+              <el-button :icon="Delete" @click="removeStopover(index)">Delete</el-button>
             </div>
-            <el-button :icon="Plus" @click="addStopover">添加经停</el-button>
+            <el-button :icon="Plus" @click="addStopover">Add Stopover</el-button>
           </div>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="dialogLoading" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" :loading="dialogLoading" @click="submit">Save</el-button>
       </template>
     </el-dialog>
   </section>
