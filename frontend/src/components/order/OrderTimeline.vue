@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Wallet, CreditCard, RefreshLeft, Money, Select, CircleClose } from '@element-plus/icons-vue'
+import { orderStatusLabel } from '@/utils/labels'
 
 const props = defineProps<{
   status: string
@@ -46,7 +47,7 @@ function nodeState(index: number) {
       <span class="node">
         <el-icon><component :is="iconMap[item] ?? Wallet" /></el-icon>
       </span>
-      <span class="label">{{ item }}</span>
+      <span class="label">{{ orderStatusLabel(item) }}</span>
     </div>
   </div>
 </template>

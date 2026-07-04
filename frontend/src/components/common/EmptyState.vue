@@ -5,8 +5,8 @@ withDefaults(
     description?: string
   }>(),
   {
-    title: '暂无数据',
-    description: '当前模块已预留接口与页面结构，等待业务数据接入。',
+    title: 'No Data',
+    description: 'This module is ready for data.',
   },
 )
 </script>
