@@ -37,7 +37,7 @@ const filteredAircraftTypes = computed<AircraftType[]>(() => {
 
 const validateSeatTotal = (_rule: unknown, _value: unknown, callback: (error?: Error) => void) => {
   if (form.economy_seats + form.first_seats <= 0) {
-    callback(new Error('座位总数必须大于0'))
+    callback(new Error('Total seats must be greater than 0'))
     return
   }
   callback()
@@ -45,15 +45,15 @@ const validateSeatTotal = (_rule: unknown, _value: unknown, callback: (error?: E
 
 const rules: FormRules<AircraftForm> = {
   model: [
-    { required: true, message: '请输入机型', trigger: 'blur' },
-    { max: 32, message: '机型不能超过32个字符', trigger: 'blur' },
+    { required: true, message: 'Enter aircraft type', trigger: 'blur' },
+    { max: 32, message: 'Aircraft type cannot exceed 32 characters', trigger: 'blur' },
   ],
   economy_seats: [
-    { required: true, message: '请输入经济舱座位数', trigger: 'change' },
+    { required: true, message: 'Enter economy seats', trigger: 'change' },
     { validator: validateSeatTotal, trigger: 'change' },
   ],
   first_seats: [
-    { required: true, message: '请输入头等舱座位数', trigger: 'change' },
+    { required: true, message: 'Enter first class seats', trigger: 'change' },
     { validator: validateSeatTotal, trigger: 'change' },
   ],
 }
@@ -98,10 +98,10 @@ async function submit() {
   }
   if (mode.value === 'create') {
     await adminApi.createAircraftType(payload)
-    ElMessage.success('机型已新增')
+    ElMessage.success('Aircraft type added')
   } else {
     await adminApi.updateAircraftType(editingModel.value, payload)
-    ElMessage.success('机型已更新')
+    ElMessage.success('Aircraft type updated')
   }
   dialogVisible.value = false
   await loadAircraftTypes()
@@ -109,9 +109,9 @@ async function submit() {
 
 async function deleteAircraftType(row: AircraftType) {
   try {
-    await ElMessageBox.confirm(`确认删除机型 ${row.model}？`, '删除机型', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete aircraft type ${row.model}?`, 'Delete Aircraft Type', { type: 'warning' })
     await adminApi.deleteAircraftType(row.model)
-    ElMessage.success('机型已删除')
+    ElMessage.success('Aircraft type deleted')
     await loadAircraftTypes()
   } catch {
     // 取消删除或后端已提示错误。
@@ -122,17 +122,17 @@ async function deleteAircraftType(row: AircraftType) {
 <template>
   <section class="page-section admin-crud-page">
     <div class="toolbar">
-      <h1 class="page-title">机型管理</h1>
+      <h1 class="page-title">Aircraft Types</h1>
       <div class="toolbar-actions">
         <el-input
           v-model="aircraftKeyword"
           clearable
           :prefix-icon="Search"
-          placeholder="搜索机型"
+          placeholder="Search aircraft type"
           class="aircraft-search"
         />
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-        <el-button :icon="Refresh" @click="loadAircraftTypes">刷新</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Add</el-button>
+        <el-button :icon="Refresh" @click="loadAircraftTypes">Refresh</el-button>
       </div>
     </div>
 
@@ -141,45 +141,45 @@ async function deleteAircraftType(row: AircraftType) {
       v-loading="loading"
       :data="filteredAircraftTypes"
       class="aircraft-table"
-      empty-text="未找到匹配机型"
+      empty-text="No matching aircraft types"
       border
       row-key="model"
     >
-      <el-table-column prop="model" label="机型" min-width="180" />
-      <el-table-column prop="economy_seats" label="经济舱座位" min-width="180" />
-      <el-table-column prop="first_seats" label="头等舱座位" min-width="180" />
-      <el-table-column label="总座位" min-width="160">
+      <el-table-column prop="model" label="Aircraft Type" min-width="180" />
+      <el-table-column prop="economy_seats" label="Economy Seats" min-width="180" />
+      <el-table-column prop="first_seats" label="First Class Seats" min-width="180" />
+      <el-table-column label="Total Seats" min-width="160">
         <template #default="{ row }">{{ row.economy_seats + row.first_seats }}</template>
       </el-table-column>
-      <el-table-column label="操作" min-width="180" align="center">
+      <el-table-column label="Actions" min-width="180" align="center">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" :icon="Delete" @click="deleteAircraftType(row)">删除</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">Edit</el-button>
+          <el-button link type="danger" :icon="Delete" @click="deleteAircraftType(row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <EmptyState v-else title="暂无机型" description="机型数据为空。" />
+    <EmptyState v-else title="No Aircraft Types" description="No aircraft type data." />
 
     <el-dialog
       v-model="dialogVisible"
-      :title="mode === 'create' ? '新增机型' : '编辑机型'"
+      :title="mode === 'create' ? 'Add Aircraft Type' : 'Edit Aircraft Type'"
       width="460px"
       :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="机型" prop="model">
+        <el-form-item label="Aircraft Type" prop="model">
           <el-input v-model="form.model" maxlength="32" />
         </el-form-item>
-        <el-form-item label="经济舱座位" prop="economy_seats">
+        <el-form-item label="Economy Seats" prop="economy_seats">
           <el-input-number v-model="form.economy_seats" :min="0" :max="999" :step="1" :precision="0" class="full-width" />
         </el-form-item>
-        <el-form-item label="头等舱座位" prop="first_seats">
+        <el-form-item label="First Class Seats" prop="first_seats">
           <el-input-number v-model="form.first_seats" :min="0" :max="999" :step="1" :precision="0" class="full-width" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submit">Save</el-button>
       </template>
     </el-dialog>
   </section>

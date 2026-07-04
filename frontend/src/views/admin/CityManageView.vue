@@ -44,8 +44,8 @@ const cityFormRef = ref<FormInstance>()
 const cityForm = reactive<CityForm>({ city_name: '' })
 const cityRules: FormRules<CityForm> = {
   city_name: [
-    { required: true, message: '请输入城市名称', trigger: 'blur' },
-    { max: 32, message: '城市名称不能超过32个字符', trigger: 'blur' },
+    { required: true, message: 'Enter city name', trigger: 'blur' },
+    { max: 32, message: 'City name cannot exceed 32 characters', trigger: 'blur' },
   ],
 }
 
@@ -54,8 +54,8 @@ const nearDialogVisible = ref(false)
 const nearFormRef = ref<FormInstance>()
 const nearForm = reactive<NearForm>({ iata_code: '', distance: 0 })
 const nearRules: FormRules<NearForm> = {
-  iata_code: [{ required: true, message: '请选择机场', trigger: 'change' }],
-  distance: [{ required: true, message: '请输入距离', trigger: 'change' }],
+  iata_code: [{ required: true, message: 'Select an airport', trigger: 'change' }],
+  distance: [{ required: true, message: 'Enter distance', trigger: 'change' }],
 }
 
 onMounted(async () => {
@@ -120,11 +120,11 @@ async function submitCity() {
   const cityName = cityForm.city_name.trim()
   if (cityMode.value === 'create') {
     await adminApi.createCity({ city_name: cityName })
-    ElMessage.success('城市已新增')
+    ElMessage.success('City added')
   } else {
     await adminApi.updateCity(editingCity.value, { city_name: cityName })
     selectedCity.value = cityName
-    ElMessage.success('城市已更新')
+    ElMessage.success('City updated')
   }
   cityDialogVisible.value = false
   await loadCities()
@@ -132,14 +132,14 @@ async function submitCity() {
 
 async function deleteCity(row: CityRow) {
   try {
-    await ElMessageBox.confirm(`确认删除城市 ${row.city_name}？`, '删除城市', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete city ${row.city_name}?`, 'Delete City', { type: 'warning' })
     await adminApi.deleteCity(row.city_name)
     if (selectedCity.value === row.city_name) {
       selectedCity.value = ''
       nearAirports.value = []
       nearManageDialogVisible.value = false
     }
-    ElMessage.success('城市已删除')
+    ElMessage.success('City deleted')
     await loadCities()
   } catch {
     // 取消删除或后端已提示错误。
@@ -163,15 +163,15 @@ async function submitNearAirport() {
     distance: nearForm.distance,
   })
   nearDialogVisible.value = false
-  ElMessage.success('临近机场已新增')
+  ElMessage.success('Nearby airport added')
   await loadNearAirports()
 }
 
 async function deleteNearAirport(row: NearAirport) {
   try {
-    await ElMessageBox.confirm(`确认删除 ${selectedCity.value} 与 ${row.iata_code} 的关系？`, '删除临近机场', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete relation between ${selectedCity.value} and ${row.iata_code}?`, 'Delete Nearby Airport', { type: 'warning' })
     await adminApi.deleteNearAirport(selectedCity.value, row.iata_code)
-    ElMessage.success('临近机场已删除')
+    ElMessage.success('Nearby airport deleted')
     await loadNearAirports()
   } catch {
     // 取消删除或后端已提示错误。
@@ -183,17 +183,17 @@ async function deleteNearAirport(row: NearAirport) {
   <div class="admin-crud-page">
     <section class="page-section">
       <div class="toolbar">
-        <h1 class="page-title">城市管理</h1>
+        <h1 class="page-title">Cities</h1>
         <div class="toolbar-actions">
           <el-input
             v-model="cityKeyword"
             clearable
             :prefix-icon="Search"
-            placeholder="搜索城市名称"
+            placeholder="Search city name"
             class="city-search"
           />
-          <el-button type="primary" :icon="Plus" @click="openCreateCity">新增</el-button>
-          <el-button :icon="Refresh" @click="loadCities">刷新</el-button>
+          <el-button type="primary" :icon="Plus" @click="openCreateCity">Add</el-button>
+          <el-button :icon="Refresh" @click="loadCities">Refresh</el-button>
         </div>
       </div>
 
@@ -201,21 +201,21 @@ async function deleteNearAirport(row: NearAirport) {
         v-if="cities.length || loading"
         v-loading="loading"
         :data="filteredCityRows"
-        empty-text="未找到匹配城市"
+        empty-text="No matching cities"
         border
         row-key="city_name"
         highlight-current-row
       >
-        <el-table-column prop="city_name" label="城市名称" min-width="180" />
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column prop="city_name" label="City Name" min-width="180" />
+        <el-table-column label="Actions" width="250" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" :icon="Search" @click="openNearAirportManage(row)">临近机场</el-button>
-            <el-button link type="primary" :icon="Edit" @click="openEditCity(row)">编辑</el-button>
-            <el-button link type="danger" :icon="Delete" @click="deleteCity(row)">删除</el-button>
+            <el-button link type="primary" :icon="Search" @click="openNearAirportManage(row)">Nearby Airports</el-button>
+            <el-button link type="primary" :icon="Edit" @click="openEditCity(row)">Edit</el-button>
+            <el-button link type="danger" :icon="Delete" @click="deleteCity(row)">Delete</el-button>
           </template>
         </el-table-column>
       </el-table>
-      <EmptyState v-else title="暂无城市" description="城市数据为空。" />
+      <EmptyState v-else title="No Cities" description="No city data." />
     </section>
 
     <el-dialog
@@ -226,18 +226,18 @@ async function deleteNearAirport(row: NearAirport) {
     >
       <template #header>
         <div class="near-dialog-title">
-          <span>临近机场</span>
+          <span>Nearby Airports</span>
           <el-tag v-if="selectedCity" type="info">{{ selectedCity }}</el-tag>
         </div>
       </template>
 
       <div class="near-dialog-toolbar">
         <div class="near-dialog-desc">
-          维护当前城市与机场之间的临近关系。
+          Manage nearby airport relations for the selected city.
         </div>
         <div class="toolbar-actions">
-          <el-button type="primary" :icon="Plus" :disabled="!selectedCity" @click="openCreateNearAirport">新增</el-button>
-          <el-button :icon="Refresh" :disabled="!selectedCity" @click="loadNearAirports">刷新</el-button>
+          <el-button type="primary" :icon="Plus" :disabled="!selectedCity" @click="openCreateNearAirport">Add</el-button>
+          <el-button :icon="Refresh" :disabled="!selectedCity" @click="loadNearAirports">Refresh</el-button>
         </div>
       </div>
 
@@ -249,50 +249,50 @@ async function deleteNearAirport(row: NearAirport) {
         row-key="iata_code"
       >
         <el-table-column prop="iata_code" label="IATA" width="110" />
-        <el-table-column prop="airport_name" label="机场名称" min-width="220" />
-        <el-table-column label="距离" width="130">
+        <el-table-column prop="airport_name" label="Airport Name" min-width="220" />
+        <el-table-column label="Distance" width="130">
           <template #default="{ row }">{{ Number(row.distance).toFixed(2) }} km</template>
         </el-table-column>
-        <el-table-column label="操作" width="110" fixed="right">
+        <el-table-column label="Actions" width="110" fixed="right">
           <template #default="{ row }">
-            <el-button link type="danger" :icon="Delete" @click="deleteNearAirport(row)">删除</el-button>
+            <el-button link type="danger" :icon="Delete" @click="deleteNearAirport(row)">Delete</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <EmptyState
         v-else
-        :title="selectedCity ? '暂无临近机场' : '未选择城市'"
-        :description="selectedCity ? '当前城市没有临近机场关系。' : '从城市列表选择一行。'"
+        :title="selectedCity ? 'No Nearby Airports' : 'No City Selected'"
+        :description="selectedCity ? 'This city has no nearby airport relations.' : 'Select a row from the city list.'"
       />
     </el-dialog>
 
     <el-dialog
       v-model="cityDialogVisible"
-      :title="cityMode === 'create' ? '新增城市' : '编辑城市'"
+      :title="cityMode === 'create' ? 'Add City' : 'Edit City'"
       width="420px"
       :close-on-click-modal="false"
     >
       <el-form ref="cityFormRef" :model="cityForm" :rules="cityRules" label-position="top">
-        <el-form-item label="城市名称" prop="city_name">
+        <el-form-item label="City Name" prop="city_name">
           <el-input v-model="cityForm.city_name" maxlength="32" show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="cityDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitCity">保存</el-button>
+        <el-button @click="cityDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitCity">Save</el-button>
       </template>
     </el-dialog>
 
     <el-dialog
       v-model="nearDialogVisible"
-      title="新增临近机场"
+      title="Add Nearby Airport"
       width="480px"
       :close-on-click-modal="false"
       append-to-body
     >
       <el-form ref="nearFormRef" :model="nearForm" :rules="nearRules" label-position="top">
-        <el-form-item label="机场" prop="iata_code">
+        <el-form-item label="Airport" prop="iata_code">
           <el-select v-model="nearForm.iata_code" filterable class="full-width">
             <el-option
               v-for="airport in airports"
@@ -302,13 +302,13 @@ async function deleteNearAirport(row: NearAirport) {
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="距离 km" prop="distance">
+        <el-form-item label="Distance (km)" prop="distance">
           <el-input-number v-model="nearForm.distance" :min="0" :max="300" :precision="2" :step="1" class="full-width" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="nearDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitNearAirport">保存</el-button>
+        <el-button @click="nearDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitNearAirport">Save</el-button>
       </template>
     </el-dialog>
   </div>

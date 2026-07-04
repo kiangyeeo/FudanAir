@@ -37,12 +37,12 @@ const filteredAirlines = computed<Airline[]>(() => {
 
 const rules: FormRules<AirlineForm> = {
   iata_code: [
-    { required: true, message: '请输入航司二字码', trigger: 'blur' },
-    { min: 2, max: 2, message: '航司代码必须为2位', trigger: 'blur' },
+    { required: true, message: 'Enter airline IATA code', trigger: 'blur' },
+    { min: 2, max: 2, message: 'Airline code must be 2 characters', trigger: 'blur' },
   ],
   airline_name: [
-    { required: true, message: '请输入航司名称', trigger: 'blur' },
-    { max: 128, message: '航司名称不能超过128个字符', trigger: 'blur' },
+    { required: true, message: 'Enter airline name', trigger: 'blur' },
+    { max: 128, message: 'Airline name cannot exceed 128 characters', trigger: 'blur' },
   ],
 }
 
@@ -81,10 +81,10 @@ async function submit() {
   }
   if (mode.value === 'create') {
     await adminApi.createAirline(payload)
-    ElMessage.success('航司已新增')
+    ElMessage.success('Airline added')
   } else {
     await adminApi.updateAirline(editingIata.value, payload)
-    ElMessage.success('航司已更新')
+    ElMessage.success('Airline updated')
   }
   dialogVisible.value = false
   await loadAirlines()
@@ -92,9 +92,9 @@ async function submit() {
 
 async function deleteAirline(row: Airline) {
   try {
-    await ElMessageBox.confirm(`确认删除航司 ${row.iata_code}？`, '删除航司', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete airline ${row.iata_code}?`, 'Delete Airline', { type: 'warning' })
     await adminApi.deleteAirline(row.iata_code)
-    ElMessage.success('航司已删除')
+    ElMessage.success('Airline deleted')
     await loadAirlines()
   } catch {
     // 取消删除或后端已提示错误。
@@ -105,17 +105,17 @@ async function deleteAirline(row: Airline) {
 <template>
   <section class="page-section admin-crud-page">
     <div class="toolbar">
-      <h1 class="page-title">航司管理</h1>
+      <h1 class="page-title">Airlines</h1>
       <div class="toolbar-actions">
         <el-input
           v-model="airlineKeyword"
           clearable
           :prefix-icon="Search"
-          placeholder="搜索代码或名称"
+          placeholder="Search code or name"
           class="airline-search"
         />
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-        <el-button :icon="Refresh" @click="loadAirlines">刷新</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Add</el-button>
+        <el-button :icon="Refresh" @click="loadAirlines">Refresh</el-button>
       </div>
     </div>
 
@@ -123,38 +123,38 @@ async function deleteAirline(row: Airline) {
       v-if="airlines.length || loading"
       v-loading="loading"
       :data="filteredAirlines"
-      empty-text="未找到匹配航司"
+      empty-text="No matching airlines"
       border
       row-key="iata_code"
     >
-      <el-table-column prop="iata_code" label="航司代码" width="120" />
-      <el-table-column prop="airline_name" label="航司名称" min-width="240" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column prop="iata_code" label="Airline Code" width="120" />
+      <el-table-column prop="airline_name" label="Airline Name" min-width="240" />
+      <el-table-column label="Actions" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" :icon="Delete" @click="deleteAirline(row)">删除</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">Edit</el-button>
+          <el-button link type="danger" :icon="Delete" @click="deleteAirline(row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <EmptyState v-else title="暂无航司" description="航司数据为空。" />
+    <EmptyState v-else title="No Airlines" description="No airline data." />
 
     <el-dialog
       v-model="dialogVisible"
-      :title="mode === 'create' ? '新增航司' : '编辑航司'"
+      :title="mode === 'create' ? 'Add Airline' : 'Edit Airline'"
       width="460px"
       :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="航司二字码" prop="iata_code">
+        <el-form-item label="Airline Code" prop="iata_code">
           <el-input v-model="form.iata_code" maxlength="2" />
         </el-form-item>
-        <el-form-item label="航司名称" prop="airline_name">
+        <el-form-item label="Airline Name" prop="airline_name">
           <el-input v-model="form.airline_name" maxlength="128" show-word-limit />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submit">Save</el-button>
       </template>
     </el-dialog>
   </section>

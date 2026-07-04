@@ -30,14 +30,14 @@ const form = reactive<AirportForm>({
 
 const rules: FormRules<AirportForm> = {
   iata_code: [
-    { required: true, message: '请输入机场三字码', trigger: 'blur' },
-    { min: 3, max: 3, message: '机场代码必须为3位', trigger: 'blur' },
+    { required: true, message: 'Enter airport IATA code', trigger: 'blur' },
+    { min: 3, max: 3, message: 'Airport code must be 3 characters', trigger: 'blur' },
   ],
   airport_name: [
-    { required: true, message: '请输入机场名称', trigger: 'blur' },
-    { max: 128, message: '机场名称不能超过128个字符', trigger: 'blur' },
+    { required: true, message: 'Enter airport name', trigger: 'blur' },
+    { max: 128, message: 'Airport name cannot exceed 128 characters', trigger: 'blur' },
   ],
-  city_name: [{ required: true, message: '请选择所属城市', trigger: 'change' }],
+  city_name: [{ required: true, message: 'Select city', trigger: 'change' }],
 }
 
 onMounted(async () => {
@@ -86,10 +86,10 @@ async function submit() {
   }
   if (mode.value === 'create') {
     await adminApi.createAirport(payload)
-    ElMessage.success('机场已新增')
+    ElMessage.success('Airport added')
   } else {
     await adminApi.updateAirport(editingIata.value, payload)
-    ElMessage.success('机场已更新')
+    ElMessage.success('Airport updated')
   }
   dialogVisible.value = false
   await loadAirports()
@@ -97,9 +97,9 @@ async function submit() {
 
 async function deleteAirport(row: Airport) {
   try {
-    await ElMessageBox.confirm(`确认删除机场 ${row.iata_code}？`, '删除机场', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete airport ${row.iata_code}?`, 'Delete Airport', { type: 'warning' })
     await adminApi.deleteAirport(row.iata_code)
-    ElMessage.success('机场已删除')
+    ElMessage.success('Airport deleted')
     await loadAirports()
   } catch {
     // 取消删除或后端已提示错误。
@@ -110,14 +110,14 @@ async function deleteAirport(row: Airport) {
 <template>
   <section class="page-section admin-crud-page">
     <div class="toolbar">
-      <h1 class="page-title">机场管理</h1>
+      <h1 class="page-title">Airports</h1>
       <div class="toolbar-actions">
-        <el-select v-model="cityFilter" clearable filterable placeholder="所属城市" class="filter-select">
+        <el-select v-model="cityFilter" clearable filterable placeholder="City" class="filter-select">
           <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
         </el-select>
-        <el-button :icon="Search" @click="loadAirports">筛选</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-        <el-button :icon="Refresh" @click="loadAirports">刷新</el-button>
+        <el-button :icon="Search" @click="loadAirports">Filter</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Add</el-button>
+        <el-button :icon="Refresh" @click="loadAirports">Refresh</el-button>
       </div>
     </div>
 
@@ -129,39 +129,39 @@ async function deleteAirport(row: Airport) {
       row-key="iata_code"
     >
       <el-table-column prop="iata_code" label="IATA" width="100" />
-      <el-table-column prop="airport_name" label="机场名称" min-width="240" />
-      <el-table-column prop="city_name" label="所属城市" width="140" />
-      <el-table-column label="操作" width="160" fixed="right">
+      <el-table-column prop="airport_name" label="Airport Name" min-width="240" />
+      <el-table-column prop="city_name" label="City" width="140" />
+      <el-table-column label="Actions" width="160" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
-          <el-button link type="danger" :icon="Delete" @click="deleteAirport(row)">删除</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openEdit(row)">Edit</el-button>
+          <el-button link type="danger" :icon="Delete" @click="deleteAirport(row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <EmptyState v-else title="暂无机场" description="机场数据为空。" />
+    <EmptyState v-else title="No Airports" description="No airport data." />
 
     <el-dialog
       v-model="dialogVisible"
-      :title="mode === 'create' ? '新增机场' : '编辑机场'"
+      :title="mode === 'create' ? 'Add Airport' : 'Edit Airport'"
       width="520px"
       :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-        <el-form-item label="IATA 三字码" prop="iata_code">
+        <el-form-item label="IATA Code" prop="iata_code">
           <el-input v-model="form.iata_code" maxlength="3" />
         </el-form-item>
-        <el-form-item label="机场名称" prop="airport_name">
+        <el-form-item label="Airport Name" prop="airport_name">
           <el-input v-model="form.airport_name" maxlength="128" show-word-limit />
         </el-form-item>
-        <el-form-item label="所属城市" prop="city_name">
+        <el-form-item label="City" prop="city_name">
           <el-select v-model="form.city_name" filterable class="full-width">
             <el-option v-for="city in cities" :key="city" :label="city" :value="city" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submit">保存</el-button>
+        <el-button @click="dialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submit">Save</el-button>
       </template>
     </el-dialog>
   </section>

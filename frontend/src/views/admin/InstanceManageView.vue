@@ -7,6 +7,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import { adminApi } from '@/api/admin'
 import { flightApi } from '@/api/flight'
 import { formatCurrency, formatDate, formatTime } from '@/utils/format'
+import { instanceStatusLabel, instanceStatusOptions } from '@/utils/labels'
 import type {
   FlightInstance,
   FlightInstanceBatchPayload,
@@ -37,7 +38,6 @@ interface StatusForm {
   status: InstanceStatus
 }
 
-const statusOptions: InstanceStatus[] = ['计划', '可订', '已起飞', '已到达', '已取消']
 const router = useRouter()
 
 const loading = ref(false)
@@ -85,23 +85,23 @@ const statusForm = reactive<StatusForm>({
 })
 
 const createRules: FormRules<CreateForm> = {
-  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
-  flight_date: [{ required: true, message: '请选择日期', trigger: 'change' }],
+  flight_no: [{ required: true, message: 'Enter flight number', trigger: 'blur' }],
+  flight_date: [{ required: true, message: 'Select date', trigger: 'change' }],
 }
 
 const batchRules: FormRules<BatchForm> = {
-  flight_no: [{ required: true, message: '请输入航班号', trigger: 'blur' }],
-  start_date: [{ required: true, message: '请选择开始日期', trigger: 'change' }],
-  end_date: [{ required: true, message: '请选择结束日期', trigger: 'change' }],
+  flight_no: [{ required: true, message: 'Enter flight number', trigger: 'blur' }],
+  start_date: [{ required: true, message: 'Select start date', trigger: 'change' }],
+  end_date: [{ required: true, message: 'Select end date', trigger: 'change' }],
 }
 
 const updateRules: FormRules<UpdateForm> = {
-  scheduled_departure: [{ required: true, message: '请选择起飞时间', trigger: 'change' }],
-  scheduled_arrival: [{ required: true, message: '请选择到达时间', trigger: 'change' }],
-  fuel_infra_fee: [{ required: true, message: '请输入燃油基建费', trigger: 'change' }],
+  scheduled_departure: [{ required: true, message: 'Select departure time', trigger: 'change' }],
+  scheduled_arrival: [{ required: true, message: 'Select arrival time', trigger: 'change' }],
+  fuel_infra_fee: [{ required: true, message: 'Enter fuel & airport fee', trigger: 'change' }],
 }
 const statusRules: FormRules<StatusForm> = {
-  status: [{ required: true, message: '请选择状态', trigger: 'change' }],
+  status: [{ required: true, message: 'Select status', trigger: 'change' }],
 }
 
 onMounted(loadInstances)
@@ -189,7 +189,7 @@ function openUpdate(row: FlightInstance) {
 
 function validateUpdateTimes() {
   if (updateForm.scheduled_departure && updateForm.scheduled_arrival && updateForm.scheduled_departure > updateForm.scheduled_arrival) {
-    ElMessage.error('起飞时间不得晚于到达时间')
+    ElMessage.error('Departure time cannot be later than arrival time')
     return false
   }
   return true
@@ -205,7 +205,7 @@ function openStatus(row: FlightInstance) {
 
 function ensureDateRange(payload: FlightInstanceBatchPayload) {
   if (payload.end_date < payload.start_date) {
-    throw new Error('结束日期不能早于开始日期')
+    throw new Error('End date cannot be earlier than start date')
   }
 }
 
@@ -216,7 +216,7 @@ async function submitCreate() {
     flight_date: createForm.flight_date,
   })
   createDialogVisible.value = false
-  ElMessage.success('航班实例已创建')
+  ElMessage.success('Flight instance created')
   await loadInstances()
 }
 
@@ -235,7 +235,7 @@ async function submitBatch() {
   }
   const rows = await adminApi.batchGenerateInstances(payload)
   batchDialogVisible.value = false
-  ElMessage.success(`批量生成完成，共 ${rows.length} 条`)
+  ElMessage.success(`Batch generated ${rows.length} instance(s)`)
   await loadInstances()
 }
 
@@ -250,22 +250,22 @@ async function submitUpdate() {
     fuel_infra_fee: updateForm.fuel_infra_fee,
   })
   updateDialogVisible.value = false
-  ElMessage.success('实例信息已更新')
+  ElMessage.success('Instance updated')
   await loadInstances()
 }
 async function submitStatus() {
   await statusFormRef.value?.validate()
   await adminApi.updateInstanceStatus(statusForm.instance_id, { status: statusForm.status })
   statusDialogVisible.value = false
-  ElMessage.success('实例状态已更新')
+  ElMessage.success('Instance status updated')
   await loadInstances()
 }
 
 async function deleteInstance(row: FlightInstance) {
   try {
-    await ElMessageBox.confirm(`确认删除实例 ${row.instance_id}？`, '删除航班实例', { type: 'warning' })
+    await ElMessageBox.confirm(`Delete instance ${row.instance_id}?`, 'Delete Flight Instance', { type: 'warning' })
     await adminApi.deleteInstance(row.instance_id)
-    ElMessage.success('实例已删除')
+    ElMessage.success('Instance deleted')
     await loadInstances()
   } catch {
     // 取消删除或后端已提示错误。
@@ -280,14 +280,14 @@ function openPrices(row: FlightInstance) {
 <template>
   <section class="page-section admin-crud-page">
     <div class="toolbar">
-      <h1 class="page-title">实例管理</h1>
+      <h1 class="page-title">Flight Instances</h1>
       <div class="toolbar-actions">
         <el-input
           v-model="filters.flight_no"
           clearable
           :prefix-icon="Search"
           maxlength="8"
-          placeholder="航班号"
+          placeholder="Flight no."
           class="filter-select"
           @keyup.enter="applyFilters"
         />
@@ -295,48 +295,50 @@ function openPrices(row: FlightInstance) {
           v-model="filters.flight_date"
           type="date"
           value-format="YYYY-MM-DD"
-          placeholder="执行日期"
+          placeholder="Operating date"
           class="date-filter"
         />
-        <el-select v-model="filters.status" clearable placeholder="状态" class="status-select">
-          <el-option v-for="status in statusOptions" :key="status" :label="status" :value="status" />
+        <el-select v-model="filters.status" clearable placeholder="Status" class="status-select">
+          <el-option v-for="status in instanceStatusOptions" :key="status.value" :label="status.label" :value="status.value" />
         </el-select>
-        <el-button :icon="Search" @click="applyFilters">筛选</el-button>
-        <el-button @click="resetFilters">重置</el-button>
-        <el-button type="primary" :icon="Plus" @click="openCreate">新增</el-button>
-        <el-button :icon="Plus" @click="openBatchGenerate">批量生成</el-button>
-        <el-button :icon="Refresh" @click="loadInstances">刷新</el-button>
+        <el-button :icon="Search" @click="applyFilters">Filter</el-button>
+        <el-button @click="resetFilters">Reset</el-button>
+        <el-button type="primary" :icon="Plus" @click="openCreate">Add</el-button>
+        <el-button :icon="Plus" @click="openBatchGenerate">Batch Generate</el-button>
+        <el-button :icon="Refresh" @click="loadInstances">Refresh</el-button>
       </div>
     </div>
 
     <el-table v-if="instances.length || loading" v-loading="loading" :data="instances" border row-key="instance_id">
-      <el-table-column prop="instance_id" label="实例 ID" min-width="180" />
-      <el-table-column prop="flight_no" label="航班号" width="110" />
-      <el-table-column label="执行日期" width="130">
+      <el-table-column prop="instance_id" label="Instance ID" min-width="180" />
+      <el-table-column prop="flight_no" label="Flight No." width="110" />
+      <el-table-column label="Operating Date" width="130">
         <template #default="{ row }">{{ formatDate(row.flight_date) }}</template>
       </el-table-column>
-      <el-table-column prop="status" label="状态" width="100" />
-      <el-table-column label="起飞" width="100">
+      <el-table-column label="Status" width="120">
+        <template #default="{ row }">{{ instanceStatusLabel(row.status) }}</template>
+      </el-table-column>
+      <el-table-column label="Departure" width="100">
         <template #default="{ row }">{{ formatTime(row.scheduled_departure) }}</template>
       </el-table-column>
-      <el-table-column label="到达" width="100">
+      <el-table-column label="Arrival" width="100">
         <template #default="{ row }">{{ formatTime(row.scheduled_arrival) }}</template>
       </el-table-column>
-      <el-table-column label="燃油基建" width="120">
+      <el-table-column label="Fuel & Airport" width="120">
         <template #default="{ row }">{{ formatCurrency(row.fuel_infra_fee ?? 0) }}</template>
       </el-table-column>
-      <el-table-column prop="economy_left" label="经济舱余票" width="120" />
-      <el-table-column prop="first_left" label="头等舱余票" width="120" />
-      <el-table-column label="操作" width="300" fixed="right">
+      <el-table-column prop="economy_left" label="Economy Left" width="120" />
+      <el-table-column prop="first_left" label="First Left" width="120" />
+      <el-table-column label="Actions" width="300" fixed="right">
         <template #default="{ row }">
-          <el-button link type="primary" :icon="Edit" @click="openUpdate(row)">编辑</el-button>
-          <el-button link type="primary" @click="openStatus(row)">状态</el-button>
-          <el-button link type="primary" @click="openPrices(row)">票价</el-button>
-          <el-button link type="danger" :icon="Delete" @click="deleteInstance(row)">删除</el-button>
+          <el-button link type="primary" :icon="Edit" @click="openUpdate(row)">Edit</el-button>
+          <el-button link type="primary" @click="openStatus(row)">Status</el-button>
+          <el-button link type="primary" @click="openPrices(row)">Pricing</el-button>
+          <el-button link type="danger" :icon="Delete" @click="deleteInstance(row)">Delete</el-button>
         </template>
       </el-table-column>
     </el-table>
-    <EmptyState v-else title="暂无实例" description="航班实例数据为空。" />
+    <EmptyState v-else title="No Instances" description="No flight instance data." />
 
     <el-pagination
       v-if="total > 0"
@@ -350,98 +352,98 @@ function openPrices(row: FlightInstance) {
       @size-change="handlePageSizeChange"
     />
 
-    <el-dialog v-model="createDialogVisible" title="新增航班实例" width="460px" :close-on-click-modal="false">
+    <el-dialog v-model="createDialogVisible" title="Add Flight Instance" width="460px" :close-on-click-modal="false">
       <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top">
-        <el-form-item label="航班号" prop="flight_no">
+        <el-form-item label="Flight No." prop="flight_no">
           <el-input v-model="createForm.flight_no" maxlength="8" class="full-width" />
         </el-form-item>
-        <el-form-item label="执行日期" prop="flight_date">
+        <el-form-item label="Operating Date" prop="flight_date">
           <el-date-picker
             v-model="createForm.flight_date"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="选择日期"
+            placeholder="Select date"
             class="full-width"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitCreate">保存</el-button>
+        <el-button @click="createDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitCreate">Save</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="batchDialogVisible" title="按航班批量生成" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="batchDialogVisible" title="Batch Generate by Flight" width="520px" :close-on-click-modal="false">
       <el-form ref="batchFormRef" :model="batchForm" :rules="batchRules" label-position="top">
-        <el-form-item label="航班号" prop="flight_no">
+        <el-form-item label="Flight No." prop="flight_no">
           <el-input v-model="batchForm.flight_no" maxlength="8" class="full-width" />
         </el-form-item>
         <div class="form-grid">
-          <el-form-item label="开始日期" prop="start_date">
+          <el-form-item label="Start Date" prop="start_date">
             <el-date-picker
               v-model="batchForm.start_date"
               type="date"
               value-format="YYYY-MM-DD"
-              placeholder="开始日期"
+              placeholder="Start date"
               class="full-width"
             />
           </el-form-item>
-          <el-form-item label="结束日期" prop="end_date">
+          <el-form-item label="End Date" prop="end_date">
             <el-date-picker
               v-model="batchForm.end_date"
               type="date"
               value-format="YYYY-MM-DD"
-              placeholder="结束日期"
+              placeholder="End date"
               class="full-width"
             />
           </el-form-item>
         </div>
       </el-form>
       <template #footer>
-        <el-button @click="batchDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitBatch">生成</el-button>
+        <el-button @click="batchDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitBatch">Generate</el-button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="updateDialogVisible" title="编辑航班实例" width="520px" :close-on-click-modal="false">
+    <el-dialog v-model="updateDialogVisible" title="Edit Flight Instance" width="520px" :close-on-click-modal="false">
       <el-form ref="updateFormRef" :model="updateForm" :rules="updateRules" label-position="top">
-        <el-form-item label="实例 ID">
+        <el-form-item label="Instance ID">
           <el-input v-model="updateForm.instance_id" disabled />
         </el-form-item>
-        <el-form-item label="航班号" prop="flight_no">
+        <el-form-item label="Flight No." prop="flight_no">
           <el-input v-model="updateForm.flight_no" maxlength="8" class="full-width" disabled />
         </el-form-item>
         <div class="form-grid">
-          <el-form-item label="起飞时间" prop="scheduled_departure">
+          <el-form-item label="Departure Time" prop="scheduled_departure">
             <el-time-picker v-model="updateForm.scheduled_departure" value-format="HH:mm:ss" format="HH:mm" class="full-width" />
           </el-form-item>
-          <el-form-item label="到达时间" prop="scheduled_arrival">
+          <el-form-item label="Arrival Time" prop="scheduled_arrival">
             <el-time-picker v-model="updateForm.scheduled_arrival" value-format="HH:mm:ss" format="HH:mm" class="full-width" />
           </el-form-item>
         </div>
-        <el-form-item label="燃油基建费" prop="fuel_infra_fee">
+        <el-form-item label="Fuel & Airport Fee" prop="fuel_infra_fee">
           <el-input-number v-model="updateForm.fuel_infra_fee" :min="0" :precision="2" :step="10" class="full-width" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="updateDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitUpdate">保存</el-button>
+        <el-button @click="updateDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitUpdate">Save</el-button>
       </template>
     </el-dialog>
-    <el-dialog v-model="statusDialogVisible" title="修改实例状态" width="420px" :close-on-click-modal="false">
+    <el-dialog v-model="statusDialogVisible" title="Update Instance Status" width="420px" :close-on-click-modal="false">
       <el-form ref="statusFormRef" :model="statusForm" :rules="statusRules" label-position="top">
-        <el-form-item label="实例 ID">
+        <el-form-item label="Instance ID">
           <el-input v-model="statusForm.instance_id" disabled />
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item label="Status" prop="status">
           <el-select v-model="statusForm.status" class="full-width">
-            <el-option v-for="status in statusOptions" :key="status" :label="status" :value="status" />
+            <el-option v-for="status in instanceStatusOptions" :key="status.value" :label="status.label" :value="status.value" />
           </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="statusDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitStatus">保存</el-button>
+        <el-button @click="statusDialogVisible = false">Cancel</el-button>
+        <el-button type="primary" @click="submitStatus">Save</el-button>
       </template>
     </el-dialog>
   </section>
