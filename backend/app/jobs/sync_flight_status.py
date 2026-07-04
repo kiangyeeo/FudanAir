@@ -15,7 +15,7 @@ def sync_flight_status_job() -> None:
         departed_count, arrived_count = FlightService(db).sync_time_statuses(datetime.now())
     if departed_count or arrived_count:
         logger.info(
-            "航班实例状态已自动流转: 已起飞=%s, 已到达=%s",
+            "Flight instance statuses auto-synced: departed=%s, arrived=%s",
             departed_count,
             arrived_count,
         )

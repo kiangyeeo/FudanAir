@@ -19,6 +19,6 @@ def expire_orders_job() -> None:
         for order_no in order_nos:
             try:
                 if BookingService(db).expire_order(order_no):
-                    logger.info("订单 %s 已超时取消并回补库存", order_no)
+                    logger.info("Order %s expired, canceled, and stock was restored", order_no)
             except Exception as exc:
-                logger.exception("订单 %s 超时处理失败: %s", order_no, exc)
+                logger.exception("Failed to process expired order %s: %s", order_no, exc)

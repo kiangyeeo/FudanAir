@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -35,16 +35,16 @@ logger = get_logger(__name__)
 LOGIN_PATH = "/api/auth/login"
 REGISTER_PATH = "/api/auth/register"
 LOGIN_REQUIRED_FIELDS = (
-    ("phone", "手机号"),
-    ("password", "密码"),
+    ("phone", "phone number"),
+    ("password", "password"),
 )
 REGISTER_REQUIRED_FIELDS = (
-    ("name", "姓名"),
-    ("password", "密码"),
-    ("phone", "手机号"),
+    ("name", "name"),
+    ("password", "password"),
+    ("phone", "phone number"),
 )
-PASSWORD_TOO_SHORT_MESSAGE = "请输入至少六位的密码"
-DEFAULT_VALIDATION_MESSAGE = "请求参数校验失败"
+PASSWORD_TOO_SHORT_MESSAGE = "Password must be at least six characters."
+DEFAULT_VALIDATION_MESSAGE = "Request validation failed."
 
 
 @asynccontextmanager
@@ -138,7 +138,7 @@ def _login_validation_message(body: object) -> str:
 
     phone = body.get("phone")
     if not isinstance(phone, str) or not PHONE_PATTERN.fullmatch(phone.strip()):
-        return "手机号格式错误"
+        return "Invalid phone number format."
 
     return DEFAULT_VALIDATION_MESSAGE
 
@@ -150,11 +150,11 @@ def _register_validation_message(body: object) -> str:
     missing_labels = _missing_field_labels(body, REGISTER_REQUIRED_FIELDS)
     if len(missing_labels) >= 2:
         return _missing_fields_message(missing_labels)
-    if missing_labels == ["姓名"]:
-        return "请输入姓名"
-    if missing_labels == ["手机号"]:
-        return "请输入手机号"
-    if missing_labels == ["密码"]:
+    if missing_labels == ["name"]:
+        return "Please enter your name"
+    if missing_labels == ["phone number"]:
+        return "Please enter your phone number"
+    if missing_labels == ["password"]:
         return PASSWORD_TOO_SHORT_MESSAGE
 
     password = body.get("password")
@@ -176,7 +176,7 @@ def _missing_field_labels(
 
 def _missing_fields_message(fields: tuple[tuple[str, str], ...] | list[str]) -> str:
     labels = [label for _, label in fields] if isinstance(fields, tuple) else fields
-    return f"请输入{','.join(labels)}"
+    return f"Please enter {', '.join(labels)}"
 
 
 def _is_blank(value: object) -> bool:
@@ -193,12 +193,12 @@ async def unhandled_exception_handler(
     exc: Exception,
 ) -> JSONResponse:
     logger.error(
-        "未处理异常 %s %s",
+        "Unhandled exception %s %s",
         request.method,
         request.url.path,
         exc_info=(type(exc), exc, exc.__traceback__),
     )
     return JSONResponse(
         status_code=500,
-        content={"code": "INTERNAL_ERROR", "message": "系统繁忙,请稍后重试"},
+        content={"code": "INTERNAL_ERROR", "message": "The system is busy. Please try again later."},
     )
